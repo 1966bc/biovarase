@@ -583,9 +583,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                                                         caller)
 
         path = self.get_file("log.txt")
-        log_file = open(path, "a")
-        log_file.write(log_text)
-        log_file.close()
+        with open(path, "a") as log_file:
+            log_file.write(log_text)
 
     def get_python_version(self,):
         return "Python version: %s" % ".".join(map(str, sys.version_info[:3]))
@@ -636,18 +635,16 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
         now = datetime.datetime.now()
         s = "\n\n{0}\n{1}\n{2}\n\n".format(now, module, function)
-        f = open('debug.txt', 'a')
-        f.write(s)
-        for i in args:
-            s = "{0}\n".format(i)
+        with open('debug.txt', 'a') as f:
             f.write(s)
-        f.close()
+            for i in args:
+                s = "{0}\n".format(i)
+                f.write(s)
 
     def get_time_out(self):
         try:
-            f = open('time_out', 'r')
-            v = f.readline()
-            f.close()
+            with open('time_out', 'r') as f:
+                v = f.readline()
             return v
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -657,9 +654,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def get_loop(self):
         try:
-            f = open('loop', 'r')
-            v = f.readline()
-            f.close()
+            with open('loop', 'r') as f:
+                v = f.readline()
             return v
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -669,9 +665,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def get_zscore(self):
         try:
-            f = open('zscore', 'r')
-            v = f.readline()
-            f.close()
+            with open('zscore', 'r') as f:
+                v = f.readline()
             return float(v)
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -705,9 +700,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
         try:
             path = self.get_file("section_id")
-            f = open(path, 'r')
-            v = f.readline()
-            f.close()
+            with open(path, 'r') as f:
+                v = f.readline()
             return int(v)
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -781,9 +775,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         """get license"""
         try:
             path = self.get_file("LICENSE")
-            f = open(path, "r")
-            v = f.read()
-            f.close()
+            with open(path, "r") as f:
+                v = f.read()
             return v
         except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -881,9 +874,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def get_batch_length(self,):
 
         try:
-            file = open('lot_description_lenght', 'r')
-            lenght = file.readline()
-            file.close()
+            with open('lot_description_lenght', 'r') as file:
+                lenght = file.readline()
             return int(lenght)
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -894,9 +886,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def get_lot_length(self,):
 
         try:
-            file = open('lot_lenght', 'r')
-            lenght = file.readline()
-            file.close()
+            with open('lot_lenght', 'r') as file:
+                lenght = file.readline()
             return int(lenght)
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
