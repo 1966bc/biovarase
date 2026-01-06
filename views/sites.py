@@ -106,16 +106,9 @@ class UI(ParentView):
             padding=8,
         )
 
-        def add_btn(text, cmd, underline=None, shortcut=None):
-            btn = ttk.Button(frm_buttons, text=text, command=cmd, underline=underline)
-            btn.pack(fill=tk.X, padx=5, pady=5)
-            if shortcut:
-                self.bind(shortcut, lambda e, c=cmd: c())
-            return btn
-
-        add_btn("Add",    self._on_add,            underline=0, shortcut="<Alt-a>")
-        add_btn("Update", self._on_item_activated, underline=0, shortcut="<Alt-u>")
-        add_btn("Cancel", self.on_cancel,         underline=0, shortcut="<Alt-c>")
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self._on_item_activated)
 
@@ -314,42 +307,13 @@ class UI(ParentView):
             return
 
         if 1 <= idx < self.lstItems.size():
-            self._open_child(idx)
+            pk = self.dict_items.get(idx)
+            if pk is not None:
+                self.engine.open_child(self, ui.UI, index=pk)
 
     def _on_add(self, _evt=None):
         """Add button handler: open editor in INSERT mode."""
-        self._open_child(index=None)
-
-    def _open_child(self, index=None):
-        """
-        Open child editor window for the given site.
-        
-        Args:
-            index: Listbox index (or None for INSERT mode)
-        """
-        # Destroy previous child, if any
-        try:
-            if self.child is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except Exception as e:
-            pass
-
-        # Translate listbox index -> primary key
-        if index is None:
-            pk = None  # INSERT mode
-        else:
-            pk = self.dict_items.get(index)
-            if pk is None:
-                messagebox.showwarning(
-                    self.engine.app_title,
-                    self.engine.no_selected,
-                    parent=self,
-                )
-                return
-
-        # Create editor with the correct PK (or None for INSERT)
-        self.child = ui.UI(self, index=pk)
-        self.child.on_open()
+        self.engine.open_child(self, ui.UI, index=None)
 
     def _reselect_by_pk(self, pk):
         """

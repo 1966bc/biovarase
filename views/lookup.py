@@ -146,16 +146,9 @@ class LookupUI(ParentView):
             padding=8,
         )
 
-        def add_btn(text, cmd, underline=None, shortcut=None):
-            btn = ttk.Button(frm_buttons, text=text, command=cmd, underline=underline)
-            btn.pack(fill=tk.X, padx=5, pady=5)
-            if shortcut:
-                self.bind(shortcut, lambda e, c=cmd: c())
-            return btn
-
-        add_btn("Add",    self.on_add,            underline=0, shortcut="<Alt-a>")
-        add_btn("Update", self.on_item_activated, underline=0, shortcut="<Alt-u>")
-        add_btn("Cancel", self.on_cancel,         underline=0, shortcut="<Alt-c>")
+        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self.on_item_activated)
 
@@ -234,7 +227,7 @@ class LookupUI(ParentView):
         sel = self.lstItems.curselection()
         if not sel:
             messagebox.showwarning(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 self.engine.no_selected,
                 parent=self,
             )
@@ -242,36 +235,25 @@ class LookupUI(ParentView):
 
         idx = sel[0]
         if 0 <= idx < self.lstItems.size():
-            self._open_child(index=idx)
+            self.engine.open_child(
+                self, Editor, index=idx,
+                table=self.table,
+                pk_field=self.primary_key,
+                desc_field=self.desc_field,
+                label_text=self.label_text,
+                ui_name=f"{self.table}_editor",
+            )
 
     def on_add(self, _evt=None):
         """Open the editor window in INSERT mode."""
-        self._open_child(index=None)
-
-    # ------------------------------------------------------------------
-    # Child editor
-    # ------------------------------------------------------------------
-    def _open_child(self, index=None):
-        """
-        Create or replace the editor child window (INSERT or UPDATE mode).
-        """
-        try:
-            if self.child is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except Exception as e:
-            pass
-
-        self.child = Editor(
-            self,
-            index=index,
+        self.engine.open_child(
+            self, Editor, index=None,
             table=self.table,
             pk_field=self.primary_key,
             desc_field=self.desc_field,
             label_text=self.label_text,
             ui_name=f"{self.table}_editor",
         )
-
-        self.child.on_open()
 
     # ------------------------------------------------------------------
     # Close

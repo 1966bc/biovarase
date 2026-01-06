@@ -375,14 +375,14 @@ class UI(ChildView):
                 )
                 if existing_id is not None and existing_id != current_id:
                     messagebox.showwarning(
-                        self.nametowidget(".").title(),
+                        self.engine.app_title,
                         "Device ID %s has already been assigned!" % device,
                         parent=self,
                     )
                     return 0
             else:
                 messagebox.showwarning(
-                    self.nametowidget(".").title(),
+                    self.engine.app_title,
                     "Device ID %s has already been assigned!" % device,
                     parent=self,
                 )

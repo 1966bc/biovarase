@@ -91,15 +91,9 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=6, pady=6)
 
-        def add_btn(text, cmd, hotkey=None):
-            btn = ttk.Button(frm_buttons, style="App.TButton", text=text, command=cmd)
-            btn.pack(fill=tk.X, pady=4)
-            if hotkey:
-                self.bind(hotkey, cmd)
-
-        add_btn("Add",    self._on_add,            "<Alt-a>")
-        add_btn("Update", self._on_item_activated, "<Alt-u>")
-        add_btn("Cancel", self.on_cancel,          "<Alt-c>")
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
        
 
@@ -113,8 +107,7 @@ class UI(ParentView):
         rs = self.engine.read(True, SQL, ()) or []
 
         # Clear current content
-        for iid in self.lstItems.get_children():
-            self.lstItems.delete(iid)
+        self.engine.clear_treeview(self.lstItems)
 
         # Repopulate
         for row in rs:
@@ -162,20 +155,10 @@ class UI(ParentView):
             return
 
         self._on_item_selected()
-        self._open_child(index=sel[0])
+        self.engine.open_child(self, control_editor.UI, index=sel[0])
 
     def _on_add(self, _evt=None) -> None:
-        self._open_child(index=None)
-
-    def _open_child(self, index=None) -> None:
-        try:
-            if hasattr(self, "child") and self.child is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except Exception as e:
-            pass
-
-        self.child = control_editor.UI(self, index=index)
-        self.child.on_open()
+        self.engine.open_child(self, control_editor.UI, index=None)
 
     def on_cancel(self, evt=None) -> None:
         """Close window."""

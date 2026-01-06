@@ -376,3 +376,76 @@ class Tools:
             return {"type": kind, "id": int(id_str)}
         except Exception:
             return {}
+
+    def clear_treeview(self, tree: ttk.Treeview) -> None:
+        """Clear all items from a Treeview widget."""
+        for iid in tree.get_children():
+            tree.delete(iid)
+
+    def clear_listbox(self, listbox: tk.Listbox) -> None:
+        """Clear all items from a Listbox widget."""
+        listbox.delete(0, tk.END)
+
+    # -------------------------------------------------------------------------
+    # Button Factory with Hotkey
+    # -------------------------------------------------------------------------
+    def add_button(self, parent: Any, text: str, command: Callable,
+                   hotkey: Optional[str] = None, window: Any = None) -> ttk.Button:
+        """
+        Create a button and optionally bind a hotkey.
+
+        Args:
+            parent: Parent widget for the button
+            text: Button text
+            command: Callback function
+            hotkey: Optional hotkey like "<Alt-a>"
+            window: Window to bind hotkey to (defaults to parent's toplevel)
+
+        Returns:
+            ttk.Button instance
+        """
+        btn = ttk.Button(
+            parent,
+            style="App.TButton",
+            text=text,
+            command=command,
+        )
+        btn.pack(fill=tk.X, pady=4)
+
+        if hotkey:
+            target = window or parent.winfo_toplevel()
+            target.bind(hotkey, lambda e: command())
+
+        return btn
+
+    # -------------------------------------------------------------------------
+    # Child Window Management
+    # -------------------------------------------------------------------------
+    def open_child(self, parent: Any, child_class: type,
+                   index: Any = None, **kwargs) -> Any:
+        """
+        Safely open a child editor window, destroying any previous instance.
+
+        Args:
+            parent: Parent window (must have 'child' attribute)
+            child_class: The UI class to instantiate
+            index: Primary key for UPDATE mode, None for INSERT mode
+            **kwargs: Additional arguments passed to child_class
+
+        Returns:
+            The new child window instance
+        """
+        # Destroy existing child if open
+        try:
+            child = getattr(parent, "child", None)
+            if child is not None and child.winfo_exists():
+                child.destroy()
+        except Exception:
+            pass
+
+        # Create new child
+        parent.child = child_class(parent, index=index, **kwargs)
+        if hasattr(parent.child, "on_open"):
+            parent.child.on_open()
+
+        return parent.child
