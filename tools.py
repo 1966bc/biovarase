@@ -146,6 +146,31 @@ class Tools:
         y = (screen_height - window_height) / 2
         window.geometry("+%d+%d" % (x, y))
 
+    def center_window(self, window: Any) -> None:
+        """
+        Center a window relative to its parent.
+
+        Considers minsize if set, and uses reqwidth/reqheight
+        which work even when the window is withdrawn (anti-flash).
+
+        Args:
+            window: The Toplevel window to center
+        """
+        window.update_idletasks()
+        parent = window.parent
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        # Use reqwidth/reqheight - works even when window is withdrawn
+        # Also consider minsize if set (returns (0,0) if not set)
+        min_w, min_h = window.wm_minsize()
+        width = max(window.winfo_reqwidth(), min_w)
+        height = max(window.winfo_reqheight(), min_h)
+        x = parent_x + (parent_width - width) // 2
+        y = parent_y + (parent_height - height) // 2
+        window.geometry(f"{width}x{height}+{x}+{y}")
+
     def cols_configure(self, w: Any) -> None:
         """Configure three-column grid with proportional weights."""
         w.columnconfigure(0, weight=1)

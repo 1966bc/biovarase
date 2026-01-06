@@ -329,6 +329,30 @@ class Controller:
 
 
 
+    def close_instance(self, name: str) -> None:
+        """
+        Close a registered window instance by name.
+
+        If the instance exists and is still alive, closes it.
+        Use this for ChildView dialogs before creating a new one
+        to switch context (e.g., editing a different record).
+
+        Args:
+            name: Window name as registered in dict_instances
+        """
+        registry = getattr(self, "dict_instances", None)
+        if not registry:
+            return
+        instance = registry.get(name)
+        if instance is not None:
+            try:
+                if instance.winfo_exists():
+                    instance.on_cancel()
+            except Exception:
+                pass
+            # Ensure cleanup
+            registry.pop(name, None)
+
     def refresh_windows_for_table(self, table_name: str) -> None:
         """
         Central dispatcher for cross-window GUI refreshes after editing lookup tables.
