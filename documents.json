@@ -1,7 +1,7 @@
 {
     "user_manual": {
-        "filename": "biovarase_user_manual.pdf",
-        "description": "Biovarase User Manual"
+        "filename": "USER_MANUAL.md",
+        "description": "Manuale Utente Biovarase"
     },
     "qc_technical": {
         "filename": "nt_tr_569_ed4.pdf",
