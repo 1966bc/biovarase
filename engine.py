@@ -90,13 +90,45 @@ ROLE_SUPERUSER = 1   # Lab manager - QC validation + lab-wide data access
 ROLE_TECHNICIAN = 2  # Section worker - data entry + section-only access
 ROLE_AUTOLOGIN = 3   # Guest user - read-only access
 
-class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tools):
+
+class _EngineMeta(type):
+    """
+    Metaclass that ensures only one Engine instance exists.
+
+    Implements the Singleton pattern at the metaclass level,
+    intercepting instance creation before __new__ and __init__ are called.
+
+    How it works:
+        1. First call to Engine(...) creates and stores the instance
+        2. Subsequent calls return the stored instance, ignoring new arguments
+    """
+
+    _instance = None
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Intercept instance creation.
+
+        Returns the existing instance if one exists, otherwise creates
+        a new one using the normal class instantiation process.
+        """
+        if cls._instance is None:
+            cls._instance = super().__call__(*args, **kwargs)
+        return cls._instance
+
+
+class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tools,
+             metaclass=_EngineMeta):
     """
     Main orchestrator for Biovarase - combines all system components via mixin inheritance.
 
     The Engine class is the central hub of Biovarase, combining multiple specialized
     mixins through Python's multiple inheritance to provide a unified interface for
     all application functionality.
+
+    **Singleton Pattern**:
+        Engine uses _EngineMeta metaclass to ensure only one instance exists.
+        Multiple calls to Engine() return the same instance.
 
     **Mixin Architecture** (in MRO order):
         1. DBMS: Database connection and query execution
