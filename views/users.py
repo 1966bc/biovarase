@@ -74,7 +74,7 @@ class UI(ParentView):
         frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
         
         # Left: list + scrollbar
-        frm_left = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_left = ttk.Frame(frm_main, style="Panel.TFrame")
         ttk.Label(
             frm_left,
             style="App.TLabel",
@@ -98,7 +98,7 @@ class UI(ParentView):
         self.lstItems.bind("<Double-Button-1>", self.on_item_activated)
 
         # Right: buttons
-        frm_buttons = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5, expand=False)
 
         self._add_button(frm_buttons, "Add",    self.on_add,            "<Alt-a>")

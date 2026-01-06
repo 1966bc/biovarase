@@ -86,7 +86,7 @@ class UI(ParentView):
         lbl_cnt = ttk.Label(pane_left, style="App.TLabel", textvariable=self.items)
         lbl_cnt.pack(fill=tk.X, padx=2, pady=2)
 
-        frm_tests = ttk.Frame(pane_left, style="App.TFrame", padding=8, relief=tk.GROOVE)
+        frm_tests = ttk.Frame(pane_left, style="Panel.TFrame")
         frm_tests.pack(fill=tk.BOTH, expand=1)
 
         sb = ttk.Scrollbar(frm_tests, orient=tk.VERTICAL)
@@ -102,7 +102,7 @@ class UI(ParentView):
         pane_mid = ttk.Frame(self.pw, style="App.TFrame")
         self.pw.add(pane_mid, minsize=360, stretch="always")
 
-        frm_methods = ttk.Frame(pane_mid, style="App.TFrame", padding=8, relief=tk.GROOVE)
+        frm_methods = ttk.Frame(pane_mid, style="Panel.TFrame")
         frm_methods.pack(fill=tk.BOTH, expand=1)
 
         lf_methods = ttk.Labelframe(frm_methods, text="Methods")
@@ -139,7 +139,7 @@ class UI(ParentView):
         pane_right = ttk.Frame(self.pw, style="App.TFrame")
         self.pw.add(pane_right, minsize=140, stretch="never")
 
-        frm_buttons = ttk.Frame(pane_right, style="App.TFrame", padding=8, relief=tk.GROOVE)
+        frm_buttons = ttk.Frame(pane_right, style="Panel.TFrame")
         frm_buttons.pack(side=tk.LEFT, fill=tk.Y, expand=0)
 
         def add_btn(text, cmd, *, underline=None, shortcut=None):

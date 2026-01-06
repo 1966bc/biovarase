@@ -115,7 +115,7 @@ class LookupUI(ParentView):
         frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
 
         # Left panel
-        frm_left = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_left = ttk.Frame(frm_main, style="Panel.TFrame")
         ttk.Label(
             frm_left,
             style="App.TLabel",

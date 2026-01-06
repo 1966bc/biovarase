@@ -94,7 +94,7 @@ class UI(ParentView):
         self.Sites.bind("<Double-1>", self.on_branch_activated)
 
         # Right: list of mapped methods
-        frm_right = ttk.Frame(pane_right, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_right = ttk.Frame(pane_right, style="Panel.TFrame")
         frm_right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
         # Buttons frame FIRST (pack order matters - bottom first)

@@ -57,7 +57,7 @@ class UI(ParentView):
         frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
 
         # Left: Treeview
-        frm_left = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_left = ttk.Frame(frm_main, style="Panel.TFrame")
         frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
 
         ttk.Label(

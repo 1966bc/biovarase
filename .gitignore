@@ -35,6 +35,7 @@ env/
 .claude/
 
 # Local folders (not for production)
+imgs/
 inventarium/
 sql/*
 !sql/migrations/

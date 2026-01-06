@@ -313,103 +313,129 @@ class Main(tk.Toplevel):
 
         ttk.Label(frm_lists, text='Categories').pack(side=tk.TOP, fill=tk.X, expand=0)
 
-        self.cbCategories = ttk.Combobox(frm_lists, style="App.TCombobox", state="readonly")
+        self.cbCategories = ttk.Combobox(frm_lists, style="App.TCombobox", state="readonly", width=26)
         self.cbCategories.bind("<<ComboboxSelected>>", self.on_selected_category)
         self.cbCategories.pack(side=tk.TOP, fill=tk.X, pady=5, expand=0)
 
         ttk.Label(frm_lists, text='Tests').pack(side=tk.TOP, fill=tk.X, expand=0)
-        self.cbTests = ttk.Combobox(frm_lists, style="App.TCombobox")
+        self.cbTests = ttk.Combobox(frm_lists, style="App.TCombobox", width=26)
         self.cbTests.bind("<<ComboboxSelected>>", self.on_selected_test)
         self.cbTests.pack(side=tk.TOP, fill=tk.X, pady=5, expand=0)
 
         w = ttk.LabelFrame(frm_lists, text='Workstation Data Source')
-        self.lstWorkstations = self._create_listbox(w, height=5, width=2, color="white")
-        self.lstWorkstations.bind("<<ListboxSelect>>", self.on_selected_workstation)
+        cols_ws = ("description", "serial")
+        self.lstWorkstations = ttk.Treeview(w, columns=cols_ws, show="headings", height=4)
+        self.lstWorkstations.column("description", width=100, minwidth=80, anchor=tk.W)
+        self.lstWorkstations.column("serial", width=80, minwidth=60, anchor=tk.W)
+        self.lstWorkstations.heading("description", text="Workstation", anchor=tk.W)
+        self.lstWorkstations.heading("serial", text="Serial", anchor=tk.W)
+        sb_ws = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstWorkstations.yview)
+        self.lstWorkstations.configure(yscrollcommand=sb_ws.set)
+        self.lstWorkstations.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_ws.pack(side=tk.RIGHT, fill=tk.Y)
+        self.lstWorkstations.bind("<<TreeviewSelect>>", self.on_selected_workstation)
         w.pack(side=tk.TOP, fill=tk.BOTH, expand=0)
 
         w = ttk.LabelFrame(frm_lists, text="Batches")
-        self.lstBatches = self._create_listbox(w, height=5, color="white")
-        self.lstBatches.selectmode = tk.MULTIPLE
-        self.lstBatches.bind("<<ListboxSelect>>", self.on_selected_batch)
+        cols_batch = ("level", "lot", "expiration")
+        self.lstBatches = ttk.Treeview(w, columns=cols_batch, show="headings", height=4)
+        self.lstBatches.column("level", width=30, minwidth=25, anchor=tk.W)
+        self.lstBatches.column("lot", width=70, minwidth=60, anchor=tk.W)
+        self.lstBatches.column("expiration", width=80, minwidth=70, anchor=tk.W)
+        self.lstBatches.heading("level", text="Lv", anchor=tk.W)
+        self.lstBatches.heading("lot", text="Lot", anchor=tk.W)
+        self.lstBatches.heading("expiration", text="Expiration", anchor=tk.W)
+        self.lstBatches.tag_configure("expired", background="red")
+        self.lstBatches.tag_configure("expiring", background="yellow")
+        sb_batch = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstBatches.yview)
+        self.lstBatches.configure(yscrollcommand=sb_batch.set)
+        self.lstBatches.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_batch.pack(side=tk.RIGHT, fill=tk.Y)
+        self.lstBatches.bind("<<TreeviewSelect>>", self.on_selected_batch)
         self.lstBatches.bind('<Double-Button-1>', self.on_batch_double_button)
         w.pack(side=tk.TOP, fill=tk.BOTH, expand=0)
 
         frm_stats = ttk.Frame(frm_lists, style="App.TFrame")
 
-        w = tk.LabelFrame(frm_stats, text="Batch data", font="Helvetica 10 bold")
+        # --- Column 1: Batch data (from lot) ---
+        frm_batch = ttk.LabelFrame(frm_stats, text="Batch", labelanchor="n")
+        frm_batch.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(0, 2))
 
-        ttk.Label(w, text="Target").pack()
-        ttk.Label(w,
+        ttk.Label(frm_batch, text="Target", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch,
                   style="Target.TLabel",
                   anchor=tk.CENTER,
-                  textvariable=self.target).pack(fill=tk.X, padx=2, pady=2)
-        ttk.Label(w, text="SD").pack()
-        ttk.Label(w,
-                  style="black_and_withe.TLabel",
+                  textvariable=self.target).pack(fill=tk.X, padx=4, pady=1)
+        ttk.Label(frm_batch, text="SD", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch,
+                  style="black_and_white.TLabel",
                   anchor=tk.CENTER,
-                  textvariable=self.sd).pack(fill=tk.X, padx=2, pady=2)
-        ttk.Label(w, text="TE%").pack()
-        ttk.Label(w,
-                  style="black_and_withe.TLabel",
+                  textvariable=self.sd).pack(fill=tk.X, padx=4, pady=1)
+        ttk.Label(frm_batch, text="TE%", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch,
+                  style="black_and_white.TLabel",
                   anchor=tk.CENTER,
-                  textvariable=self.te).pack(fill=tk.X, padx=2, pady=2)
+                  textvariable=self.te).pack(fill=tk.X, padx=4, pady=1)
 
-        w.pack(side=tk.LEFT, fill=tk.X, expand=0)
+        # --- Column 2: Computed statistics ---
+        frm_calc = ttk.LabelFrame(frm_stats, text="Computed", labelanchor="n")
+        frm_calc.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=2)
 
-        w = tk.LabelFrame(frm_stats, text="Cal data", font="Helvetica 10 bold")
-
-        ttk.Label(w, text="Average").pack()
-        ttk.Label(w,
+        ttk.Label(frm_calc, text="Mean", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc,
                   style="Average.TLabel",
                   anchor=tk.CENTER,
-                  textvariable=self.average).pack(fill=tk.X, padx=2, pady=2)
-        ttk.Label(w, text="sd").pack()
-        ttk.Label(w,
-                  style="black_and_withe.TLabel",
+                  textvariable=self.average).pack(fill=tk.X, padx=4, pady=1)
+        ttk.Label(frm_calc, text="sd", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc,
+                  style="black_and_white.TLabel",
                   anchor=tk.CENTER,
-                  textvariable=self.calculated_sd).pack(fill=tk.X, padx=2, pady=2)
-        ttk.Label(w, text="CV%").pack()
-        ttk.Label(w,
-                  style="black_and_withe.TLabel",
+                  textvariable=self.calculated_sd).pack(fill=tk.X, padx=4, pady=1)
+        ttk.Label(frm_calc, text="CV%", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc,
+                  style="black_and_white.TLabel",
                   anchor=tk.CENTER,
-                  textvariable=self.cva).pack(fill=tk.X, padx=2, pady=2)
+                  textvariable=self.cva).pack(fill=tk.X, padx=4, pady=1)
 
-        w.pack(side=tk.LEFT, fill=tk.X, expand=0)
+        # --- Column 3: QC evaluation ---
+        frm_qc = ttk.LabelFrame(frm_stats, text="QC", labelanchor="n")
+        frm_qc.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(2, 0))
 
-        w = tk.LabelFrame(frm_stats, text="Other data", font="Helvetica 10 bold")
-
-        ttk.Label(w, text="Westgard").pack()
-
+        ttk.Label(frm_qc, text="Bias%", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc,
+                  style="black_and_white.TLabel",
+                  anchor=tk.CENTER,
+                  textvariable=self.bias).pack(fill=tk.X, padx=4, pady=1)
+        ttk.Label(frm_qc, text="U", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc,
+                  style="black_and_white.TLabel",
+                  anchor=tk.CENTER,
+                  textvariable=self.uncertainty).pack(fill=tk.X, padx=4, pady=1)
+        ttk.Label(frm_qc, text="Westgard", anchor=tk.CENTER).pack(fill=tk.X)
         self.lblWestgard = ttk.Label(
-            w,
-            style="black_and_withe.TLabel",
+            frm_qc,
+            style="black_and_white.TLabel",
             anchor=tk.CENTER,
             textvariable=self.westgard,
         )
-        self.lblWestgard.pack(fill=tk.X, padx=2, pady=2)
-
-        ttk.Label(w, text="U").pack()
-        ttk.Label(
-            w,
-            style="black_and_withe.TLabel",
-            anchor=tk.CENTER,
-            textvariable=self.uncertainty,
-        ).pack(fill=tk.X, padx=2, pady=2)
-
-        ttk.Label(w, text="Bias%").pack()
-        ttk.Label(
-            w,
-            style="black_and_withe.TLabel",
-            anchor=tk.CENTER,
-            textvariable=self.bias,
-        ).pack(fill=tk.X, padx=2, pady=2)
-
-
-        w.pack(side=tk.RIGHT, fill=tk.X, expand=0)
+        self.lblWestgard.pack(fill=tk.X, padx=4, pady=1)
 
         w = ttk.LabelFrame(frm_lists, text="Results")
-        self.lstResults = self._create_listbox(w, color="white")
-        self.lstResults.bind("<<ListboxSelect>>", self.on_selected_result)
+        cols_results = ("date", "result")
+        self.lstResults = ttk.Treeview(w, columns=cols_results, show="headings", height=8)
+        self.lstResults.column("date", width=90, minwidth=80, anchor=tk.W)
+        self.lstResults.column("result", width=80, minwidth=70, anchor=tk.E)
+        self.lstResults.heading("date", text="Date", anchor=tk.W)
+        self.lstResults.heading("result", text="Result", anchor=tk.E)
+        self.lstResults.tag_configure("disabled", foreground="gray")
+        self.lstResults.tag_configure("violation_3s", foreground="red")
+        self.lstResults.tag_configure("violation_2s", foreground="orange")
+        self.lstResults.tag_configure("has_notes", background="#fff2cc")
+        sb_results = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstResults.yview)
+        self.lstResults.configure(yscrollcommand=sb_results.set)
+        self.lstResults.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_results.pack(side=tk.RIGHT, fill=tk.Y)
+        self.lstResults.bind("<<TreeviewSelect>>", self.on_selected_result)
         self.lstResults.bind("<Double-Button-1>", self.on_update_result)
         w.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
 
@@ -454,7 +480,7 @@ class Main(tk.Toplevel):
 
         frm_data.pack(fill=tk.BOTH, expand=1)
         frm_lists.pack(side=tk.LEFT, fill=tk.Y, expand=0)
-        frm_stats.pack(side=tk.LEFT, fill=tk.Y, expand=0)
+        frm_stats.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         frm_graphs.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
         self.frm_main.pack(fill=tk.BOTH, expand=1)
@@ -665,14 +691,16 @@ class Main(tk.Toplevel):
 
         # Lista risultati
         if getattr(self, "lstResults", None) is not None:
-            self.lstResults.delete(0, tk.END)
+            for item in self.lstResults.get_children():
+                self.lstResults.delete(item)
 
     def reset_batch_data(self) -> None:
 
         self.expiration.set('')
         self.target.set(0)
         self.sd.set(0)
-        self.lstBatches.delete(0, tk.END)
+        for item in self.lstBatches.get_children():
+            self.lstBatches.delete(item)
 
     def reset_cal_data(self) -> None:
 
@@ -758,7 +786,7 @@ class Main(tk.Toplevel):
         val = (self.westgard.get() or "").strip()
 
         if len(val) == 0:
-            self.lblWestgard.configure(style="black_and_withe.TLabel")
+            self.lblWestgard.configure(style="black_and_white.TLabel")
             self.westgard.set("No data")
             return
 
@@ -863,28 +891,28 @@ class Main(tk.Toplevel):
         self.reset_batch_data()
 
     def set_workstations(self) -> None:
-        """Fill workstations listbox for selected test method."""
-        self.lstWorkstations.delete(0, tk.END)
+        """Fill workstations treeview for selected test method."""
+        for item in self.lstWorkstations.get_children():
+            self.lstWorkstations.delete(item)
         self.selected_workstation = None
         self.workstation_test_methods = {}
-        index = 0
 
         if self.cbTests.current() == -1:
             return
 
         if not self.selected_test_method:
             return
-        
+
         sql = """
-                SELECT workstations.workstation_id, 
-                       workstations.description, 
-                       workstations.serial 
-                FROM workstation_test_methods 
-                JOIN workstations 
-                  ON workstation_test_methods.workstation_id = workstations.workstation_id 
-                WHERE workstation_test_methods.test_method_id = ? 
-                  AND workstations.section_id = ? 
-                  AND workstations.status = 1 
+                SELECT workstations.workstation_id,
+                       workstations.description,
+                       workstations.serial
+                FROM workstation_test_methods
+                JOIN workstations
+                  ON workstation_test_methods.workstation_id = workstations.workstation_id
+                WHERE workstation_test_methods.test_method_id = ?
+                  AND workstations.section_id = ?
+                  AND workstations.status = 1
                 ORDER BY workstations.rank ASC;
              """
 
@@ -894,15 +922,19 @@ class Main(tk.Toplevel):
         rs = self.nametowidget(".").engine.read(True, sql, args)
 
         if rs:
+            first_item = None
             for row in rs:
-                text = f"{row['description']:<15} {row['serial']:>18}"
-                self.lstWorkstations.insert(tk.END, text)
-                self.workstation_test_methods[index] = row["workstation_id"]
-                index += 1
+                item_id = self.lstWorkstations.insert(
+                    "", tk.END, values=(row["description"], row["serial"])
+                )
+                self.workstation_test_methods[item_id] = row["workstation_id"]
+                if first_item is None:
+                    first_item = item_id
 
             self.reset_batch_data()
-            self.lstWorkstations.select_set(0)
-            self.lstWorkstations.event_generate("<<ListboxSelect>>")
+            if first_item:
+                self.lstWorkstations.selection_set(first_item)
+                self.lstWorkstations.event_generate("<<TreeviewSelect>>")
 
     def _on_batch_changed(self, data=None) -> None:
         """Observer callback for batch changes - refresh batch list.
@@ -923,24 +955,24 @@ class Main(tk.Toplevel):
 
         # Restore previous selection if possible
         if current_batch_id:
-            for idx, batch_id in self.dict_batches.items():
+            for item_id, batch_id in self.dict_batches.items():
                 if batch_id == current_batch_id:
-                    self.lstBatches.selection_clear(0, tk.END)
-                    self.lstBatches.selection_set(idx)
-                    self.lstBatches.see(idx)
-                    self.lstBatches.event_generate("<<ListboxSelect>>")
+                    self.lstBatches.selection_set(item_id)
+                    self.lstBatches.see(item_id)
+                    self.lstBatches.event_generate("<<TreeviewSelect>>")
                     return
 
         # If batch not found, select first item
-        if self.dict_batches:
-            self.lstBatches.select_set(0)
-            self.lstBatches.event_generate("<<ListboxSelect>>")
+        children = self.lstBatches.get_children()
+        if children:
+            self.lstBatches.selection_set(children[0])
+            self.lstBatches.event_generate("<<TreeviewSelect>>")
 
     def _populate_batches(self) -> None:
-        """Core logic to populate batch listbox (no early-return checks)."""
-        self.lstBatches.delete(0, tk.END)
+        """Core logic to populate batch treeview (no early-return checks)."""
+        for item in self.lstBatches.get_children():
+            self.lstBatches.delete(item)
         self.dict_batches = {}
-        index = 0
 
         sql = """
             SELECT batches.batch_id,
@@ -967,30 +999,32 @@ class Main(tk.Toplevel):
         if rs:
             for row in rs:
                 x = self.engine.get_expiration_date(row["expiration_str"])
-                label = "{0:<2}  {1:<8}  {2:<10}".format(
-                    row["description"], row["lot_number"], row["expiration_str"]
-                )
-                self.lstBatches.insert(tk.END, label[:25])
-
+                tags = ()
                 if x <= 0:
-                    self.lstBatches.itemconfig(index, {"bg": "red"})
+                    tags = ("expired",)
                 elif x <= 15:
-                    self.lstBatches.itemconfig(index, {"bg": "yellow"})
+                    tags = ("expiring",)
 
-                self.dict_batches[index] = row["batch_id"]
-                index += 1
+                item_id = self.lstBatches.insert(
+                    "", tk.END,
+                    values=(row["description"], row["lot_number"], row["expiration_str"]),
+                    tags=tags
+                )
+                self.dict_batches[item_id] = row["batch_id"]
 
     def set_batches(self) -> None:
-        """Fill batches listbox for selected test method and workstation."""
-        if self.cbTests.current() == -1 or not self.lstWorkstations.curselection():
-            self.lstBatches.delete(0, tk.END)
+        """Fill batches treeview for selected test method and workstation."""
+        if self.cbTests.current() == -1 or not self.lstWorkstations.selection():
+            for item in self.lstBatches.get_children():
+                self.lstBatches.delete(item)
             self.dict_batches = {}
             self.reset_cal_data()
             self.reset_graph()
             return
 
         if not (self.selected_test_method and self.selected_workstation):
-            self.lstBatches.delete(0, tk.END)
+            for item in self.lstBatches.get_children():
+                self.lstBatches.delete(item)
             self.dict_batches = {}
             self.reset_cal_data()
             self.reset_graph()
@@ -998,16 +1032,18 @@ class Main(tk.Toplevel):
 
         self._populate_batches()
 
-        if self.dict_batches:
-            self.lstBatches.select_set(0)
-            self.lstBatches.event_generate("<<ListboxSelect>>")
+        children = self.lstBatches.get_children()
+        if children:
+            self.lstBatches.selection_set(children[0])
+            self.lstBatches.event_generate("<<TreeviewSelect>>")
         else:
             self.reset_cal_data()
             self.reset_graph()
 
     def set_results(self) -> None:
-        """Fill results listbox for selected batch and workstation."""
-        self.lstResults.delete(0, tk.END)
+        """Fill results treeview for selected batch and workstation."""
+        for item in self.lstResults.get_children():
+            self.lstResults.delete(item)
         self.dict_results = {}
 
         if not (self.selected_batch and self.selected_workstation):
@@ -1071,29 +1107,23 @@ class Main(tk.Toplevel):
             }
 
 
-        index = 0
         for row in rs:
-            base_text = "{0:10}{1:12}".format(row["received_str"], row["result_rounded"])
-
             has_notes = notes_map.get(row["result_id"], 0) > 0
-            # Aggiungo un marcatore visivo nel testo, ad es. un asterisco iniziale
-            text = f"* {base_text}" if has_notes else base_text
-
-            self.lstResults.insert(tk.END, text)
-
             result_val = float(row["result_rounded"])
             is_enabled = row["status"]
-            self.set_results_row_color(index, result_val, is_enabled, target, sd)
 
-            # Se ci sono note, evidenzio anche lo sfondo della riga
-            if has_notes:
-                try:
-                    self.lstResults.itemconfig(index, {"background": "#fff2cc"})  # giallino
-                except Exception as e:
-                    pass
+            # Determine tags for this row
+            tags = self._get_result_tags(result_val, is_enabled, target, sd, has_notes)
 
-            self.dict_results[index] = row["result_id"]
-            index += 1
+            # Add asterisk prefix if has notes
+            date_display = f"* {row['received_str']}" if has_notes else row["received_str"]
+
+            item_id = self.lstResults.insert(
+                "", tk.END,
+                values=(date_display, row["result_rounded"]),
+                tags=tags
+            )
+            self.dict_results[item_id] = row["result_id"]
 
         self.get_values(rs)
 
@@ -1200,7 +1230,8 @@ class Main(tk.Toplevel):
             return
 
         self.cbTests.set("")
-        self.lstWorkstations.delete(0, tk.END)
+        for item in self.lstWorkstations.get_children():
+            self.lstWorkstations.delete(item)
 
         index = self.cbCategories.current()
         pk = self.dict_categories.get(index)
@@ -1219,7 +1250,8 @@ class Main(tk.Toplevel):
             return
 
         if self.cbTests.current() == -1:
-            self.lstWorkstations.delete(0, tk.END)
+            for item in self.lstWorkstations.get_children():
+                self.lstWorkstations.delete(item)
             self.reset_batch_data()
             self.reset_cal_data()
             self.reset_graph()
@@ -1250,13 +1282,13 @@ class Main(tk.Toplevel):
 
     def on_selected_workstation(self, evt: Optional[tk.Event]) -> None:
         """Handle workstation selection change."""
-        if not self.lstWorkstations.curselection():
+        if not self.lstWorkstations.selection():
             self.selected_workstation = None
             self.reset_batch_data()
             return
 
-        index = self.lstWorkstations.curselection()[0]
-        pk = self.workstation_test_methods.get(index)
+        item_id = self.lstWorkstations.selection()[0]
+        pk = self.workstation_test_methods.get(item_id)
         if pk is None:
             self.selected_workstation = None
             self.reset_batch_data()
@@ -1270,14 +1302,14 @@ class Main(tk.Toplevel):
 
     def on_selected_batch(self, evt: Optional[tk.Event] = None) -> None:
         """Handle batch selection change."""
-        if not self.lstBatches.curselection():
+        if not self.lstBatches.selection():
             self.selected_batch = None
             self.reset_cal_data()
             self.reset_graph()
             return
 
-        index = self.lstBatches.curselection()[0]
-        pk = self.dict_batches.get(index)
+        item_id = self.lstBatches.selection()[0]
+        pk = self.dict_batches.get(item_id)
         if pk is None:
             self.selected_batch = None
             self.reset_cal_data()
@@ -1290,12 +1322,13 @@ class Main(tk.Toplevel):
 
     def on_selected_result(self, event: Optional[tk.Event]) -> None:
         """Handle result selection change and load selected_result dict."""
-        if not self.lstResults.curselection():
+        selection = self.lstResults.selection()
+        if not selection:
             self.selected_result = None
             return
 
-        index = self.lstResults.curselection()[0]
-        pk = self.dict_results.get(index)
+        item_id = selection[0]
+        pk = self.dict_results.get(item_id)
         if pk is None:
             self.selected_result = None
             return
@@ -1303,11 +1336,11 @@ class Main(tk.Toplevel):
         self.selected_result = self.engine.get_selected("results", "result_id", pk)
         #print(self.selected_result)
 
-    def _open_result_editor_for_list_index(self, index: int) -> None:
-        """Open result editor in update mode for the given listbox index."""
+    def _open_result_editor_for_item(self, item_id: str) -> None:
+        """Open result editor in update mode for the given treeview item."""
         try:
             # --- Build dictionaries required by result.py ---------------------
-            result_id = self.dict_results.get(index)
+            result_id = self.dict_results.get(item_id)
             if result_id is None:
                 messagebox.showerror(
                     self.engine.app_title,
@@ -1361,7 +1394,7 @@ class Main(tk.Toplevel):
                 "workstations", "workstation_id", workstation_id
             )
 
-            views.result.UI(self, index).on_open()
+            views.result.UI(self, item_id).on_open()
 
         except Exception as e:
             self.engine.on_log(
@@ -1372,24 +1405,21 @@ class Main(tk.Toplevel):
             )
 
 
-    def set_results_row_color(self, index, result, is_enabled, target, sd):
-        """Set color of a result row according to Westgard thresholds."""
-        try:
-            if not is_enabled:
-                self.lstResults.itemconfig(index, {"fg": "gray"})
-                return
+    def _get_result_tags(self, result, is_enabled, target, sd, has_notes):
+        """Return tuple of tags for a result row based on Westgard thresholds."""
+        tags = []
 
-            # 1s, 2s, 3s etc. (simple thresholds)
-            if sd and abs(result - target) > 3 * sd:
-                color = "red"
-            elif sd and abs(result - target) > 2 * sd:
-                color = "orange"
-            else:
-                color = "black"
+        if not is_enabled:
+            tags.append("disabled")
+        elif sd and abs(result - target) > 3 * sd:
+            tags.append("violation_3s")
+        elif sd and abs(result - target) > 2 * sd:
+            tags.append("violation_2s")
 
-            self.lstResults.itemconfig(index, {"fg": color})
-        except Exception as e:
-            pass
+        if has_notes:
+            tags.append("has_notes")
+
+        return tuple(tags)
 
     def on_lj_point_double_click(self, info: dict) -> None:
         """
@@ -1412,14 +1442,14 @@ class Main(tk.Toplevel):
 
             result_id = mapping[idx]
 
-            # Find corresponding listbox index
-            list_index = None
+            # Find corresponding treeview item_id
+            item_id = None
             for k, rid in self.dict_results.items():
                 if rid == result_id:
-                    list_index = k
+                    item_id = k
                     break
 
-            if list_index is None:
+            if item_id is None:
                 messagebox.showerror(
                     self.engine.app_title,
                     "Result not found in list. Cannot edit.",
@@ -1427,14 +1457,13 @@ class Main(tk.Toplevel):
                 )
                 return
 
-            # Sync selection in the listbox
-            self.lstResults.selection_clear(0, tk.END)
-            self.lstResults.selection_set(list_index)
-            self.lstResults.activate(list_index)
-            self.lstResults.see(list_index)
+            # Sync selection in the treeview
+            self.lstResults.selection_set(item_id)
+            self.lstResults.see(item_id)
+            self.lstResults.focus(item_id)
 
             # Open editor
-            self._open_result_editor_for_list_index(list_index)
+            self._open_result_editor_for_item(item_id)
 
         except Exception as e:
             self.engine.on_log(
@@ -1761,7 +1790,7 @@ class Main(tk.Toplevel):
 
         if self.cbTests.current() != -1:
 
-            if self.lstBatches.curselection():
+            if self.lstBatches.selection():
 
                 index = self.cbTests.current()
                 pk = self.test_methods[index]
@@ -1790,7 +1819,7 @@ class Main(tk.Toplevel):
                                    parent=self)
             return
 
-        if not self.lstBatches.curselection():
+        if not self.lstBatches.selection():
             messagebox.showwarning(self.nametowidget(".").title(),
                                    "Not enough data to plot.\nSelect a batch.",
                                    parent=self)
@@ -1835,7 +1864,7 @@ class Main(tk.Toplevel):
             return
 
         # Two batches must be selected
-        items = self.lstBatches.curselection()
+        items = self.lstBatches.selection()
         if not items:
             msg = (
                 "Not enough data to plot a Youden chart.\n"
@@ -1937,7 +1966,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        if self.lstBatches.curselection():
+        if self.lstBatches.selection():
 
             msg = "Insert 30 random results for:\n{0}\nbatch {1} {2}?".format(
                 self.selected_test["description"],
@@ -2015,7 +2044,7 @@ class Main(tk.Toplevel):
 
     def on_batch_double_button(self, evt: Optional[tk.Event] = None) -> None:
 
-        if self.lstBatches.curselection():
+        if self.lstBatches.selection():
             self.on_add_result()
         else:
             msg = "Attention please.\nSelect a batch."
@@ -2030,16 +2059,15 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
-        if not self.lstBatches.curselection():
+        if not self.lstBatches.selection():
             msg = (
                 "Attention please.\nBefore adding a result you must select a batch."
             )
             messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
             return
 
-
-        batch_index = self.lstBatches.curselection()[0]
-        batch_id = self.dict_batches[batch_index]
+        batch_item = self.lstBatches.selection()[0]
+        batch_id = self.dict_batches[batch_item]
         self.selected_batch = self.engine.get_selected("batches", "batch_id", batch_id)
 
         if not self.selected_batch:
@@ -2082,10 +2110,17 @@ class Main(tk.Toplevel):
                 messagebox.showwarning(self.engine.app_title, msg, parent=self)
                 return
 
-            if not self.lstResults.curselection():
+            selection = self.lstResults.selection()
+            if not selection:
                 msg = "Attention please.\nSelect a result."
                 messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
                 return
+
+            # Ensure selected_result is set before opening notes
+            item_id = selection[0]
+            pk = self.dict_results.get(item_id)
+            if pk:
+                self.selected_result = self.engine.get_selected("results", "result_id", pk)
 
             views.notes.UI(self).on_open()
 
