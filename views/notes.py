@@ -39,7 +39,6 @@ class UI(ParentView):
         self.child = None
 
         self.items = tk.StringVar(value="Items: 0")
-        self.test = tk.StringVar()
         self.batch = tk.StringVar()
         self.description = tk.StringVar()
         self.result = tk.StringVar()
@@ -66,40 +65,17 @@ class UI(ParentView):
         )
         frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
 
-        ttk.Label(frm_left, text="Test:").pack(side=tk.TOP, anchor=tk.W)
-        tk.Label(
-            frm_left,
-            font="Verdana 12 bold",
-            textvariable=self.test,
-        ).pack(side=tk.TOP, anchor=tk.W)
-
         ttk.Label(frm_left, text="Batch:").pack(side=tk.TOP, anchor=tk.W)
-        tk.Label(
-            frm_left,
-            font="Verdana 12 bold",
-            textvariable=self.batch,
-        ).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, textvariable=self.batch).pack(side=tk.TOP, anchor=tk.W)
 
         ttk.Label(frm_left, text="Description:").pack(side=tk.TOP, anchor=tk.W)
-        tk.Label(
-            frm_left,
-            font="Verdana 12 bold",
-            textvariable=self.description,
-        ).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, textvariable=self.description).pack(side=tk.TOP, anchor=tk.W)
 
         ttk.Label(frm_left, text="Result:").pack(side=tk.TOP, anchor=tk.W)
-        tk.Label(
-            frm_left,
-            font="Verdana 12 bold",
-            textvariable=self.result,
-        ).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, textvariable=self.result).pack(side=tk.TOP, anchor=tk.W)
 
         ttk.Label(frm_left, text="Received:").pack(side=tk.TOP, anchor=tk.W)
-        tk.Label(
-            frm_left,
-            font="Verdana 12 bold",
-            textvariable=self.received,
-        ).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, textvariable=self.received).pack(side=tk.TOP, anchor=tk.W)
 
         # Middle: Treeview with notes
         frm_middle = ttk.Frame(
@@ -160,18 +136,16 @@ class UI(ParentView):
         Configure title, load parent context, reload data and center the window.
         This method MUST always be called after construction.
         """
-        self.title(f"{self.winfo_name().capitalize()} management")
-
         # Parent MUST provide dicts (PROJECT_RULES: use read_dict).
         self.selected_test = getattr(self.parent, "selected_test", None)
         self.selected_batch = getattr(self.parent, "selected_batch", None)
         self.selected_result = getattr(self.parent, "selected_result", None)
 
-        # Test description
+        # Test description in title
+        test_name = ""
         if isinstance(self.selected_test, dict):
-            self.test.set(self.selected_test.get("description", ""))
-        else:
-            self.test.set("")
+            test_name = self.selected_test.get("description", "")
+        self.title(f"Notes - {test_name}" if test_name else "Notes management")
 
         # Batch: lot_number + description
         if isinstance(self.selected_batch, dict):
@@ -186,17 +160,20 @@ class UI(ParentView):
             value = self.selected_result.get("result")
             received = self.selected_result.get("received")
 
-            if isinstance(value, (int, float)):
-                self.result.set(round(value, 3))
+            if value is not None:
+                try:
+                    self.result.set(round(float(value), 3))
+                except (TypeError, ValueError):
+                    self.result.set("")
             else:
                 self.result.set("")
 
             try:
                 if hasattr(received, "strftime"):
-                    self.received.set(received.strftime("%Y-%m-%d"))
+                    self.received.set(received.strftime("%d-%m-%Y"))
                 else:
                     self.received.set("")
-            except Exception as e:
+            except Exception:
                 self.received.set("")
         else:
             self.result.set("")
