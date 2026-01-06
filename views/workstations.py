@@ -58,18 +58,18 @@ class UI(tk.Toplevel):
         self.child = None                   
 
         # Window properties
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
         self.resizable(True, True)
 
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.bind("<Escape>", self.on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
         # Stabilize real geometry, then center and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -91,54 +91,51 @@ class UI(tk.Toplevel):
         self.pane_left = ttk.Frame(self.pw, style="App.TFrame", padding=6)
         self.pw.add(self.pane_left, minsize=260)
 
-        cols_sites = (
-            ["#0", "Sites", "w", True, 220, 260],
-            ["#1", "",      "w", True,   0,   0],
-        )
+        # Hierarchical tree: Sites → Labs → Sections
+        self.Sites = ttk.Treeview(self.pane_left, show="tree")
+        self.Sites.column("#0", width=260, minwidth=220, stretch=True)
+        self.Sites.heading("#0", text="Sites", anchor=tk.W)
 
-        # Hierarchical tree:
-        #   Sites → Labs → Sections
-        self.Sites = self.engine.get_tree(
-            self.pane_left, cols_sites, show="tree headings"
-        )
-        # Only show the tree column
-        self.Sites["displaycolumns"] = ()
-        self.Sites.pack(fill=tk.BOTH, expand=1)
+        sb_sites = ttk.Scrollbar(self.pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
+        self.Sites.configure(yscrollcommand=sb_sites.set)
+        self.Sites.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_sites.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.Sites.bind("<<TreeviewSelect>>", self.on_branch_selected)
         self.Sites.bind("<Double-1>", self.on_branch_activated)
 
+        # -------------------------- RIGHT PANE ----------------------------- #
         self.pane_right = ttk.Frame(self.pw, style="App.TFrame", padding=6)
         self.pw.add(self.pane_right, minsize=480)
 
-        lf = ttk.LabelFrame(
-            self.pane_right, style="App.TLabelframe", text="Workstations"
-        )
+        lf = ttk.LabelFrame(self.pane_right, style="App.TLabelframe", text="Workstations")
         lf.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        cols_ws = (
-            ["#0", "id",           "w", False,   0,   0],
-            ["#1", "Equipments",   "w",  True, 220, 220],
-            ["#2", "Workstations", "w",  True, 260, 260],
-            ["#3", "Serial",       "w",  True, 140, 140],
-            ["#4", "Device ID",    "w",  True, 200, 200],
-        )
+        cols_ws = ("equipment", "workstation", "serial", "device_id")
+        self.lstWorkstations = ttk.Treeview(lf, columns=cols_ws, show="headings")
 
-        # Workstations list (flat Treeview)
-        self.lstWorkstations = self.engine.get_tree(lf, cols_ws)
-        self.lstWorkstations.pack(fill=tk.BOTH, expand=1)
+        self.lstWorkstations.column("equipment", width=220, minwidth=220, anchor=tk.W, stretch=True)
+        self.lstWorkstations.heading("equipment", text="Equipment", anchor=tk.W)
+
+        self.lstWorkstations.column("workstation", width=260, minwidth=260, anchor=tk.W, stretch=True)
+        self.lstWorkstations.heading("workstation", text="Workstation", anchor=tk.W)
+
+        self.lstWorkstations.column("serial", width=140, minwidth=140, anchor=tk.W, stretch=True)
+        self.lstWorkstations.heading("serial", text="Serial", anchor=tk.W)
+
+        self.lstWorkstations.column("device_id", width=200, minwidth=200, anchor=tk.W, stretch=True)
+        self.lstWorkstations.heading("device_id", text="Device ID", anchor=tk.W)
+
+        sb_ws = ttk.Scrollbar(lf, orient=tk.VERTICAL, command=self.lstWorkstations.yview)
+        self.lstWorkstations.configure(yscrollcommand=sb_ws.set)
+        self.lstWorkstations.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_ws.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Tag used to highlight inactive workstations
-        self.lstWorkstations.tag_configure(
-            "status", background=self.engine.get_rgb(211, 211, 211)
-        )
+        self.lstWorkstations.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
 
-        self.lstWorkstations.bind(
-            "<<TreeviewSelect>>", self.on_workstation_selected
-        )
-        self.lstWorkstations.bind(
-            "<Double-1>", self.on_workstation_activated
-        )
+        self.lstWorkstations.bind("<<TreeviewSelect>>", self.on_workstation_selected)
+        self.lstWorkstations.bind("<Double-1>", self.on_workstation_activated)
 
         
         # Place the sash after the widget has a valid width
@@ -438,7 +435,7 @@ class UI(tk.Toplevel):
         self.child = workstation_ui.UI(self, index=index)
         self.child.on_open()
 
-    def _on_cancel(self, _evt=None) -> None:
+    def on_cancel(self, _evt=None) -> None:
         """Close window safely and unregister from Engine."""
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.engine.safe_close(self)

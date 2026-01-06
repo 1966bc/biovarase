@@ -20,17 +20,18 @@ Expected table schema:
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from views.parent_view import ParentView
 from views.editor import Editor
 
 
-class LookupUI(tk.Toplevel):
+class LookupUI(ParentView):
     """
     Generic list window for simple lookup tables.
 
     Usage pattern (PROJECT_RULES compliant):
 
         win = LookupUI(parent, table="units", ui_name="units")
-        win.show()   # explicit lifecycle entry point
+        win.on_open()   # explicit lifecycle entry point
 
     The class abstracts:
         - loading table rows
@@ -38,30 +39,6 @@ class LookupUI(tk.Toplevel):
         - opening child editor windows
         - window lifecycle management
     """
-
-    _instance = None
-
-    def __new__(cls, parent, *args, **kwargs):
-        """
-        Class-level singleton: ensures one instance per lookup window type.
-
-        If the previous instance still exists, reuse it.
-        Otherwise, create a new one.
-
-        NOTE:
-        - Lifecycle entry point must be explicit via show()
-        - __init__ must NOT call on_open() (PROJECT_RULES)
-        """
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
 
     def __init__(
         self,
@@ -78,18 +55,13 @@ class LookupUI(tk.Toplevel):
         NOTE:
         - __init__ must NOT perform data loading
         - __init__ must NOT call on_open()
-        - Data loading MUST be invoked via show()
+        - Data loading MUST be invoked via on_open()
         """
+        super().__init__(parent, name=ui_name or table)
 
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        # Skip re-initialization on singleton reuse
+        if self._reusing:
             return
-
-        super().__init__(name=ui_name or table)
-
-        self.engine = self.nametowidget(".").engine
-        self._is_init = True
-        self.parent = parent
 
         # Table metadata
         self.table = table
@@ -105,45 +77,16 @@ class LookupUI(tk.Toplevel):
         self.selected_item = None
         self.items = tk.StringVar()
 
-        # Register instance into Engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
-        # Window configuration
-       
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        #self.update_idletasks()
-        #self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+
         # Set reasonable window size for table display
-        self.update_idletasks()
-        min_width = 600   # Wide enough for all columns (40+10+12+25+10 + spacing)
-        min_height = 400  # Show ~20-25 rows comfortably
+        min_width = 600
+        min_height = 400
         self.minsize(min_width, min_height)
-        
-        # Set initial geometry (can be resized by user)
         self.geometry(f"{min_width}x{min_height}")
 
-    # ------------------------------------------------------------------
-    # Public lifecycle
-    # ------------------------------------------------------------------
-    def show(self):
-        """
-        Explicit lifecycle entry point.
-
-        MUST be called by the caller after instantiating LookupUI.
-        Complies with PROJECT_RULES: no automatic on_open() from __init__.
-        """
-        self.after_idle(self.focus_set)
-        self.on_open()
+        self.show()
 
     # ------------------------------------------------------------------
     # Helpers
@@ -212,7 +155,7 @@ class LookupUI(tk.Toplevel):
 
         add_btn("Add",    self.on_add,            underline=0, shortcut="<Alt-a>")
         add_btn("Update", self.on_item_activated, underline=0, shortcut="<Alt-u>")
-        add_btn("Cancel", self._on_cancel,        underline=0, shortcut="<Alt-c>")
+        add_btn("Cancel", self.on_cancel,         underline=0, shortcut="<Alt-c>")
 
         self.bind("<Return>", self.on_item_activated)
 
@@ -325,7 +268,7 @@ class LookupUI(tk.Toplevel):
             pk_field=self.primary_key,
             desc_field=self.desc_field,
             label_text=self.label_text,
-            ui_name=self.table,
+            ui_name=f"{self.table}_editor",
         )
 
         self.child.on_open()
@@ -333,9 +276,6 @@ class LookupUI(tk.Toplevel):
     # ------------------------------------------------------------------
     # Close
     # ------------------------------------------------------------------
-    def _on_cancel(self, _evt=None):
-        """
-        Close the lookup window and remove it from Engine registry.
-        """
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None):
+        """Close the lookup window."""
+        super().on_cancel(evt)

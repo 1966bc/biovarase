@@ -9,39 +9,29 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
-import views.user as ui  
+
+from views.parent_view import ParentView
+import views.user as ui
 
 
 SQL = """
-    SELECT 
+    SELECT
         user_id,
         last_name,
         first_name,
         nickname,
         status
-    FROM users 
+    FROM users
     ORDER BY last_name ASC, first_name ASC
 """
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Users Management Window - Master view (Singleton).
-    
+
     Displays all users in the system with their full name and nickname.
     Uses fixed-width monospaced font to simulate table columns with header.
-    
-    Columns:
-        - Last Name: User's surname
-        - First Name: User's given name
-        - Nickname: Login username
-        - Status: Active (enabled) or inactive (grayed out)
-    
-    Architecture:
-        - Singleton pattern (only one instance allowed)
-        - Uses fixed-width columns with monospaced font (TkFixedFont)
-        - Header row at index 0 (non-selectable, styled)
-        - Data rows start at index 1
     """
 
     # ------------------------------------------------------------------
@@ -52,69 +42,31 @@ class UI(tk.Toplevel):
     COL_NICKNAME_WIDTH = 20    # Nickname (login)
     COL_SPACING = 3            # Spaces between columns
 
-    _instance = None  
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance._focus_list)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="users")
+
+        if self._reusing:
             return
-
-        super().__init__(name="users")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-
-        self._is_init = True
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
-
-        # Register this window in the Engine's instance registry
-        self.engine.dict_instances[self.winfo_name()] = self
 
         self.table = "users"
         self.primary_key = "user_id"
 
-        self.child = None            # child editor (frames.user.UI)
+        self.child = None            # child editor (views.user.UI)
         self.dict_items = {}         # listbox index -> user_id (starts at 1, 0 is header)
         self.selected_item = None    # hybrid dict from engine.get_selected()
         self.items = tk.StringVar()  # status text (items count)
 
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
         self.bind("<Return>", self.on_item_activated)
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        # Set reasonable window size for table display
-        self.update_idletasks()
-        min_width = 750   # Wide enough for all columns + spacing
-        min_height = 500  # Show ~20-25 rows comfortably
+
+        min_width = 750
+        min_height = 500
         self.minsize(min_width, min_height)
-        
-        # Set initial geometry (can be resized by user)
         self.geometry(f"{min_width}x{min_height}")
+
+        self.show()
 
     # ------------------------------------------------------------------ UI BUILD
     def _build_ui(self):
@@ -151,7 +103,7 @@ class UI(tk.Toplevel):
 
         self._add_button(frm_buttons, "Add",    self.on_add,            "<Alt-a>")
         self._add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>")
-        self._add_button(frm_buttons, "Cancel", self._on_cancel,        "<Alt-c>")
+        self._add_button(frm_buttons, "Cancel", self.on_cancel,         "<Alt-c>")
 
     def _add_button(self, parent, text, cmd, hotkey):
         """Helper: create a button and bind an optional keyboard shortcut."""
@@ -385,11 +337,6 @@ class UI(tk.Toplevel):
         self.child.on_open()
 
     # ------------------------------------------------------------------ CLOSE
-    def _on_cancel(self, _evt=None):
-        """
-        Proper window close:
-            - remove from Engine.dict_instances
-            - safely destroy the window via Engine.safe_close
-        """
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None):
+        """Close window."""
+        super().on_cancel(evt)

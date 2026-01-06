@@ -6,11 +6,13 @@
 # modify:   autumn MMXXV
 #-----------------------------------------------------------------------------
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Z-score dialog (Singleton Toplevel).
 
@@ -21,40 +23,18 @@ class UI(tk.Toplevel):
 
     _instance = None  # singleton cache
 
-    def __new__(cls, parent):
-        """Reuse a living instance if present; otherwise create a new one."""
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None  # stale reference; recreate
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
     def __init__(self, parent):
-        # Guard against double-initialization when reusing the singleton
         if getattr(self, "_is_init", False):
             self.parent = parent
             self.on_open()
             return
 
-        super().__init__(name="zscore")
+        super().__init__(parent, name="zscore")
 
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-
-        # Window setup
         self.transient(parent)
         self.resizable(False, False)
         self.attributes("-topmost", True)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-
-        # Hotkeys
         self.bind("<Escape>", self._on_close)
         self.bind("<Alt-c>", self._on_close)
         self.bind("<Alt-s>", self._on_save)
@@ -69,7 +49,7 @@ class UI(tk.Toplevel):
         self.columnconfigure(1, weight=0)
 
         self._build_ui()
-        self.engine.center_window_on_screen(self)
+        self.show(on_screen=True)
 
         self._is_init = True
         self.on_open()

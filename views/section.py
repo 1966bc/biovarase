@@ -10,8 +10,10 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from views.child_view import ChildView
 
-class UI(tk.Toplevel):
+
+class UI(ChildView):
     """
     Section editor.
 
@@ -25,17 +27,11 @@ class UI(tk.Toplevel):
         """
         Standard Toplevel initialization (no singleton guard).
         """
-        super().__init__(name="section")
-        
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
+        super().__init__(parent, name="section")
+
         self.index = index  # None for insert, pk for update
 
-       
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        # Hotkeys
         self.bind("<Alt-s>", self.on_save)
 
         # Tk variables
@@ -53,14 +49,8 @@ class UI(tk.Toplevel):
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show()
 
     # ------------------------------------------------------------------ UI BUILD
     def _build_ui(self):
@@ -116,7 +106,7 @@ class UI(tk.Toplevel):
             style="App.TButton",
             text="Cancel",
             underline=0,
-            command=self._on_cancel,
+            command=self.on_cancel,
         )
         btn_cancel.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
@@ -423,7 +413,7 @@ class UI(tk.Toplevel):
             self._reselect_in_parent(resolved_id)
 
             # Finally close the editor
-            self._on_cancel()
+            self.on_cancel()
 
         except Exception as exc:
             messagebox.showerror(
@@ -473,9 +463,6 @@ class UI(tk.Toplevel):
         except Exception as e:
             self.engine.on_log("_reselect_in_parent", e, type(e), sys.modules[__name__])
 
-    
-    def _on_cancel(self, _evt=None):
-        try:
-            self.destroy()
-        except Exception as e:
-            pass
+    def on_cancel(self, evt=None):
+        """Close dialog."""
+        super().on_cancel(evt)

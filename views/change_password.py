@@ -7,28 +7,14 @@
 # -----------------------------------------------------------------------------
 
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 import bcrypt
 
 
-class UI(tk.Toplevel):
-    
-    _instance = None
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
 
     def __init__(self, parent):        
         if getattr(self, "_is_init", False):
@@ -56,12 +42,7 @@ class UI(tk.Toplevel):
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
         
@@ -200,7 +181,7 @@ class UI(tk.Toplevel):
             self.engine.write(False, sql, (hashed, user_id))
 
             messagebox.showinfo(self.parent.title(), "Password successfully changed.", parent=self)
-            self._on_cancel()
+            self.on_cancel()
 
         except Exception as e:
             messagebox.showerror(self.parent.title(),

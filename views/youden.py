@@ -9,12 +9,14 @@
 """Youden module of Biovarase — rewritten to use pure Tkinter Canvas."""
 
 import tkinter as tk
+
+from views.child_view import ChildView
 from tkinter import ttk
 
 from youden_canvas import YoudenPlotCanvas   # <<< nuovo import
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     """
     Youden plot window.
     Uses YoudenPlotCanvas instead of Matplotlib.
@@ -40,13 +42,7 @@ class UI(tk.Toplevel):
         self.show_labels_var = tk.BooleanVar(value=False)
 
         self._build_ui()
-
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 

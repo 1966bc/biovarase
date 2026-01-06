@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from views.parent_view import ParentView
 import views.control as control_editor
 
 
@@ -25,39 +26,13 @@ SQL = (
 )
 
 
-class UI(tk.Toplevel):
-
-    _instance = None
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
 
     def __init__(self, parent):
-        # Singleton guard
-        if getattr(self, "_is_init", False):
+        super().__init__(parent, name="controls")
+
+        if self._reusing:
             return
-
-        super().__init__(name="controls")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
 
         self.table = "controls"
         self.primary_key = "control_id"
@@ -67,24 +42,12 @@ class UI(tk.Toplevel):
 
         self.items = tk.StringVar()
 
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
-        # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
         self.bind("<Return>", self._on_item_activated)
 
-      
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-        #self.transient(self.parent)
+        self.show()
 
     # ------------------------------------------------------------------
     # UI
@@ -103,18 +66,26 @@ class UI(tk.Toplevel):
             textvariable=self.items,
         ).pack(fill=tk.X, padx=2, pady=2)
 
-        cols = (
-            ["#0", "id",          "w", False,  60,  60],
-            ["#1", "Description", "w", True,  260, 260],
-            ["#2", "Reference",   "w", True,  120, 120],
-            ["#3", "Supplier",    "w", True,  180, 180],
-        )
+        cols_controls = ("description", "reference", "supplier")
+        self.lstItems = ttk.Treeview(frm_left, columns=cols_controls, show="headings")
 
-        self.lstItems = self.engine.get_tree(frm_left, cols)
+        self.lstItems.column("description", width=260, minwidth=260, anchor=tk.W, stretch=True)
+        self.lstItems.heading("description", text="Description", anchor=tk.W)
+
+        self.lstItems.column("reference", width=120, minwidth=120, anchor=tk.W, stretch=True)
+        self.lstItems.heading("reference", text="Reference", anchor=tk.W)
+
+        self.lstItems.column("supplier", width=180, minwidth=180, anchor=tk.W, stretch=True)
+        self.lstItems.heading("supplier", text="Supplier", anchor=tk.W)
+
+        sb_controls = ttk.Scrollbar(frm_left, orient=tk.VERTICAL, command=self.lstItems.yview)
+        self.lstItems.configure(yscrollcommand=sb_controls.set)
+        self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sb_controls.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.lstItems.tag_configure("is_disabled", background="light gray")
         self.lstItems.bind("<<TreeviewSelect>>", self._on_item_selected)
         self.lstItems.bind("<Double-1>", self._on_item_activated)
-        self.lstItems.pack(fill=tk.BOTH, expand=True)
 
         # Right: Buttons
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
@@ -128,7 +99,7 @@ class UI(tk.Toplevel):
 
         add_btn("Add",    self._on_add,            "<Alt-a>")
         add_btn("Update", self._on_item_activated, "<Alt-u>")
-        add_btn("Cancel", self._on_cancel,         "<Alt-c>")
+        add_btn("Cancel", self.on_cancel,          "<Alt-c>")
 
        
 
@@ -206,7 +177,6 @@ class UI(tk.Toplevel):
         self.child = control_editor.UI(self, index=index)
         self.child.on_open()
 
-    def _on_cancel(self, _evt=None) -> None:
-        """Close window safely and unregister from Engine."""
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None) -> None:
+        """Close window."""
+        super().on_cancel(evt)

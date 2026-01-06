@@ -9,6 +9,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from views.child_view import ChildView
+
 
 SQL_SUPPLIERS = (
     "SELECT supplier_id, description "
@@ -18,25 +20,13 @@ SQL_SUPPLIERS = (
 )
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     def __init__(self, parent, index=None):
-        super().__init__(name="control")
+        super().__init__(parent, name="control")
 
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
-
-        self.parent = parent
         self.index = index
-        self.engine = self.nametowidget(".").engine
-
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
 
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
@@ -52,16 +42,10 @@ class UI(tk.Toplevel):
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=0)
 
-         # --- Build interface ------------------------------------------------
+        # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show()
 
     def _build_ui(self):
         pad = {"padx": 8, "pady": 8}
@@ -108,7 +92,7 @@ class UI(tk.Toplevel):
         btn_save = ttk.Button(right, text="Save", style="App.TButton", command=self._on_save)
         btn_save.grid(row=0, column=0, sticky="ew", pady=4)
 
-        btn_cancel = ttk.Button(right, text="Cancel", style="App.TButton", command=self._on_cancel)
+        btn_cancel = ttk.Button(right, text="Cancel", style="App.TButton", command=self.on_cancel)
         btn_cancel.grid(row=1, column=0, sticky="ew", pady=4)
 
     def on_open(self):
@@ -228,7 +212,7 @@ class UI(tk.Toplevel):
             last_id = self.engine.write(sql, args)
             self.parent.set_values()
             self._reselect_in_parent(last_id if self.index is None else None)
-            self._on_cancel()
+            self.on_cancel()
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
@@ -253,6 +237,6 @@ class UI(tk.Toplevel):
             # Defensive: do not crash if iid is missing
             pass
 
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, evt=None):
         """Close the editor window."""
-        self.destroy()
+        super().on_cancel(evt)

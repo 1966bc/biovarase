@@ -20,6 +20,8 @@ Features:
 
 import sys
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 from datetime import date, datetime
@@ -33,7 +35,7 @@ ROLE_TECHNICIAN = 2
 ROLE_AUTOLOGIN = 3
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Daily QC Validation window (singleton).
 
@@ -55,49 +57,16 @@ class UI(tk.Toplevel):
         - Excel export of displayed data
     """
 
-    _instance = None
-
-    def __new__(cls, parent):
-        """Singleton: only one instance allowed."""
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
     def __init__(self, parent):
         """Initialize the validation window."""
         if getattr(self, "_initialized", False):
             return
 
-        super().__init__(name="daily_validation")
+        super().__init__(parent, name="daily_validation")
         self._initialized = True
-
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-
-        #try:
-        #    self.transient(parent)
-        #except Exception as e:
-        #    pass
 
         self.title("Daily QC Validation")
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-
-        # Hotkeys
         self.bind("<Escape>", self.on_close)
         self.bind("<F5>", lambda e: self._load_results())
 
@@ -109,12 +78,7 @@ class UI(tk.Toplevel):
 
         # Build UI
         self._init_ui()
-
-        # Center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
+        self.show(on_screen=True)
 
     def _init_ui(self):
         """Build the complete UI."""

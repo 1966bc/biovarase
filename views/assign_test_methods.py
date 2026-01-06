@@ -7,11 +7,13 @@
 #-----------------------------------------------------------------------------
 
 import tkinter as tk
+
+from views.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     """
     Dialog to assign Test Methods to a single workstation.
 
@@ -51,17 +53,9 @@ class UI(tk.Toplevel):
     # Init
     # ------------------------------------------------------------------
     def __init__(self, parent):
-        super().__init__(name="assign_test_methods")
-
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
+        super().__init__(parent, name="assign_test_methods")
 
         self.resizable(True, True)
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-
-        # Hotkeys
-        self.bind("<Escape>", self.on_cancel)
-        self.bind("<Alt-c>", self.on_cancel)
         self.bind("<Return>", self._assign_current)
         self.bind("<Alt-a>", self._assign_current)
 
@@ -74,9 +68,7 @@ class UI(tk.Toplevel):
         self.site_context = {}
 
         self._init_ui()
-
-        if hasattr(self.engine, "center_window_relative_to_parent"):
-            self.engine.center_window_relative_to_parent(self)
+        self.show()
 
     # ------------------------------------------------------------------
     # UI
@@ -146,8 +138,7 @@ class UI(tk.Toplevel):
         # Fill list (site + workstation_id so NOT EXISTS always filters correctly)
         self.set_values(site_id, workstation_id)
 
-        if hasattr(self.engine, "center_window_relative_to_parent"):
-            self.engine.center_window_relative_to_parent(self)
+        self.show()
 
         try:
             self.lstItems.focus_set()

@@ -7,11 +7,13 @@
 #-----------------------------------------------------------------------------
 
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Test Method editor (Singleton Toplevel).
 
@@ -23,45 +25,17 @@ class UI(tk.Toplevel):
 
     _instance = None  # class-level singleton cache
 
-    def __new__(cls, parent, index=None):
-        """Reuse the living instance if present; otherwise create a new one."""
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    # bring to front
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None  # stale reference; recreate
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
     def __init__(self, parent, index=None):
-        # Guard: on reuse do not rebuild the UI
         if getattr(self, "_is_init", False):
             self.parent = parent
             self.index = index
             return
 
-        super().__init__(name="test_method")
-
-        # Context
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
+        super().__init__(parent, name="test_method")
         self.index = index
 
-        # Window setup
-        #self.attributes("-topmost", True)
         self.transient(parent)
         self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
-        # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
@@ -74,7 +48,7 @@ class UI(tk.Toplevel):
 
         # Build UI
         self._build_ui()
-        self.engine.center_window_relative_to_parent(self)
+        self.show()
 
         self._is_init = True
 
@@ -138,7 +112,7 @@ class UI(tk.Toplevel):
         ttk.Button(right, style="App.TButton", text="Save", underline=0,
                    command=self._on_save).grid(row=0, column=0, sticky="ew", padx=4, pady=4)
         ttk.Button(right, style="App.TButton", text="Cancel", underline=0,
-                   command=self._on_cancel).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
+                   command=self.on_cancel).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
 
     # ---------------------------------------------------------------------
     # Lifecycle
@@ -460,7 +434,7 @@ class UI(tk.Toplevel):
             # refresh parent view and reselect
             self.parent._load_methods_for_selected_test()
             self._reselect_in_parent(last_id)
-            self._on_cancel()
+            self.on_cancel()
         except Exception as exc:
             messagebox.showerror(self.engine.app_title, f"Save error:\n{exc}", parent=self)
 
@@ -488,5 +462,5 @@ class UI(tk.Toplevel):
         except Exception as e:
             pass
         
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         self.engine.safe_close(self)

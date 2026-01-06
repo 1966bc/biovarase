@@ -52,11 +52,11 @@ class UI(tk.Toplevel):
         self.attributes('-topmost', True)
         self.transient(parent)
         self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.bind("<Escape>", self.on_cancel)
         
         self._build_ui()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         
         self.on_open()
 
@@ -100,7 +100,7 @@ class UI(tk.Toplevel):
     def on_open(self):
         self.title("Z-Score, P-Value, Probability")
         
-    def _on_cancel(self, evt=None):
+    def on_cancel(self, evt=None):
         """Handles closing (Esc, X button, or direct call) and resets the Singleton reference."""
         # Reset the Singleton reference so a new instance can be created next time.
         UI._instance = None

@@ -87,14 +87,24 @@ affected = self.engine.write(False, "UPDATE results SET validated = 1 WHERE resu
 
 ### GUI Window Types
 
-**Master windows** (singleton via `__new__()`):
-- One instance only, list/tree-based views
-- Register in `Engine.dict_instances`
-- All in `frames/` directory
+**Base classes** (in `views/`):
+- `ParentView` - Singleton master windows with anti-flash
+- `ChildView` - Editor dialogs with auto-registration
 
-**Editor windows** (multiple instances allowed):
-- Fresh instance each time
-- Update parent via `self.parent._load_tree()` after save
+**Usage pattern:**
+```python
+class UI(ParentView):  # or ChildView
+    def __init__(self, parent):
+        super().__init__(name="myview")
+        if self._reusing:  # ParentView only
+            return
+        # ... build UI ...
+        self.show()  # or self.show(on_screen=True)
+```
+
+**Window positioning:**
+- `self.show()` - Center on parent (default)
+- `self.show(on_screen=True)` - Center on screen
 
 **Cross-window refresh:** `self.engine.refresh_windows_for_table("table_name")`
 

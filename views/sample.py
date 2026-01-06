@@ -6,31 +6,24 @@
 # modify:   autumn MMXXV
 #-----------------------------------------------------------------------------
 import tkinter as tk
+
+from views.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     def __init__(self, parent, index=None):
-        super().__init__(name="sample")
-        
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-        # References
+        super().__init__(name="sample")        # References
         self.parent = parent
         self.index = index  # None → INSERT, pk → UPDATE
         self.engine = self.nametowidget(".").engine
 
         self.selected_item: dict | None = None
         
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
-        # Hotkeys
-        self.bind("<Escape>", self._on_cancel) #Alt+F4
-        self.bind("<Alt-c>", self._on_cancel)
+        self.resizable(False, False)        # Hotkeys
+        self.bind("<Escape>", self.on_cancel) #Alt+F4
+        self.bind("<Alt-c>", self.on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
         
@@ -47,12 +40,7 @@ class UI(tk.Toplevel):
 
          # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
        
@@ -93,7 +81,7 @@ class UI(tk.Toplevel):
         btn_save.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         
         btn_cancel = ttk.Button(
-            frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self._on_cancel
+            frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.on_cancel
         )
         btn_cancel.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
     
@@ -183,7 +171,7 @@ class UI(tk.Toplevel):
             last_id = self.engine.write(sql, args)
             self.parent.set_values()
             self._reselect_in_parent(last_id if self.index is None else None)
-            self._on_cancel()
+            self.on_cancel()
         except Exception as exc:
             messagebox.showerror(self.nametowidget(".").title(), f"Save error:\n{exc}", parent=self)
 
@@ -337,7 +325,7 @@ class UI(tk.Toplevel):
         self.parent.on_item_selected()
         # Alternative: lb.event_generate("<<ListboxSelect>>")
   
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         """Close the window and clear the Singleton reference."""
         type(self)._instance = None
         self.destroy()

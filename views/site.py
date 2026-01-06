@@ -10,18 +10,13 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from views.child_view import ChildView
 
-class UI(tk.Toplevel):
+
+class UI(ChildView):
     def __init__(self, parent, index=None):
-        super().__init__(name="site")
+        super().__init__(parent, name="site")
 
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
         self.index = index
 
         # State
@@ -34,26 +29,14 @@ class UI(tk.Toplevel):
         self.dict_companies: dict[int, int] = {}  # idx -> supplier_id (company)
         self.dict_sites: dict[int, int] = {}      # idx -> supplier_id (site)
 
-        # Window
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show()
 
     def _build_ui(self):
         paddings = {"padx": 6, "pady": 6}
@@ -105,7 +88,7 @@ class UI(tk.Toplevel):
         btn_cancel = ttk.Button(
             btns,
             text="Cancel",
-            command=self._on_cancel,
+            command=self.on_cancel,
             underline=0,
             style="App.TButton",
         )
@@ -354,7 +337,7 @@ class UI(tk.Toplevel):
                     pass
 
             # 7) Close this editor window
-            self._on_cancel()
+            self.on_cancel()
 
         except Exception as exc:
             # Log errors safely (logging must not break the UI)
@@ -371,8 +354,6 @@ class UI(tk.Toplevel):
             messagebox.showerror(title, f"Save error:\n{exc}", parent=self)
 
 
-    def _on_cancel(self, _evt=None):
-        try:
-            self.destroy()
-        except Exception as e:
-            pass
+    def on_cancel(self, evt=None):
+        """Close dialog."""
+        super().on_cancel(evt)

@@ -88,11 +88,11 @@ class UI(tk.Toplevel):
 
         # Window
         self.resizable(True, True)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
 
         # Hot keys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.bind("<Escape>", self.on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
 
         # State
         self.table = "sites"
@@ -107,7 +107,7 @@ class UI(tk.Toplevel):
         self._build_ui()
         # Stabilize real geometry, then center and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -172,7 +172,7 @@ class UI(tk.Toplevel):
 
         add_btn("Add",    self._on_add,            underline=0, shortcut="<Alt-a>")
         add_btn("Update", self._on_item_activated, underline=0, shortcut="<Alt-u>")
-        add_btn("Cancel", self._on_cancel,         underline=0, shortcut="<Alt-c>")
+        add_btn("Cancel", self.on_cancel,         underline=0, shortcut="<Alt-c>")
 
         self.bind("<Return>", self._on_item_activated)
 
@@ -439,7 +439,7 @@ class UI(tk.Toplevel):
         self._reselect_by_pk(pk_to_select)
 
     # ------------------------------------------------------------- close
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         """Close handler: remove instance from Engine dict and close safely."""
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.engine.safe_close(self)

@@ -10,40 +10,29 @@ Note editor window.
 
 This Toplevel is the editor (child window) for a single note
 linked to a QC result. It is opened by the master window
-`frames.notes.UI`.
+`views.notes.UI`.
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 from calendarium import Calendarium
+from views.child_view import ChildView
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     """Editor window for a single note (insert / update)."""
 
     def __init__(self, parent, index=None):
         """
-        :param parent: master window (frames.notes.UI)
+        :param parent: master window (views.notes.UI)
         :param index:  note_id (Treeview iid) or None for INSERT
         """
-        super().__init__(name="note")
+        super().__init__(parent, name="note")
 
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-
-        self.parent = parent
         self.index = index            # Treeview iid (note_id) or None
-        self.engine = self.nametowidget(".").engine
-
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
 
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
@@ -66,14 +55,8 @@ class UI(tk.Toplevel):
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show()
 
 
     # ------------------------------------------------------------------ UI --
@@ -141,7 +124,7 @@ class UI(tk.Toplevel):
             right,
             text="Cancel",
             style="App.TButton",
-            command=self._on_cancel,
+            command=self.on_cancel,
         )
         btn_cancel.grid(row=1, column=0, sticky="ew", pady=4)
 
@@ -336,7 +319,7 @@ class UI(tk.Toplevel):
                 except Exception as e:
                     pass
 
-            self._on_cancel()
+            self.on_cancel()
 
         except Exception as e:
             # Log secondo PROJECT_RULES
@@ -354,9 +337,6 @@ class UI(tk.Toplevel):
             )
 
     # ---------------------------------------------------------- Lifecycle ---
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, evt=None):
         """Close the editor window."""
-        try:
-            self.destroy()
-        except Exception as e:
-            pass
+        super().on_cancel(evt)
