@@ -304,7 +304,7 @@ class UI(ChildView):
 
     def _reselect_in_parent(self, target_pk=None):
         """
-        Reselect item in parent using only its Listbox (lstItems):
+        Reselect item in parent Treeview (lstItems):
 
             - UPDATE: uses PK of selected_item.
             - INSERT: uses target_pk (last inserted id).
@@ -316,16 +316,15 @@ class UI(ChildView):
             else:
                 return
 
-        lst_index = next(
-            (k for k, v in self.parent.dict_items.items() if v == target_pk),
-            None,
-        )
-        if lst_index is None:
-            return
-
-        self.parent.lstItems.see(lst_index)
-        self.parent.lstItems.selection_set(lst_index)
-        self.parent.on_item_selected()
+        # Treeview iid is str(user_id)
+        iid = str(target_pk)
+        try:
+            self.parent.lstItems.selection_set(iid)
+            self.parent.lstItems.see(iid)
+            self.parent.lstItems.focus(iid)
+            self.parent.on_item_selected()
+        except Exception:
+            pass
 
     
     def _on_reset(self, _evt=None):
