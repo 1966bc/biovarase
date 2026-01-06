@@ -35,10 +35,10 @@ class Launcher:
                 os.startfile(path)
                 self.launch_result = True
 
-        except:
+        except (OSError, subprocess.SubprocessError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
             self.launch_result = False
 

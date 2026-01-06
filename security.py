@@ -393,9 +393,9 @@ def test_encryption():
         if os.path.exists('test_config.enc'):
             os.remove('test_config.enc')
             print("\n7. Cleanup: test_config.enc removed")
-    except:
+    except OSError:
         pass
-    
+
     print("="*60 + "\n")
 
 
