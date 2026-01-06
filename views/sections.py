@@ -10,11 +10,12 @@ from tkinter import ttk
 from tkinter import messagebox
 
 import views.section as ui
+from views.parent_view import ParentView
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
-    Sections management window (singleton).
+    Sections management window.
 
     Left pane  : Sites → Labs tree
     Right pane : Sections for the selected Lab
@@ -23,65 +24,23 @@ class UI(tk.Toplevel):
     Double-click on a Section    → open section editor in UPDATE mode
     """
 
-    _instance = None
-
-    def __new__(cls, parent):
-        """
-        Standard Toplevel singleton logic:
-        if an instance exists → bring to front instead of creating a new one.
-        """
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="sections")
+        if self._reusing:
             return
 
-        super().__init__(name="sections")
-        self._is_init = True
-
-        # Engine + singleton registry
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-        self.parent = parent
-
-        # Table info
         self.table = "sections"
         self.primary_key = "section_id"
 
-        # State
         self.child = None
         self.selected_lab = None
         self.selected_section = None
 
         self.resizable(True, True)
-
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        self.bind("<Escape>", self.on_cancel)
         self.bind("<Alt-c>", self.on_cancel)
 
-        # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window(self, on_screen=True)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show(on_screen=True)
 
     # ---------------------------------------------------------------------- UI
     def _build_ui(self):
@@ -366,6 +325,5 @@ class UI(tk.Toplevel):
 
     # ---------------------------------------------------------------------- CLOSE
     def on_cancel(self, _evt=None):
-        """Proper window close + deregister from Engine."""
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+        """Proper window close."""
+        super().on_cancel()

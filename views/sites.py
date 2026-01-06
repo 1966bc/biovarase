@@ -10,115 +10,58 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import views.site as ui
+from views.parent_view import ParentView
 
 
 SQL = """
-    SELECT 
-        sites.site_id, 
+    SELECT
+        sites.site_id,
         (SELECT suppliers.description
            FROM suppliers
-          WHERE suppliers.supplier_id = sites.supplier_id) AS company, 
+          WHERE suppliers.supplier_id = sites.supplier_id) AS company,
         (SELECT suppliers.description
            FROM suppliers
-          WHERE suppliers.supplier_id = sites.comp_id)      AS site, 
-        sites.status 
-    FROM sites 
+          WHERE suppliers.supplier_id = sites.comp_id)      AS site,
+        sites.status
+    FROM sites
     ORDER BY company ASC
 """
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
-    Sites Management Window - Master view (Singleton).
-    
+    Sites Management Window.
+
     Displays all sites in the system with their associated company and site name.
     Uses fixed-width monospaced font to simulate table columns with header.
-    
-    Columns:
-        - Company (supplier_id): Hospital/company name
-        - Site (comp_id): Site/location name
-        - Status: Active (enabled) or inactive (grayed out)
-    
-    Architecture:
-        - Singleton pattern (only one instance allowed)
-        - Uses fixed-width columns with monospaced font (TkFixedFont)
-        - Header row at index 0 (non-selectable, styled)
-        - Data rows start at index 1
     """
 
-    # ------------------------------------------------------------------
-    # Column Layout Constants (Single Source of Truth)
-    # ------------------------------------------------------------------
-    COL_COMPANY_WIDTH = 40   # Company/supplier name
-    COL_SITE_WIDTH = 40      # Site name
-    COL_SPACING = 3          # Spaces between columns
-
-    _instance = None
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+    # Column Layout Constants
+    COL_COMPANY_WIDTH = 40
+    COL_SITE_WIDTH = 40
+    COL_SPACING = 3
 
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="sites")
+        if self._reusing:
             return
 
-        super().__init__(name="sites")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
-        # Window
         self.resizable(True, True)
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-
-        # Hot keys
-        self.bind("<Escape>", self.on_cancel)
         self.bind("<Alt-c>", self.on_cancel)
 
-        # State
         self.table = "sites"
         self.primary_key = "site_id"
 
         self.child = None
-        self.selected_item = None      # hybrid dict from get_selected
-        self.dict_items = {}           # idx listbox -> site_id (starts at 1, 0 is header)
+        self.selected_item = None
+        self.dict_items = {}
         self.items = tk.StringVar()
 
-        # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window(self, on_screen=True)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        # Set reasonable window size for table display
-        self.update_idletasks()
-        min_width = 700   # Wide enough for both columns + spacing
-        min_height = 500  # Show ~20-25 rows comfortably
-        self.minsize(min_width, min_height)
-        
-        # Set initial geometry (can be resized by user)
-        self.geometry(f"{min_width}x{min_height}")
+
+        self.minsize(700, 500)
+        self.geometry("700x500")
+        self.show(on_screen=True)
 
     # ----------------------------------------------------------------- UI
     def _build_ui(self):
@@ -440,6 +383,5 @@ class UI(tk.Toplevel):
 
     # ------------------------------------------------------------- close
     def on_cancel(self, _evt=None):
-        """Close handler: remove instance from Engine dict and close safely."""
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+        """Close handler."""
+        super().on_cancel()

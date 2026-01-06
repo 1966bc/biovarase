@@ -7,58 +7,22 @@
 # -----------------------------------------------------------------------------
 import tkinter as tk
 from tkinter import ttk
+from views.parent_view import ParentView
 
 
-class UI(tk.Toplevel):
-    """
-    Informational window for 'Z-Score, P-Value, Probability'.
-    - Implements the Singleton pattern: ensures only one instance exists.
-    - Layout: A Frame containing a 3-column table of Labels.
-    """
-    _instance = None  # class-level singleton cache
-
-    def __new__(cls, parent):
-        """Return the existing instance if alive; otherwise create a new one."""
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus)
-                    return cls._instance
-            except Exception as e:
-                # If the underlying Tk widget is in an inconsistent state,
-                # ignore and recreate a fresh instance.
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
+    """Informational window for 'Z-Score, P-Value, Probability'."""
 
     def __init__(self, parent):
-        """
-        Guarded initializer: when the instance is reused, skip widget rebuilds.
-        """
-        # Prevents double initialization if the instance was retrieved from __new__
-        if getattr(self, "_is_init", False):
-            self.parent = parent
-            return
-        
         super().__init__(parent, name="zscore")
-        
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        
-        self.attributes('-topmost', True)
-        self.transient(parent)
+        if self._reusing:
+            return
+
+        self.title("Z-Score, P-Value, Probability")
         self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        self.bind("<Escape>", self.on_cancel)
-        
+
         self._build_ui()
-        self.engine.center_window(self, on_screen=True)
-        
-        self.on_open()
+        self.show(on_screen=True)
 
     def _build_ui(self):
         """Builds the user interface table."""
@@ -97,11 +61,3 @@ class UI(tk.Toplevel):
                     row=r, column=c, sticky=tk.W, **content_padding
                 )
 
-    def on_open(self):
-        self.title("Z-Score, P-Value, Probability")
-        
-    def on_cancel(self, evt=None):
-        """Handles closing (Esc, X button, or direct call) and resets the Singleton reference."""
-        # Reset the Singleton reference so a new instance can be created next time.
-        UI._instance = None
-        self.destroy()

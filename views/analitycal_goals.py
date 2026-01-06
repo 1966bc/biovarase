@@ -7,79 +7,24 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from views.parent_view import ParentView
 
 
-class UI(tk.Toplevel):
-    """
-    Single-instance dialog (singleton).
+class UI(ParentView):
+    """Single-instance dialog using ParentView pattern."""
 
-    __new__ reuses the existing window if still alive.
-    __init__ is guarded to avoid rebuilding the UI on reuse.
-    """
-
-    _instance = None  # singleton cache
-
-    # --- Singleton allocation ------------------------------------------------
-    def __new__(cls, parent, index=None):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    return cls._instance
-            except Exception as e:
-                pass
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
-    # --- Init once (guarded) -------------------------------------------------
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            # Reuse path: only update parent reference
-            self.parent = parent
+        super().__init__(parent, name="analytical_goals")
+        if self._reusing:
             return
 
-        super().__init__(name="analytical_goals")
-        self._is_init = True
-
-        # Engine reference from root window "."
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
-
-        # Register this window in Engine registry
-        try:
-            self.engine.dict_instances[self.winfo_name()] = self
-        except Exception as e:
-            pass
-
-        # Basic window configuration
         self.title("Analytical Goals")
         self.resizable(False, False)
 
-        # State variables
         self.elements = tk.IntVar(value=0)
 
-        # --- Build UI off-screen (anti-flash) --------------------------------
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        try:
-            self.transient(self.parent)
-        except Exception as e:
-            pass
-
         self._init_ui()
-
-        # Finalize geometry: center and show without shaking
-        self.update_idletasks()
-        try:
-            self.engine.center_window(self, on_screen=True)
-        except Exception as e:
-            pass
-
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.attributes("-topmost", True)
-        self.lift()
-        self.after_idle(self._focus_entry)
+        self.show(on_screen=True)
 
     # --- UI builder ----------------------------------------------------------
     def _init_ui(self):
@@ -236,17 +181,5 @@ class UI(tk.Toplevel):
             return default
 
     def _on_close(self, evt=None):
-        """
-        Destroy singleton instance and close the window.
-
-        Also unregister from Engine.dict_instances.
-        """
-        type(self)._instance = None
-        try:
-            self.engine.dict_instances.pop(self.winfo_name(), None)
-        except Exception as e:
-            pass
-        try:
-            super().destroy()
-        except Exception as e:
-            pass
+        """Close window using ParentView pattern."""
+        super().on_cancel()
