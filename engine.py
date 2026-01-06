@@ -649,10 +649,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             v = f.readline()
             f.close()
             return v
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def get_loop(self):
@@ -661,10 +661,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             v = f.readline()
             f.close()
             return v
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def get_zscore(self):
@@ -673,20 +673,20 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             v = f.readline()
             f.close()
             return float(v)
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def set_zscore(self, value):
         try:
             with open('zscore', 'w') as f:
                 f.write(str(value))
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def set_ddof(self, value):
@@ -695,10 +695,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             with open('ddof', 'w') as f:
                 f.write(str(value))
 
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def get_section_id(self):
@@ -709,10 +709,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             v = f.readline()
             f.close()
             return int(v)
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def set_section_id(self, value):
@@ -721,10 +721,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             with open("section_id", "w") as f:
                 f.write(str(value))
 
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def get_remeber_batch(self):
@@ -768,7 +768,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def get_log_ip(self):
         try:
             return socket.gethostbyname(socket.getfqdn())
-        except:
+        except OSError:
             return "No IP Get."
 
     def get_log_time(self):
@@ -785,10 +785,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             v = f.read()
             f.close()
             return v
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def get_date(self):
@@ -815,10 +815,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                 return fmt
             else:
                 return 'dd-mm-yyyy'  # Default to European
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
             return 'dd-mm-yyyy'  # Default to European on error
 
@@ -841,10 +841,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                 return dt.strftime("%m-%d-%Y")
             else:  # dd-mm-yyyy (European default)
                 return dt.strftime("%d-%m-%Y")
-        except:
+        except (AttributeError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
             return ""
 
@@ -867,10 +867,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                 return dt.strftime("%m-%d-%Y %H:%M:%S")
             else:  # dd-mm-yyyy (European default)
                 return dt.strftime("%d-%m-%Y %H:%M:%S")
-        except:
+        except (AttributeError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
             return ""
 
@@ -885,10 +885,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             lenght = file.readline()
             file.close()
             return int(lenght)
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
 
     def get_lot_length(self,):
@@ -898,12 +898,12 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             lenght = file.readline()
             file.close()
             return int(lenght)
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
+                        e,
+                        type(e),
                         sys.modules[__name__])
-        
+
 
     def get_observations(self):
         try:
@@ -911,24 +911,24 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             with open(path, 'r') as file:
                 observations = file.readline().strip()
             return observations
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
+                        e,
+                        type(e),
+                        sys.modules[__name__])
             return None
 
     def set_observations(self, observations):
         try:
             with open('observations', 'w') as f:
                 f.write(str(observations))
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
+                        e,
+                        type(e),
+                        sys.modules[__name__])
             return None
-        
+
 
     def get_correlation_coefficient(self):
         try:
@@ -936,12 +936,12 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             with open(path, "r") as file:
                 ret = file.readline().strip()
             return float(ret)
-        except:
+        except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
-            return None          
+                        e,
+                        type(e),
+                        sys.modules[__name__])
+            return None
 
     def get_icon(self):
         try:
@@ -949,11 +949,11 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             with open(path, "r") as f:
                 v = f.readline().strip()
             return v
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
+                        e,
+                        type(e),
+                        sys.modules[__name__])
             return None
 
     def get_expiration_date(self, expiration_date):
@@ -961,13 +961,13 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             expiry_date = datetime.datetime.strptime(expiration_date, "%d-%m-%Y").date()
             days_until_expiration = (expiry_date - datetime.date.today()).days
             return days_until_expiration
-        except:
+        except (ValueError, TypeError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
+                        e,
+                        type(e),
+                        sys.modules[__name__])
             return None
-        
+
     def get_records(self):
 
         try:
@@ -975,11 +975,11 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             with open(path, 'r') as f:
                 v = f.readline().strip()
             return v
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
+                        e,
+                        type(e),
+                        sys.modules[__name__])
             return None
 
     def get_dimensions(self):
@@ -996,11 +996,11 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                     else:
                         self.on_log(inspect.stack()[0][3], None, None, sys.modules[__name__], level='warning', message=f"Skipping invalid line in 'dimensions' file: '{line.strip()}'")
             return dimensions
-        except:
+        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__])        
+                        e,
+                        type(e),
+                        sys.modules[__name__])
             return {}
 
     def launch_document(self, key):
