@@ -241,12 +241,63 @@ class UI(ParentView):
     # DATA LOADING
     # =========================================================================
 
-    def _load_data(self):
+    def _get_expanded_ws_ids(self):
+        """Get list of currently expanded workstation IDs."""
+        expanded = []
+        for item_id in self.tree.get_children():
+            if self.tree.item(item_id, "open"):
+                row = self.dict_workstations.get(item_id)
+                if row:
+                    expanded.append(row["workstation_id"])
+        return expanded
+
+    def _expand_ws_ids(self, ws_ids):
+        """Expand workstation nodes by their IDs."""
+        for item_id, row in self.dict_workstations.items():
+            if row["workstation_id"] in ws_ids:
+                self.tree.item(item_id, open=True)
+                # Trigger load of children
+                self._on_expand(None, item_id)
+
+    def _on_expand(self, evt, item_id=None):
+        """Handle expand event - load results for workstation."""
+        if item_id is None:
+            item_id = self.tree.focus()
+        if not item_id:
+            return
+
+        # Check if this is a workstation node
+        tags = self.tree.item(item_id, "tags")
+        if TAG_WORKSTATION not in tags:
+            return
+
+        row = self.dict_workstations.get(item_id)
+        if not row:
+            return
+
+        ws_id = row["workstation_id"]
+
+        # Already loaded?
+        if ws_id in self.loaded_ws:
+            return
+
+        # Remove dummy child
+        for child in self.tree.get_children(item_id):
+            self.tree.delete(child)
+
+        # Load results
+        self._load_results_for_workstation(item_id, ws_id)
+        self.loaded_ws.add(ws_id)
+
+    def _load_data(self, preserve_expansion=False):
         """Load workstation summary for selected date."""
         selected_date = self._get_selected_date()
         if selected_date is None:
             messagebox.showwarning("Validation", "Please select a valid date.")
             return
+
+        # Save expanded state if requested
+        expanded_ws_ids = self._get_expanded_ws_ids() if preserve_expansion else []
 
         self.selected_date = selected_date
         self.tree.delete(*self.tree.get_children())
@@ -314,6 +365,10 @@ class UI(ParentView):
                 text=f"Workstations: {total_ws}  |  Approved: {approved_ws}  |  Pending: {total_ws - approved_ws}"
             )
 
+            # Restore expanded state
+            if expanded_ws_ids:
+                self._expand_ws_ids(expanded_ws_ids)
+
         except Exception as e:
             self.engine.on_log(
                 "_load_data",
@@ -370,35 +425,6 @@ class UI(ParentView):
 
         # Store data
         self.dict_workstations[item_id] = row
-
-    def _on_expand(self, evt):
-        """Handle expand event - load results for workstation."""
-        item_id = self.tree.focus()
-        if not item_id:
-            return
-
-        # Check if this is a workstation node
-        tags = self.tree.item(item_id, "tags")
-        if TAG_WORKSTATION not in tags:
-            return
-
-        row = self.dict_workstations.get(item_id)
-        if not row:
-            return
-
-        ws_id = row["workstation_id"]
-
-        # Already loaded?
-        if ws_id in self.loaded_ws:
-            return
-
-        # Remove dummy child
-        for child in self.tree.get_children(item_id):
-            self.tree.delete(child)
-
-        # Load results
-        self._load_results_for_workstation(item_id, ws_id)
-        self.loaded_ws.add(ws_id)
 
     def _load_results_for_workstation(self, parent_id, ws_id):
         """Load individual results as children of workstation node."""
@@ -618,7 +644,7 @@ class UI(ParentView):
             self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
 
             messagebox.showinfo("Success", f"Workstation '{ws_name}' approved.")
-            self._load_data()
+            self._load_data(preserve_expansion=True)
 
         except Exception as e:
             self.engine.on_log(
@@ -669,8 +695,8 @@ class UI(ParentView):
             self.tree.item(item_id, values=values, tags=(TAG_RESULT, color))
             self.tree.tag_configure(color, background=color)
 
-            # Refresh parent workstation counts
-            self._load_data()
+            # Refresh parent workstation counts (preserve expansion)
+            self._load_data(preserve_expansion=True)
 
         except Exception as e:
             self.engine.on_log(
@@ -709,7 +735,7 @@ class UI(ParentView):
             self.engine.write(sql, (row["result_id"],))
 
             messagebox.showinfo("Success", "Result invalidated.")
-            self._load_data()
+            self._load_data(preserve_expansion=True)
 
         except Exception as e:
             self.engine.on_log(
