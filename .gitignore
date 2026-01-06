@@ -41,7 +41,8 @@ sql/
 scripts/
 stuff/
 batches/
-documents/
+documents/*
+!documents/*.md
 imports/
 quarantine/
 services/
