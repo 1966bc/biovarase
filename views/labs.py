@@ -49,7 +49,7 @@ class UI(ParentView):
 
         # Left pane: Sites tree
         pane_left = ttk.Frame(self.pw, style="App.TFrame")
-        grp_left = ttk.Frame(pane_left, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        grp_left = ttk.Frame(pane_left, style="Panel.TFrame")
         grp_left.pack(fill=tk.BOTH, expand=1)
 
         self.Sites = ttk.Treeview(grp_left, show="tree")
@@ -65,7 +65,7 @@ class UI(ParentView):
 
         # Right pane: Labs list
         pane_right = ttk.Frame(self.pw, style="App.TFrame")
-        grp_right = ttk.Frame(pane_right, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        grp_right = ttk.Frame(pane_right, style="Panel.TFrame")
         grp_right.pack(fill=tk.BOTH, expand=1)
 
         self.lblLaboratories = ttk.Labelframe(grp_right, text="Laboratories")

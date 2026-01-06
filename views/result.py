@@ -43,10 +43,9 @@ class UI(ChildView):
             parent: Parent widget (typically the main results window)
             index: Index of existing result to edit, or None for new result
         """
-        super().__init__(name="result")
+        super().__init__(parent, name="result")
 
         self.engine = self.nametowidget(".").engine
-        self.parent = parent
         self.index = index
         self.table = "results"        # UI variables
         self.test = tk.StringVar()

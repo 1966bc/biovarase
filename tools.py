@@ -53,13 +53,6 @@ class Tools:
                         padding=4,
                         background=bg_color)
 
-        style.configure("StatusBar.TLabel",
-                        background=bg_color,
-                        padding=2,
-                        border=1,
-                        relief=tk.SUNKEN,
-                        font="TkFixedFont")
-
         style.configure("LoggedUser.TLabel",
                         font=("TkDefaultFont", 10, 'bold'),
                         relief=tk.FLAT,
@@ -81,10 +74,10 @@ class Tools:
         style.configure("App.TFrame",
                         background=bg_color)
 
-        style.configure("Buttons.TFrame",
+        style.configure("Panel.TFrame",
                         background=bg_color,
-                        padding=8,
-                        relief=tk.GROOVE)
+                        relief=tk.GROOVE,
+                        padding=8)
 
         style.configure("App.TButton",
                         background=bg_color,
@@ -105,10 +98,6 @@ class Tools:
         style.configure("Data.TLabel",
                         font=('Helvetica', 12, 'bold'))
 
-        style.configure("Mandatory.TLabel",
-                        foreground=self.get_rgb(0, 0, 255),
-                        background=self.get_rgb(255, 255, 255))
-
         # QC-specific styles
         style.configure("Target.TLabel",
                         foreground=self.get_rgb(255, 69, 0),
@@ -124,10 +113,7 @@ class Tools:
         style.configure("westgard_ok.TLabel",
                         background=self.get_rgb(152, 251, 152))
 
-        style.configure("Statusbar.TLabel",
-                        foreground='blue')
-
-        style.configure("black_and_withe.TLabel",
+        style.configure("black_and_white.TLabel",
                         background=self.get_rgb(255, 255, 255),
                         foreground=self.get_rgb(77, 77, 77))
 

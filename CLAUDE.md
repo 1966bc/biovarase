@@ -31,6 +31,7 @@ pytest tests/test_qc.py::TestQC::test_get_mean_with_valid_series -v
 pytest -m critical -v             # Medical safety tests
 pytest -m westgard -v             # Westgard rule tests
 pytest -m security -v             # Security tests
+pytest -m qc -v                   # QC statistical tests
 
 # Generate coverage report
 pytest --cov=. --cov-report=html --cov-report=term
@@ -72,6 +73,21 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 - Observer pattern: `subscribe()`, `unsubscribe()`, `notify()` for decoupled view communication
 - Configuration files: accessed via `get_section_id()`, `get_ddof()`, `get_zscore()`
 - Error logging: `on_log()` method
+
+### Multi-Site Hierarchy
+
+Data is organized in a strict hierarchy: **Site → Lab → Section**
+
+```python
+# current_ids maintains the active context
+self.engine.current_ids = {
+    "site_id": 1,
+    "supplier_id": 1,
+    "comp_id": 1,
+    "lab_id": 1,
+    "section_id": 1
+}
+```
 
 **File path consistency:**
 Always use `self.get_file("filename")` for config files to ensure consistent paths:
@@ -128,8 +144,8 @@ affected = self.engine.write(False, "UPDATE results SET validated = 1 WHERE resu
 ### GUI Window Types
 
 **Base classes** (in `views/`):
-- `ParentView` - Singleton master windows with anti-flash
-- `ChildView` - Editor dialogs with auto-registration
+- `ParentView` (parent_view.py) - Singleton master windows with anti-flash
+- `ChildView` (child_view.py) - Editor dialogs with auto-registration
 
 **ParentView pattern (master windows):**
 ```python
@@ -142,7 +158,7 @@ class UI(ParentView):
         self.show()
 
     def on_cancel(self, evt=None):
-        # cleanup...
+        # cleanup, unsubscribe events...
         super().on_cancel()  # Clears _instance
 ```
 
@@ -156,7 +172,7 @@ class UI(ChildView):
         self.show()
 
     def on_cancel(self, evt=None):
-        # cleanup...
+        # cleanup, unsubscribe events...
         super().on_cancel()  # Unregisters from dict_instances
 ```
 
@@ -173,6 +189,40 @@ if win and win.winfo_exists():
 
 # Via observer (preferred):
 self.engine.notify("batch_changed", batch_id)
+```
+
+### GUI Styles and Components
+
+**Panel.TFrame style** - Reusable frame with groove relief and padding:
+```python
+# Use for button panels, grouped sections
+frm_buttons = ttk.Frame(parent, style="Panel.TFrame")
+```
+
+**Treeview pattern** (preferred over Listbox for tabular data):
+```python
+# Define columns and widget
+cols = ("date", "result")
+tree = ttk.Treeview(parent, columns=cols, show="headings", height=8)
+tree.column("date", width=90, anchor=tk.W)
+tree.heading("date", text="Date")
+
+# Configure tags for row colors
+tree.tag_configure("disabled", foreground="gray")
+tree.tag_configure("violation_3s", foreground="red")
+tree.tag_configure("has_notes", background="#fff2cc")
+
+# Insert with tags
+item_id = tree.insert("", tk.END, values=(date, value), tags=("violation_3s",))
+
+# Map item_id to database PK
+dict_items[item_id] = row["pk_field"]
+
+# Handle selection (use item_id, not index)
+selection = tree.selection()
+if selection:
+    item_id = selection[0]
+    pk = dict_items.get(item_id)
 ```
 
 ## Project Rules
@@ -198,7 +248,7 @@ self.engine.notify("batch_changed", batch_id)
 ```python
 try:
     # operation
-except Exception as e:
+except (SpecificError, AnotherError) as e:
     self.on_log(
         inspect.stack()[0][3],      # function name
         sys.exc_info()[1],           # exception value
@@ -210,6 +260,12 @@ except Exception as e:
 ### Role-Based Access Control
 
 ```python
+# Role constants (in engine.py)
+ROLE_ADMIN = 0       # Full system access
+ROLE_SUPERUSER = 1   # QC validation, lab-wide
+ROLE_TECHNICIAN = 2  # Data entry, section-only
+ROLE_AUTOLOGIN = 3   # Read-only guest
+
 # Permission helpers in Engine:
 self.engine.can_validate_qc()      # Admin (0) or Superuser (1)
 self.engine.can_configure_system() # Admin (0) only
@@ -232,7 +288,25 @@ self.engine.is_read_only()         # Autologin (3) or higher
 ### Configuration Files
 - `ddof` - Degrees of freedom (0 or 1) for SD calculation
 - `zscore` - Coverage factor (1.96 = 95% CI)
-- Access via Engine: `self.engine.get_ddof()`, `self.engine.get_zscore()`
+- `section_id` - Current working section
+- Access via Engine: `self.engine.get_ddof()`, `self.engine.get_zscore()`, `self.engine.get_section_id()`
+
+## Testing
+
+### Test Markers (defined in tests/conftest.py)
+- `@pytest.mark.critical` - Medical safety tests
+- `@pytest.mark.westgard` - Westgard rule tests
+- `@pytest.mark.qc` - QC statistical tests
+- `@pytest.mark.security` - Security and encryption tests
+- `@pytest.mark.unit` - Fast unit tests
+- `@pytest.mark.integration` - Database/file I/O tests
+
+### Fixtures Available (conftest.py)
+- `qc_normal_series` - Normal QC series within 1SD
+- `qc_target_sd` - Standard target (100.0) and SD (5.0)
+- `qc_violation_1_3s`, `qc_violation_2_2s`, etc. - Westgard violation series
+- `stats_simple_series` - [10, 20, 30, 40, 50] for statistical tests
+- `temp_log_file`, `temp_config_file` - Temporary files for testing
 
 ## Security
 

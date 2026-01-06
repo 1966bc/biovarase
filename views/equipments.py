@@ -55,7 +55,7 @@ class UI(ParentView):
         frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
 
         # Left: list
-        frm_left = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_left = ttk.Frame(frm_main, style="Panel.TFrame")
         ttk.Label(
             frm_left,
             style="App.TLabel",
@@ -80,7 +80,7 @@ class UI(ParentView):
         self.bind("<Return>", self._on_item_activated)
 
         # Right: buttons
-        frm_buttons = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
+        frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
 
         def add_btn(text, cmd, *, underline=None, shortcut=None):
             btn = ttk.Button(frm_buttons, text=text, command=cmd, underline=underline)
