@@ -73,6 +73,26 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 - Configuration files: accessed via `get_section_id()`, `get_ddof()`, `get_zscore()`
 - Error logging: `on_log()` method
 
+**File path consistency:**
+Always use `self.get_file("filename")` for config files to ensure consistent paths:
+```python
+# CORRECT - uses app directory
+path = self.get_file("section_id")
+with open(path, "w") as f: ...
+
+# WRONG - uses current working directory (may differ!)
+with open("section_id", "w") as f: ...
+```
+
+**Context switching (section/lab change):**
+When changing section, update ALL hierarchical IDs:
+```python
+# Get all IDs for the new section
+ids = self.engine.get_idd_by_section_id(new_section_id)
+if ids:
+    self.engine.current_ids.update(ids)  # Updates site_id, lab_id, section_id, etc.
+```
+
 ### Observer Pattern (Event System)
 
 Engine provides decoupled communication between views:
