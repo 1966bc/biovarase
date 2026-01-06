@@ -187,6 +187,12 @@ class UI(ParentView):
 
         ttk.Button(
             frm_buttons,
+            text="Export",
+            command=self._on_export
+        ).pack(side=tk.LEFT, **paddings)
+
+        ttk.Button(
+            frm_buttons,
             text="Close",
             command=self.on_close
         ).pack(side=tk.RIGHT, **paddings)
@@ -838,6 +844,21 @@ class UI(ParentView):
             return bool(result)
         except Exception:
             return False
+
+    def _on_export(self):
+        """Export daily validation data to Excel."""
+        if not self.selected_date:
+            messagebox.showinfo("Export", "Please load data first.")
+            return
+
+        try:
+            self.engine.quick_data_analysis(self.selected_date, None)
+        except Exception as e:
+            self.engine.on_log(
+                "_on_export",
+                e, type(e), sys.modules[__name__]
+            )
+            messagebox.showerror("Error", f"Failed to export:\n{e}")
 
     def on_close(self, evt=None):
         """Close the window."""
