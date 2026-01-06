@@ -156,7 +156,7 @@ class Login(ttk.Frame):
         """
         if self.nametowidget(".").engine.on_fields_control(
             self.frm_main,
-            self.engine.app_title
+            self.nametowidget(".").engine.app_title
         ) == False:
             return
 
@@ -177,20 +177,20 @@ class Login(ttk.Frame):
 
         else:
             msg = "Login failed."
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
+            messagebox.showwarning(self.nametowidget(".").engine.app_title, msg, parent=self)
 
             self.attempts += 1
 
             if self.attempts >= MAX_LOGIN_ATTEMPTS:
                 msg = f"Maximum login attempts ({MAX_LOGIN_ATTEMPTS}) exceeded.\nContact system administrator."
-                messagebox.showwarning(self.engine.app_title, msg, parent=self)
+                messagebox.showwarning(self.nametowidget(".").engine.app_title, msg, parent=self)
                 self.on_quit()
             else:
                 self.txtNick.focus()
 
     def on_about(self) -> None:
         """Display application information dialog."""
-        messagebox.showinfo(self.engine.app_title,
+        messagebox.showinfo(self.nametowidget(".").engine.app_title,
                             self.nametowidget(".").info,
                             parent=self)
 
