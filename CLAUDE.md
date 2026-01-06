@@ -69,8 +69,26 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 **Engine manages:**
 - Global state: `current_ids` (site_id, lab_id, section_id)
 - Window registry: `dict_instances` (track open GUI windows)
+- Observer pattern: `subscribe()`, `unsubscribe()`, `notify()` for decoupled view communication
 - Configuration files: accessed via `get_section_id()`, `get_ddof()`, `get_zscore()`
 - Error logging: `on_log()` method
+
+### Observer Pattern (Event System)
+
+Engine provides decoupled communication between views:
+
+```python
+# Subscribe to events in __init__:
+self.engine.subscribe("batch_changed", self.on_batch_changed)
+
+# Notify after changes:
+self.engine.notify("batch_changed", batch_id)
+
+# Unsubscribe in on_cancel() to avoid dead references:
+self.engine.unsubscribe("batch_changed", self.on_batch_changed)
+```
+
+**Events:** `batch_changed`, `result_changed`, `section_changed`, `supplier_changed`, `equipment_changed`, `test_method_changed`
 
 ### Database Access Pattern
 
@@ -93,95 +111,49 @@ affected = self.engine.write(False, "UPDATE results SET validated = 1 WHERE resu
 - `ParentView` - Singleton master windows with anti-flash
 - `ChildView` - Editor dialogs with auto-registration
 
-**Usage pattern:**
+**ParentView pattern (master windows):**
 ```python
-class UI(ParentView):  # or ChildView
+class UI(ParentView):
     def __init__(self, parent):
-        super().__init__(parent, name="myview")  # parent is required!
-        if self._reusing:  # ParentView sets this - skip rebuild if reusing
+        super().__init__(parent, name="myview")
+        if self._reusing:  # Singleton reuse - skip rebuild
             return
         # ... build UI ...
-        self.show()  # or self.show(on_screen=True)
+        self.show()
+
+    def on_cancel(self, evt=None):
+        # cleanup...
+        super().on_cancel()  # Clears _instance
+```
+
+**ChildView pattern (editor dialogs):**
+```python
+class UI(ChildView):
+    def __init__(self, parent, index=None):
+        super().__init__(parent, name="myeditor")
+        self.index = index  # Primary key or None for INSERT
+        # ... build UI ...
+        self.show()
+
+    def on_cancel(self, evt=None):
+        # cleanup...
+        super().on_cancel()  # Unregisters from dict_instances
 ```
 
 **Window positioning:**
 - `self.show()` - Center on parent (default)
 - `self.show(on_screen=True)` - Center on screen
 
-**Cross-window refresh:** `self.engine.refresh_windows_for_table("table_name")`
+**Cross-window updates:**
+```python
+# Via registry (master windows):
+win = self.engine.dict_instances.get("batches")
+if win and win.winfo_exists():
+    win._load_tree()
 
-## Programming Principles
-
-### Core Philosophy
-- **PEP 8** - Python style guide (4 spaces, snake_case, 100 char lines)
-- **KISS** - Keep It Simple, Stupid. Simplest solution that works.
-- **DRY** - Don't Repeat Yourself. Extract shared logic.
-- **YAGNI** - You Aren't Gonna Need It. No speculative features.
-- **Fail Fast** - Stop immediately on error, don't hide problems.
-
-### Structural Programming (Böhm-Jacopini Theorem)
-Only three control structures needed for any algorithm:
-1. **Sequence** - Instructions executed in order
-2. **Selection** - if/elif/else branching
-3. **Iteration** - for/while loops
-
-No goto, no spaghetti code. Clean, linear flow.
-
-### The Zen of Python (`import this`)
+# Via observer (preferred):
+self.engine.notify("batch_changed", batch_id)
 ```
-Beautiful is better than ugly.
-Explicit is better than implicit.
-Simple is better than complex.
-Flat is better than nested.
-Readability counts.
-Errors should never pass silently.
-There should be one obvious way to do it.
-```
-
-### Error Handling
-- **Fail Fast** - Detect and report errors immediately
-- **Fail Safe** - When failure occurs, fail to a safe state
-- **No bare `except:`** - Always catch specific exceptions
-- **Log everything** - Use `self.on_log()` for debugging
-
-### Design Principles
-- **Composition over Inheritance** - Prefer has-a over is-a (like Engine mixins)
-- **Single Source of Truth** - One data, one place (`current_ids` in Engine)
-- **Separation of Concerns** - Each module does one thing well
-- **Law of Demeter** - Don't talk to strangers
-  ```python
-  # Good: self.engine.get_user()
-  # Bad:  self.engine.db.cursor.execute()
-  ```
-
-### Code Style
-- **Early Return / Guard Clauses** - Exit early, avoid deep nesting
-  ```python
-  # Good:
-  if not data:
-      return None
-  return process(data)
-
-  # Bad:
-  if data:
-      return process(data)
-  else:
-      return None
-  ```
-- **Meaningful Names** - `batch_id` not `bid`, `calculate_mean()` not `calc()`
-- **Boy Scout Rule** - Leave code cleaner than you found it
-- **No Magic Numbers** - Use constants: `ROLE_ADMIN = 0`, not just `0`
-
-### Defensive Programming
-- **Validate at Boundaries** - Check user input, external APIs
-- **Trust Internal Code** - Don't over-validate between internal modules
-- **Principle of Least Astonishment** - Code should do what it looks like it does
-
-### Function Design
-- **Single Responsibility** - One function, one job
-- **Small Functions** - If it doesn't fit on screen, split it
-- **Pure Functions When Possible** - Same input → same output, no side effects
-- **Max 3 Parameters** - More? Use a dict or dataclass
 
 ## Project Rules
 
@@ -199,7 +171,7 @@ There should be one obvious way to do it.
 2. **Parameterized SQL only** - Always use `?` placeholders, never string concatenation
 3. **No direct file I/O from GUI** - Use Engine helper methods
 4. **Log all exceptions** via `self.on_log()`
-5. **Singleton master windows** via `__new__()` pattern
+5. **No bare `except:`** - Always catch specific exceptions
 
 ### Error Handling Pattern
 
@@ -213,6 +185,16 @@ except Exception as e:
         sys.exc_info()[0],           # exception type
         sys.modules[__name__]        # module
     )
+```
+
+### Role-Based Access Control
+
+```python
+# Permission helpers in Engine:
+self.engine.can_validate_qc()      # Admin (0) or Superuser (1)
+self.engine.can_configure_system() # Admin (0) only
+self.engine.can_modify_data()      # Admin, Superuser, or Technician (0-2)
+self.engine.is_read_only()         # Autologin (3) or higher
 ```
 
 ## QC Domain Knowledge
@@ -235,7 +217,7 @@ except Exception as e:
 ## Security
 
 - **Passwords:** bcrypt with cost factor 12
-- **Config encryption:** AES-256-GCM tied to hardware (MAC + machine-id)
+- **Config encryption:** Fernet (AES-128-CBC) tied to hardware (MAC + machine-id)
 - **Roles:** 0=Admin, 1=Superuser, 2=Technician, 3=Autologin (read-only)
 
 ## Notes for AI Assistants
@@ -243,6 +225,5 @@ except Exception as e:
 - This is a **production system** in active use at medical laboratories
 - **Data integrity is paramount** - QC data impacts patient safety decisions
 - Follow **ISO 15189:2022** medical laboratory standards
-- The codebase is in **active refactoring** (2025 rewrite)
 - **Communication in Italian, code in English** - strictly enforced
 - Reference `PROJECT_RULES.md` as the authoritative source when in doubt
