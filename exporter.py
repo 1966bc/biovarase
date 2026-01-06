@@ -777,59 +777,10 @@ class Exporter:
                         fill_type='solid',
                     )
 
-                # color for k imp
-                if formula_k_imp_res:
-                    cell = worksheet.cell(row=row_num, column=14)
-                    if formula_k_imp_res[1] == 'yellow':
-                        cell.fill = PatternFill(
-                            start_color='FFFFFF00',
-                            end_color='FFFFFF00',
-                            fill_type='solid',
-                        )
-                    elif formula_k_imp_res[1] == 'red':
-                        cell.fill = PatternFill(
-                            start_color='FFFF0000',
-                            end_color='FFFF0000',
-                            fill_type='solid',
-                        )
-                    elif formula_k_imp_res[1] == 'green':
-                        cell.fill = PatternFill(
-                            start_color='FF00FF00',
-                            end_color='FF00FF00',
-                            fill_type='solid',
-                        )
-
-                # color for k bias
-                if formula_k_bias_res:
-                    cell = worksheet.cell(row=row_num, column=15)
-                    if formula_k_bias_res[1] == 'yellow':
-                        cell.fill = PatternFill(
-                            start_color='FFFFFF00',
-                            end_color='FFFFFF00',
-                            fill_type='solid',
-                        )
-                    elif formula_k_bias_res[1] == 'red':
-                        cell.fill = PatternFill(
-                            start_color='FFFF0000',
-                            end_color='FFFF0000',
-                            fill_type='solid',
-                        )
-                    elif formula_k_bias_res[1] == 'green':
-                        cell.fill = PatternFill(
-                            start_color='FF00FF00',
-                            end_color='FF00FF00',
-                            fill_type='solid',
-                        )
-
-                # color for TE%
-                if tea_tes_comparision_res and tea_tes_comparision_res[1]:
-                    cell = worksheet.cell(row=row_num, column=16)
-                    fill_color = self._convert_color(tea_tes_comparision_res[1])
-                    cell.fill = PatternFill(
-                        start_color=fill_color,
-                        end_color=fill_color,
-                        fill_type='solid',
-                    )
+                # Apply colors using helper method
+                self._apply_fill_color(worksheet, row_num, 14, formula_k_imp_res)
+                self._apply_fill_color(worksheet, row_num, 15, formula_k_bias_res)
+                self._apply_fill_color(worksheet, row_num, 16, tea_tes_comparision_res)
 
                 row_num += 1
 
@@ -946,6 +897,25 @@ class Exporter:
             "teal": "FF008080",
         }
         return color_map.get(color_name.lower(), "FFFFFFFF")  # Default white
+
+    def _apply_fill_color(self, worksheet, row, column, result_tuple):
+        """
+        Apply fill color to a cell based on a result tuple (value, color_name).
+
+        Args:
+            worksheet: openpyxl worksheet
+            row: row number (1-based)
+            column: column number (1-based)
+            result_tuple: tuple like (value, 'red') or None
+        """
+        if result_tuple and len(result_tuple) > 1 and result_tuple[1]:
+            cell = worksheet.cell(row=row, column=column)
+            fill_color = self._convert_color(result_tuple[1])
+            cell.fill = PatternFill(
+                start_color=fill_color,
+                end_color=fill_color,
+                fill_type='solid',
+            )
 
 
 def main():
