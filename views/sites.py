@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # project:  biovarase
 # authors:  1966bc
-# modify:   ver MMXXV - refactored with tabular format and column headers
-#-----------------------------------------------------------------------------
+# modify:   autumn MMXXV - refactored with Treeview
+# -----------------------------------------------------------------------------
 
 import sys
 import tkinter as tk
@@ -33,13 +33,7 @@ class UI(ParentView):
     Sites Management Window.
 
     Displays all sites in the system with their associated company and site name.
-    Uses fixed-width monospaced font to simulate table columns with header.
     """
-
-    # Column Layout Constants
-    COL_COMPANY_WIDTH = 40
-    COL_SITE_WIDTH = 40
-    COL_SPACING = 3
 
     def __init__(self, parent):
         super().__init__(parent, name="sites")
@@ -68,13 +62,8 @@ class UI(ParentView):
         frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
         frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
 
-        # Left side: list + scrollbar
-        frm_left = ttk.Frame(
-            frm_main,
-            style="App.TFrame",
-            relief=tk.GROOVE,
-            padding=8,
-        )
+        # Left side: treeview + scrollbar
+        frm_left = ttk.Frame(frm_main, style="Panel.TFrame")
         frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 8), pady=5, expand=True)
 
         ttk.Label(
@@ -84,109 +73,38 @@ class UI(ParentView):
             relief=tk.GROOVE,
         ).pack(fill=tk.X, expand=0)
 
-        sb = ttk.Scrollbar(frm_left, orient=tk.VERTICAL)
-        self.lstItems = tk.Listbox(
-            frm_left,
-            yscrollcommand=sb.set,
-            exportselection=False,
-            font="TkFixedFont",  # Monospaced font for column alignment
-        )
-        self.lstItems.bind("<<ListboxSelect>>", self.on_item_selected)
-        self.lstItems.bind("<Double-Button-1>", self._on_item_activated)
-        sb.config(command=self.lstItems.yview)
+        # Define columns
+        cols = ("company", "site")
+        self.lstItems = ttk.Treeview(frm_left, columns=cols, show="headings")
 
-        self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        sb.pack(side=tk.RIGHT, fill=tk.Y, expand=0)
+        # Configure columns
+        self.lstItems.column("company", width=300, minwidth=200, anchor=tk.W)
+        self.lstItems.heading("company", text="Company", anchor=tk.W)
+
+        self.lstItems.column("site", width=300, minwidth=200, anchor=tk.W)
+        self.lstItems.heading("site", text="Site", anchor=tk.W)
+
+        # Tag for inactive sites
+        self.lstItems.tag_configure("inactive", background=self.engine.get_rgb(211, 211, 211))
+
+        sb = ttk.Scrollbar(frm_left, orient=tk.VERTICAL, command=self.lstItems.yview)
+        self.lstItems.configure(yscrollcommand=sb.set)
+
+        self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.lstItems.bind("<<TreeviewSelect>>", self.on_item_selected)
+        self.lstItems.bind("<Double-Button-1>", self._on_item_activated)
 
         # Right side: buttons
-        frm_buttons = ttk.Frame(
-            frm_main,
-            style="App.TFrame",
-            relief=tk.GROOVE,
-            padding=8,
-        )
+        frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
+        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5, expand=False)
 
         self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
         self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
         self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self._on_item_activated)
-
-        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5, expand=0)
-
-    # ----------------------------------------------------------------- Data formatting
-    def _format_header(self) -> str:
-        """
-        Build the header row with column titles.
-        
-        Returns:
-            Formatted header string with fixed-width columns
-        """
-        spacing = " " * self.COL_SPACING
-        header = (
-            f"{'Company':<{self.COL_COMPANY_WIDTH}}"
-            f"{spacing}"
-            f"{'Site':<{self.COL_SITE_WIDTH}}"
-        )
-        return header
-
-    def _format_row(self, row: dict) -> str:
-        """
-        Build a fixed-width data row for the Listbox.
-        
-        Columns:
-            1) Company name (from supplier_id)
-            2) Site name (from comp_id)
-        
-        Args:
-            row: Dictionary with site data from database
-        
-        Returns:
-            Formatted string with fixed-width columns
-        """
-        # Extract and sanitize fields
-        company = (row.get("company") or "").strip()
-        site_name = (row.get("site") or "").strip()
-
-        # Truncate to column widths (prevent overflow)
-        company = company[:self.COL_COMPANY_WIDTH]
-        site_name = site_name[:self.COL_SITE_WIDTH]
-
-        # Build formatted string with fixed-width columns
-        spacing = " " * self.COL_SPACING
-        label = (
-            f"{company:<{self.COL_COMPANY_WIDTH}}"
-            f"{spacing}"
-            f"{site_name:<{self.COL_SITE_WIDTH}}"
-        )
-        return label
-
-    def _parse_listbox_row(self, raw: str) -> dict:
-        """
-        Parse a formatted Listbox row back into individual fields.
-        
-        This method is the inverse of _format_row(): it extracts the fields
-        from the fixed-width formatted string using the same column widths.
-        
-        Args:
-            raw: Formatted string from Listbox.get()
-        
-        Returns:
-            Dictionary with parsed fields: company, site
-        """
-        pos = 0
-
-        # Extract company name
-        company = raw[pos:pos + self.COL_COMPANY_WIDTH].strip()
-        pos += self.COL_COMPANY_WIDTH + self.COL_SPACING
-
-        # Extract site name (rest of string)
-        site = raw[pos:].strip()
-
-        return {
-            "company": company,
-            "site": site
-        }
 
     # ----------------------------------------------------------------- lifecycle
     def on_open(self):
@@ -196,21 +114,14 @@ class UI(ParentView):
 
     def set_values(self):
         """
-        Populate the Listbox with all sites from database.
-        
+        Populate the Treeview with all sites from database.
+
         Behavior:
-            - Index 0: Header row (styled, non-selectable)
-            - Index 1+: Data rows (site_id mapped in dict_items)
             - Inactive sites (status=0): grayed out background
         """
-        self.lstItems.delete(0, tk.END)
+        self.engine.clear_treeview(self.lstItems)
         self.dict_items.clear()
         self.selected_item = None
-
-        # Insert header row at index 0
-        header = self._format_header()
-        self.lstItems.insert(tk.END, header)
-        self.lstItems.itemconfig(0, bg="lightgray", fg="black")  # Header style
 
         # Fetch data
         try:
@@ -223,52 +134,42 @@ class UI(ParentView):
                     type(exc),
                     sys.modules[__name__],
                 )
-            except Exception as e:
+            except Exception:
                 pass
             rows = []
 
-        # Populate data rows (index starts at 1)
         for row in rows:
             site_id = row.get("site_id")
             status = row.get("status", 1)
 
-            # Format and insert row
-            label = self._format_row(row)
-            idx = self.lstItems.size()  # Current index (after header)
-            self.lstItems.insert(tk.END, label)
+            company = (row.get("company") or "").strip()
+            site_name = (row.get("site") or "").strip()
 
-            # Style inactive sites
-            if int(status) != 1:
-                self.lstItems.itemconfig(idx, {"bg": "light gray"})
+            tags = ("inactive",) if int(status) != 1 else ()
 
-            # Map listbox index -> site_id (skip header at index 0)
-            if site_id is not None:
-                self.dict_items[idx] = int(site_id)
+            iid = self.lstItems.insert(
+                "",
+                tk.END,
+                iid=str(site_id),
+                values=(company, site_name),
+                tags=tags,
+            )
 
-        # Update count label (exclude header from count)
-        data_rows = self.lstItems.size() - 1  # Subtract header
-        msg = f"Sites: {data_rows}"
-        self.items.set(msg)
+            self.dict_items[iid] = int(site_id)
+
+        self.items.set(f"Sites: {len(self.dict_items)}")
 
     def on_item_selected(self, _evt=None):
         """
         Update self.selected_item when the user selects an item.
-        
-        Note: Skips header row (index 0) - not selectable for editing.
         """
-        sel = self.lstItems.curselection()
+        sel = self.lstItems.selection()
         if not sel:
             self.selected_item = None
             return
 
-        idx = sel[0]
-        
-        # Skip header row
-        if idx == 0:
-            self.selected_item = None
-            return
-
-        pk = self.dict_items.get(idx)
+        iid = sel[0]
+        pk = self.dict_items.get(iid)
         if pk is None:
             self.selected_item = None
             return
@@ -283,10 +184,8 @@ class UI(ParentView):
     def _on_item_activated(self, _evt=None):
         """
         Double-click or Enter: open the editor for the selected item.
-        
-        Note: Skips header row (index 0).
         """
-        sel = self.lstItems.curselection()
+        sel = self.lstItems.selection()
         if not sel:
             messagebox.showwarning(
                 self.engine.app_title,
@@ -295,21 +194,10 @@ class UI(ParentView):
             )
             return
 
-        idx = sel[0]
-        
-        # Skip header row
-        if idx == 0:
-            messagebox.showinfo(
-                self.engine.app_title,
-                "This is the header row. Please select a site to edit.",
-                parent=self,
-            )
-            return
-
-        if 1 <= idx < self.lstItems.size():
-            pk = self.dict_items.get(idx)
-            if pk is not None:
-                self.engine.open_child(self, ui.UI, index=pk)
+        iid = sel[0]
+        pk = self.dict_items.get(iid)
+        if pk is not None:
+            self.engine.open_child(self, ui.UI, index=pk)
 
     def _on_add(self, _evt=None):
         """Add button handler: open editor in INSERT mode."""
@@ -318,27 +206,25 @@ class UI(ParentView):
     def _reselect_by_pk(self, pk):
         """
         Reselect the item with the given primary key after reload.
-        
+
         Args:
             pk: Primary key (site_id) to reselect
         """
         if pk is None:
             return
         try:
-            for idx, value in self.dict_items.items():
-                if value == pk:
-                    self.lstItems.selection_clear(0, tk.END)
-                    self.lstItems.selection_set(idx)
-                    self.lstItems.see(idx)
-                    break
-        except Exception as e:
+            iid = str(pk)
+            self.lstItems.selection_set(iid)
+            self.lstItems.see(iid)
+            self.lstItems.focus(iid)
+        except Exception:
             pass
 
     def reload_and_reselect(self, pk_to_select):
         """
         Called by child after save:
         reloads data and reselects the given PK.
-        
+
         Args:
             pk_to_select: Primary key of the site to reselect
         """
