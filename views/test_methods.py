@@ -1,0 +1,352 @@
+# -*- coding: utf-8 -*-
+#-----------------------------------------------------------------------------
+# project:  biovarase
+# authors:  1966bc
+# mailto:   giuseppecostanzi@gmail.com
+# modify:   ver MMXXV
+#-----------------------------------------------------------------------------
+
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+
+import views.test_method as test_method_editor
+import views.goal as goal_editor
+
+
+SQL_LAB_DESCRIPTION = "SELECT description FROM labs WHERE lab_id = ? LIMIT 1;"
+
+SQL_TEST_METHODS = """
+                    SELECT
+                      test_methods.test_method_id,
+                      test_methods.code,
+                      samples.description  AS sample_description,
+                      methods.description  AS method_description,
+                      units.description    AS unit_description,
+                      sections.description    AS section_description,
+                      test_methods.status  AS status
+                    FROM tests
+                    INNER JOIN test_methods ON tests.test_id = test_methods.test_id
+                    INNER JOIN samples ON test_methods.sample_id = samples.sample_id
+                    INNER JOIN methods ON test_methods.method_id = methods.method_id
+                    INNER JOIN units   ON test_methods.unit_id   = units.unit_id
+                    INNER JOIN sections ON test_methods.section_id = sections.section_id
+                    INNER JOIN labs ON sections.lab_id = labs.lab_id
+                    WHERE tests.test_id = ?
+                      AND labs.lab_id = ?
+                      AND tests.status = 1
+                    ORDER BY tests.description ASC;
+                    """
+
+SQL_TESTS = "SELECT test_id, description, status FROM tests WHERE status = 1 ORDER BY description ASC;"
+
+
+class UI(tk.Toplevel):
+
+    _instance = None
+
+    def __new__(cls, parent):
+        if cls._instance is not None:
+            try:
+                if cls._instance.winfo_exists():
+                    cls._instance.deiconify()
+                    cls._instance.lift()
+                    cls._instance.after_idle(cls._instance.focus)
+                    return cls._instance
+            except Exception as e:
+                cls._instance = None  
+        obj = super().__new__(cls)
+        cls._instance = obj
+        return obj
+
+    def __init__(self, parent):
+        if getattr(self, "_is_init", False):
+            self.parent = parent
+            self.on_open()
+            return
+
+        super().__init__(name="test_methods")
+
+        # Anti-flash (build off-screen)
+        self.withdraw()
+        self.attributes("-alpha", 0.0)
+
+        self._is_init = True
+        self._loaded = False
+        self.parent = parent
+        self.engine = self.nametowidget(".").engine
+        self.engine.dict_instances[self.winfo_name()] = self
+        
+        self.resizable(True, True)
+
+        # Hotkeys
+        self.bind("<Escape>", self._on_cancel)
+        self.bind("<Alt-c>", self._on_cancel)
+        self.bind("<Alt-b>", self.on_analytical_goal)
+        self.bind("<Return>", self._open_current_selection)
+        
+        # State
+        self.items = tk.StringVar()
+        self.selected_test = None
+        self.child = None  # child editor/dialog
+        
+        # --- Build interface ------------------------------------------------
+        self._build_ui()
+        # Stabilize real geometry, then center and show
+        self.update_idletasks()
+        self.engine.center_window_on_screen(self)
+        self.deiconify()
+        self.attributes("-alpha", 1.0)
+        self.lift()
+        self.update_idletasks()
+        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        
+
+
+    # ---------------------------------------------------------------------
+    # UI (pack-based)
+    # ---------------------------------------------------------------------
+    def _build_ui(self):
+
+        # Window title with current lab context
+        self._update_lab_title()
+
+        # PanedWindow root (H)
+        self.pw = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashwidth=6)
+        self.pw.pack(fill=tk.BOTH, expand=1, padx=6, pady=6)
+
+        # --- Left pane: Tests 
+        pane_left = ttk.Frame(self.pw, style="App.TFrame")
+        self.pw.add(pane_left, minsize=220, stretch="always")
+
+        lbl_cnt = ttk.Label(pane_left, style="App.TLabel", textvariable=self.items)
+        lbl_cnt.pack(fill=tk.X, padx=2, pady=2)
+
+        frm_tests = ttk.Frame(pane_left, style="App.TFrame", padding=8, relief=tk.GROOVE)
+        frm_tests.pack(fill=tk.BOTH, expand=1)
+
+        sb = ttk.Scrollbar(frm_tests, orient=tk.VERTICAL)
+        self.lstTests = tk.Listbox(frm_tests, yscrollcommand=sb.set, exportselection=False)
+        self.lstTests.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb.config(command=self.lstTests.yview)
+        sb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.lstTests.bind("<<ListboxSelect>>", self.on_test_selected)
+        self.lstTests.bind("<Double-Button-1>", self.on_test_activated)
+
+        # --- Middle pane: Methods 
+        pane_mid = ttk.Frame(self.pw, style="App.TFrame")
+        self.pw.add(pane_mid, minsize=360, stretch="always")
+
+        frm_methods = ttk.Frame(pane_mid, style="App.TFrame", padding=8, relief=tk.GROOVE)
+        frm_methods.pack(fill=tk.BOTH, expand=1)
+
+        lf_methods = ttk.Labelframe(frm_methods, text="Methods")
+        lf_methods.pack(fill=tk.BOTH, expand=1)
+
+        cols = (
+            ["#0", "id",      "w", False,   0,   0],
+            ["#1", "Code",    "w", True,   80,  80],
+            ["#2", "Sample",  "w", True,  140, 140],
+            ["#3", "Method",  "w", True,  180, 180],
+            ["#4", "Unit",    "w", True,  100, 100],
+            ["#5", "Section", "w", True,  100, 100],
+        )
+        self.lstMethods = self.engine.get_tree(lf_methods, cols)
+        self.lstMethods.tag_configure("inactive", background="light gray")
+        self.lstMethods.bind("<<TreeviewSelect>>", self.on_test_method_selected)
+        self.lstMethods.bind("<Double-1>", self.on_test_method_activated)
+        self.lstMethods.pack(fill=tk.BOTH, expand=1)
+
+        # --- Right pane: Actions
+        pane_right = ttk.Frame(self.pw, style="App.TFrame")
+        self.pw.add(pane_right, minsize=140, stretch="never")
+
+        frm_buttons = ttk.Frame(pane_right, style="App.TFrame", padding=8, relief=tk.GROOVE)
+        frm_buttons.pack(side=tk.LEFT, fill=tk.Y, expand=0)
+
+        def add_btn(text, cmd, *, underline=None, shortcut=None):
+            """
+            Create a button in the right pane with optional underline and keyboard shortcut.
+            """
+            btn = ttk.Button(frm_buttons, text=text, command=cmd)
+
+            if underline is not None:
+                btn.configure(underline=underline)
+
+            if shortcut:
+                # Shortcut bound to the Toplevel, not to the single button.
+                self.bind(shortcut, lambda _e: cmd())
+
+            btn.pack(fill=tk.X, pady=2)
+            return btn
+
+        add_btn("Goals", self.on_analytical_goal, underline=0, shortcut="<Alt-g>")
+        add_btn("Cancel", self._on_cancel,         underline=0, shortcut="<Alt-c>")
+
+        # Place sashes after first layout
+        self.after_idle(self._place_sashes)
+
+    def _place_sashes(self, fixed_right=160, left_ratio=0.30):
+        """
+        Place sashes so that:
+          - left pane ≈ left_ratio of total width
+          - right pane ≈ fixed_right pixels
+          - middle pane takes the remaining space.
+        """
+        try:
+            w = self.pw.winfo_width()
+            if w <= fixed_right + 100:
+                return
+
+            left = int(w * left_ratio)
+            right = w - fixed_right
+
+            self.pw.sash_place(0, left, 1)
+            self.pw.sash_place(1, right, 1)
+        except Exception as e:
+            pass
+        
+    def on_open(self):
+
+        self._update_lab_title()
+        self._load_tests()
+        self._clear_methods()
+
+    def _update_lab_title(self):
+        """Set window title with current lab description."""
+        lab_id = self.engine.current_ids.get("lab_id")
+        lab_row = self.engine.read(False, SQL_LAB_DESCRIPTION, (lab_id,))
+        lab_name = lab_row["description"] if lab_row else "?"
+        self.title(f"Test Methods – Lab: {lab_name}")
+
+    def _load_tests(self):
+        """Load active tests into the listbox."""
+        self.lstTests.delete(0, tk.END)
+        self.dict_tests = {}
+
+        rs = self.engine.read(True, SQL_TESTS, ()) or []
+
+        for idx, row in enumerate(rs):            
+            self.lstTests.insert(tk.END, row["description"])
+            self.dict_tests[idx] = row["test_id"]
+
+        self.items.set(f"Tests: {self.lstTests.size()}")
+        self.selected_test = None
+
+    def _clear_methods(self):
+        """Clear the methods tree."""
+        for iid in self.lstMethods.get_children():
+            self.lstMethods.delete(iid)
+
+    def _load_methods_for_selected_test(self):
+        """Populate methods tree for the currently selected test."""
+        self._clear_methods()
+        if not self.selected_test:
+            return
+
+        test_id = self.selected_test["test_id"]
+        lab_id = self.engine.current_ids["lab_id"]
+
+        args = (test_id, lab_id)
+        rows = self.engine.read(True, SQL_TEST_METHODS, args) or []
+
+        for row in rows:
+            tags = ("inactive",) if int(row["status"]) != 1 else ()
+            self.lstMethods.insert(
+                "",
+                tk.END,
+                iid=row["test_method_id"],
+                text=row["test_method_id"],
+                values=(
+                    row["code"],
+                    row["sample_description"],
+                    row["method_description"],
+                    row["unit_description"],
+                    row["section_description"],      
+                ),
+                tags=tags,)
+   
+    def on_test_selected(self, _evt=None):
+        """When a test is selected, load its methods."""
+        sel = self.lstTests.curselection()
+        if not sel:
+            self.selected_test = None
+            self._clear_methods()
+            return
+
+        idx = sel[0]
+        pk = self.dict_tests.get(idx)
+        self.selected_test = self.engine.get_selected("tests", "test_id", pk)
+        self._load_methods_for_selected_test()
+
+    def on_test_activated(self, _evt=None):
+        """Double-click on a test: open test editor (anagraphic)."""
+        sel = self.lstTests.curselection()
+        if not sel or not self.selected_test:
+            return
+        self.child = test_method_editor.UI(self)
+        self.child.on_open(self.selected_test)
+
+    def on_test_method_selected(self, _evt=None):
+         """Track the selected test_method record (currently unused)."""
+         pass
+
+    def on_test_method_activated(self, _evt=None):
+        """Double-click on a method: open test_method editor."""
+        sel = self.lstMethods.selection()
+        if not sel or not self.selected_test:
+            return
+        pk = int(sel[0])
+        selected_item = self.engine.get_selected("test_methods", "test_method_id", pk)
+        self.child = test_method_editor.UI(self, sel[0])
+        self.child.on_open(self.selected_test, selected_item)
+
+    def _open_current_selection(self, _evt=None):
+        """
+        Enter key: open selected method if any; otherwise open test editor.
+        """
+        if self.lstMethods.selection():
+            self.on_test_method_activated()
+        elif self.lstTests.curselection():
+            self.on_test_activated()
+
+    def on_analytical_goal(self, _evt=None):
+        """Open analytical goals dialog for the selected test_method."""
+
+        # Destroy existing child if open
+        try:
+            if self.child is not None and self.child.winfo_exists():
+                self.child.destroy()
+        except Exception as e:
+            pass
+        
+        sel = self.lstMethods.selection()
+        if not sel:
+            messagebox.showwarning(self.engine.app_title, "Select a Test Method.", parent=self)
+            return
+        pk = int(sel[0])
+        selected_tm = self.engine.get_selected("test_methods", "test_method_id", pk)
+        self.child = goal_editor.UI(self, index=pk)
+        self.child.on_open()
+
+    def refresh_context_from_section(self):
+        """
+        Called when the current section/lab changes elsewhere.
+        - Rilegge lab_id/lab_name dal contesto.
+        - Aggiorna il titolo della finestra.
+        - Ricarica la lista dei metodi per il test selezionato.
+        """
+        try:
+            self._update_lab_title()
+            self._clear_methods()
+            if self.selected_test:
+                self._load_methods_for_selected_test()
+
+        except Exception as e:
+            self.engine.on_log("test_methods.refresh_context_from_section",
+                               e, type(e), __name__)
+
+    def _on_cancel(self, _evt=None):
+        self.engine.dict_instances.pop(self.winfo_name(), None)
+        self.engine.safe_close(self)

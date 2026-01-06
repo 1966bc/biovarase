@@ -1,0 +1,154 @@
+INTERNAL QUALITY CONTROL (IQC) ACCORDING TO ISO 15189
+======================================================
+
+1. BASIC PRINCIPLES
+-------------------
+Internal quality control serves to continuously monitor the precision and 
+accuracy of the analytical process, allowing the identification of systematic 
+and random errors before results are reported.
+
+Main objectives:
+- Verify that the analytical system functions correctly
+- Detect errors or drifts promptly
+- Ensure reliability of results before release
+- Document analytical performance over time
+
+
+2. CONTROL MATERIALS
+--------------------
+Required characteristics:
+- Must mimic patient samples as closely as possible
+- Must cover the entire clinically relevant range
+- Include levels: normal, pathological, and critical (where appropriate)
+
+Types:
+- Commercial materials (certified, ready to use)
+- In-house prepared materials (require rigorous validation)
+
+Note: For mass spectrometry, prefer materials in biological matrix similar 
+to real samples.
+
+
+3. FREQUENCY AND POSITIONING
+-----------------------------
+General guidelines:
+- Insert controls in every analytical run
+- Typical positioning: beginning, during, and end of session
+- For LC-MS/MS: every 20-30 samples to monitor instrumental drift
+
+Increase frequency after:
+- Instrumental maintenance
+- Reagent or lot changes
+- Calibrations
+- Prolonged activity interruptions
+
+
+4. CONTROL RULES (WESTGARD)
+----------------------------
+System of control charts with statistical limits:
+
+Rule        Meaning                     Action
+----        -------                     ------
+1-2s        Warning                     Caution, monitor
+1-3s        Out of control             BLOCK result release
+2-2s        Systematic shift           Investigate systematic cause
+R-4s        Degraded precision         Check repeatability
+4-1s        Systematic shift           Check calibration
+10x         Progressive trend          Verify reagent stability
+
+Control limits:
+- Mean ± 1 SD (approximately 68% of values)
+- Mean ± 2 SD (approximately 95% of values)  
+- Mean ± 3 SD (approximately 99.7% of values)
+
+
+5. CORRECTIVE ACTIONS
+----------------------
+Procedure in case of control failure:
+
+1. BLOCK immediate release of results
+2. INVESTIGATE the cause:
+   - Instrumental drift
+   - Reagent problems
+   - Operator error
+   - Environmental issues (temperature, humidity)
+3. IMPLEMENT appropriate corrective actions
+4. RE-ANALYZE samples if necessary
+5. DOCUMENT the entire process and actions taken
+6. REVIEW the procedure if the event recurs
+
+
+6. SPECIFIC CONTROLS FOR MASS SPECTROMETRY
+-------------------------------------------
+In addition to standard controls, monitor:
+
+Internal Standards (IS):
+- Evaluate ionization efficiency
+- Control extraction
+- Verify signal stability
+- Analyte/IS ratios must remain constant
+
+Contamination controls:
+- Carry-over between samples
+- Regular blank analyses
+- Selectivity verification
+
+Chromatographic performance:
+- Retention times (±2-3% of expected value)
+- Peak shape (symmetry, width)
+- Resolution between peaks
+
+Matrix effects:
+- Suppression/enhancement of ionization
+- Use of matrix-matched curves when necessary
+
+
+7. DOCUMENTATION REQUIRED BY ISO 15189
+---------------------------------------
+The laboratory must maintain:
+
+□ Standard Operating Procedures (SOPs) for IQC execution
+□ Recording of all control data
+□ Updated control charts with evidence of periodic review
+□ Documented procedures for handling "out of control" situations
+□ Documentary evidence of corrective actions taken
+□ Statistical calculations for determining control limits
+□ Periodic review of limits (at least annual or after 20-30 data points)
+
+
+8. BEST PRACTICES
+-----------------
+- Use the same lot of control material as long as possible
+  (for stability of statistical limits)
+- Store controls under the same conditions as samples
+- Rotate the operator analyzing controls
+- Do not use control data to adjust patient results
+- Participate in External Quality Assessment (EQA/PT) programs
+- Periodically compare your limits with those of the supplier
+
+
+9. CALCULATION OF CONTROL LIMITS
+---------------------------------
+Initial phase (at least 20 measurements under control conditions):
+
+1. Calculate the mean (x̄)
+2. Calculate the standard deviation (SD)
+3. Determine the limits:
+   - Warning limit: x̄ ± 2SD
+   - Control limit: x̄ ± 3SD
+4. Plot the control chart
+5. Update periodically with new data
+
+
+10. REGULATORY REFERENCES
+--------------------------
+- ISO 15189:2022 - Medical laboratories - Requirements for quality and competence
+- Specific sections: 7.4 (Analytical procedures), 7.7 (Quality assurance)
+- CLSI C24-A4 - Statistical Quality Control for Quantitative Measurement Procedures
+- Westgard QC - www.westgard.com for further information
+
+
+================================================================================
+Document prepared for internal use - Mass Spectrometry Laboratory
+Based on ISO 15189:2022
+================================================================================
