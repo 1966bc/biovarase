@@ -731,8 +731,10 @@ DROP TABLE IF EXISTS `workstation_test_methods`;
 CREATE TABLE `workstation_test_methods` (
   `workstation_id` smallint(5) unsigned DEFAULT NULL,
   `test_method_id` mediumint(8) unsigned DEFAULT NULL,
+  `external_code` varchar(50) DEFAULT NULL COMMENT 'Test code from workstation export (e.g., BHCG, FT4)',
   KEY `idx_wtm_test_method` (`test_method_id`),
   KEY `fk_wtm_workstation` (`workstation_id`),
+  UNIQUE KEY `uk_wtm_external` (`workstation_id`, `external_code`),
   CONSTRAINT `fk_wtm_test_method` FOREIGN KEY (`test_method_id`) REFERENCES `test_methods` (`test_method_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_wtm_workstation` FOREIGN KEY (`workstation_id`) REFERENCES `workstations` (`workstation_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

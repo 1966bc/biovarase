@@ -52,26 +52,18 @@ class UI(ParentView):
         """
         Guarded initializer: when the instance is reused, skip widget rebuilds.
         """
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="workstation_test_methods")
+        if self._reusing:
             return
-        super().__init__(name="workstation_test_methods")
 
-         # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
+        self.resizable(True, True)
+        self.bind("<Alt-c>", self.on_cancel)
 
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.resizable(True, True)        # Hotkeys        self.bind("<Alt-c>", self.on_cancel)
-
-        self.child = None  
+        self.child = None
         self.selected_workstation = None
         self.test_methods_assigned = []
-                
-       # --- Build interface ------------------------------------------------
+
+        # --- Build interface ------------------------------------------------
         self._build_ui()
         self.show()
         self.update_idletasks()
@@ -105,22 +97,46 @@ class UI(ParentView):
         frm_right = ttk.Frame(pane_right, style="App.TFrame", relief=tk.GROOVE, padding=8)
         frm_right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
-        cols_methods = ("test", "code", "sample", "method", "unit")
+        # Buttons frame FIRST (pack order matters - bottom first)
+        frm_buttons = ttk.Frame(frm_right, style="App.TFrame")
+        frm_buttons.pack(side=tk.BOTTOM, fill=tk.X, pady=(5, 0))
+
+        self.btn_edit_external = ttk.Button(
+            frm_buttons,
+            text="Edit External Code",
+            command=self.on_edit_external_code,
+            state=tk.DISABLED
+        )
+        self.btn_edit_external.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.btn_remove = ttk.Button(
+            frm_buttons,
+            text="Remove Mapping",
+            command=self.on_remove_mapping,
+            state=tk.DISABLED
+        )
+        self.btn_remove.pack(side=tk.LEFT)
+
+        # Treeview with scrollbar
+        cols_methods = ("test", "code", "external_code", "sample", "method", "unit")
         self.lstTestsMethods = ttk.Treeview(frm_right, columns=cols_methods, show="headings")
 
-        self.lstTestsMethods.column("test", width=220, minwidth=220, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.column("test", width=200, minwidth=180, anchor=tk.W, stretch=True)
         self.lstTestsMethods.heading("test", text="Test", anchor=tk.W)
 
-        self.lstTestsMethods.column("code", width=90, minwidth=90, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.column("code", width=80, minwidth=80, anchor=tk.W, stretch=False)
         self.lstTestsMethods.heading("code", text="Code", anchor=tk.W)
 
-        self.lstTestsMethods.column("sample", width=120, minwidth=120, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.column("external_code", width=100, minwidth=80, anchor=tk.W, stretch=False)
+        self.lstTestsMethods.heading("external_code", text="External Code", anchor=tk.W)
+
+        self.lstTestsMethods.column("sample", width=100, minwidth=100, anchor=tk.W, stretch=True)
         self.lstTestsMethods.heading("sample", text="Sample", anchor=tk.W)
 
-        self.lstTestsMethods.column("method", width=140, minwidth=140, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.column("method", width=120, minwidth=120, anchor=tk.W, stretch=True)
         self.lstTestsMethods.heading("method", text="Method", anchor=tk.W)
 
-        self.lstTestsMethods.column("unit", width=90, minwidth=90, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.column("unit", width=80, minwidth=80, anchor=tk.W, stretch=False)
         self.lstTestsMethods.heading("unit", text="Unit", anchor=tk.W)
 
         sb_methods = ttk.Scrollbar(frm_right, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
@@ -129,7 +145,7 @@ class UI(ParentView):
         sb_methods.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.lstTestsMethods.tag_configure("inactive", background="light gray")
-        self.lstTestsMethods.bind("<Double-1>", self.on_test_method_activated)
+        self.lstTestsMethods.bind("<<TreeviewSelect>>", self.on_test_method_selected)
 
     def on_open(self):
         self.title("Workstations — Test Methods Mapping")
@@ -519,6 +535,7 @@ class UI(ParentView):
                 test_methods.test_method_id,
                 tests.description AS test_descr,
                 test_methods.code,
+                IFNULL(workstation_test_methods.external_code, '') AS external_code,
                 IFNULL(samples.description, 'NA')  AS sample_descr,
                 IFNULL(methods.description, 'NA')  AS method_descr,
                 IFNULL(units.description,   'NA')  AS unit_descr,
@@ -546,6 +563,7 @@ class UI(ParentView):
             test_method_id = row["test_method_id"]
             test_descr     = row["test_descr"]
             code           = row["code"]
+            external_code  = row["external_code"]
             sample_descr   = row["sample_descr"]
             method_descr   = row["method_descr"]
             unit_descr     = row["unit_descr"]
@@ -560,28 +578,17 @@ class UI(ParentView):
                 tk.END,
                 iid=str(test_method_id),
                 text=str(test_method_id),
-                values=(test_descr, code, sample_descr, method_descr, unit_descr),
+                values=(test_descr, code, external_code, sample_descr, method_descr, unit_descr),
                 tags=tags
             )
 
-    def on_test_method_activated(self, _evt=None):
+    def on_remove_mapping(self, _evt=None):
         """
-        Double-click on a test method: ask confirmation and remove
-        the mapping from the selected workstation.
+        Remove the selected test method mapping from the workstation.
 
-        Permission required: Admin/Superuser only (QC configuration).
+        Permission is already checked via button state (disabled if no permission).
         """
-
-        # 1) Check permission (Admin/Superuser only can remove test methods)
-        if not self.engine.can_validate_qc():
-            messagebox.showwarning(
-                self.engine.app_title,
-                self.engine.user_not_enable,
-                parent=self
-            )
-            return
-
-        # 2) Get selected method in the right-side Treeview
+        # 1) Get selected method in the right-side Treeview
         sel = self.lstTestsMethods.selection()
         if not sel:
             return  # Nothing selected → fail-fast
@@ -674,6 +681,75 @@ class UI(ParentView):
         # Reuse the existing loader (expects a tuple argument)
         self._set_tests_methods((ws_id,))
 
+
+    def on_test_method_selected(self, evt=None):
+        """
+        Enable/disable action buttons based on selection and permissions.
+        """
+        sel = self.lstTestsMethods.selection()
+        has_selection = bool(sel)
+        can_edit = self.engine.can_validate_qc()
+
+        state = tk.NORMAL if (has_selection and can_edit) else tk.DISABLED
+        self.btn_edit_external.config(state=state)
+        self.btn_remove.config(state=state)
+
+    def on_edit_external_code(self, evt=None):
+        """
+        Open dialog to edit external_code for the selected test method mapping.
+        """
+        # 1) Get selected item
+        sel = self.lstTestsMethods.selection()
+        if not sel:
+            return
+
+        iid = sel[0]
+        values = self.lstTestsMethods.item(iid, "values")
+        if not values:
+            return
+
+        test_descr = values[0]
+        current_external_code = values[2]  # external_code is third column
+
+        # 2) Ensure workstation is selected
+        if not self.selected_workstation:
+            return
+
+        try:
+            test_method_id = int(iid)
+        except ValueError:
+            return
+
+        # 3) Simple dialog to edit external code
+        from tkinter import simpledialog
+
+        new_code = simpledialog.askstring(
+            "Edit External Code",
+            f"External code for '{test_descr}':",
+            initialvalue=current_external_code,
+            parent=self
+        )
+
+        # User cancelled
+        if new_code is None:
+            return
+
+        # Normalize: empty string → NULL
+        new_code = new_code.strip() if new_code else None
+
+        # 4) Update database
+        sql = """
+            UPDATE workstation_test_methods
+            SET external_code = ?
+            WHERE workstation_id = ?
+              AND test_method_id = ?;
+        """
+        args = (new_code, self.selected_workstation["workstation_id"], test_method_id)
+
+        self.engine.write(sql, args)
+
+        # 5) Refresh list
+        self._set_tests_methods((self.selected_workstation["workstation_id"],))
 
     def on_cancel(self, evt=None):
         """Close window."""

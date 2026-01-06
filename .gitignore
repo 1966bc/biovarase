@@ -37,6 +37,7 @@ env/
 # Local folders (not for production)
 inventarium/
 sql/
+!sql/migrations/
 scripts/
 stuff/
 batches/
@@ -46,7 +47,6 @@ quarantine/
 services/
 tests/
 dist/
-migrations/
 
 # Test files (local only)
 test_congif.py
