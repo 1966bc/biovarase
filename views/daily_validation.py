@@ -116,7 +116,7 @@ class UI(ParentView):
         sb_horiz = ttk.Scrollbar(frm_tree, orient=tk.HORIZONTAL)
 
         # TreeView with hierarchical structure
-        cols = ("equipment_batch", "counts_result", "problems_sd", "status")
+        cols = ("equipment_batch", "time", "counts_result", "problems_sd", "status")
         self.tree = ttk.Treeview(
             frm_tree,
             columns=cols,
@@ -130,15 +130,17 @@ class UI(ParentView):
         # Column headers
         self.tree.heading("#0", text="Workstation / Test", anchor=tk.W)
         self.tree.heading("equipment_batch", text="Equipment / Batch", anchor=tk.W)
+        self.tree.heading("time", text="Time", anchor=tk.CENTER)
         self.tree.heading("counts_result", text="Counts / Result", anchor=tk.CENTER)
         self.tree.heading("problems_sd", text="Problems / Z-Score", anchor=tk.CENTER)
         self.tree.heading("status", text="Status", anchor=tk.CENTER)
 
         # Column widths
-        self.tree.column("#0", width=220, anchor=tk.W)
-        self.tree.column("equipment_batch", width=160, anchor=tk.W)
-        self.tree.column("counts_result", width=120, anchor=tk.CENTER)
-        self.tree.column("problems_sd", width=100, anchor=tk.CENTER)
+        self.tree.column("#0", width=200, anchor=tk.W)
+        self.tree.column("equipment_batch", width=140, anchor=tk.W)
+        self.tree.column("time", width=50, anchor=tk.CENTER)
+        self.tree.column("counts_result", width=100, anchor=tk.CENTER)
+        self.tree.column("problems_sd", width=80, anchor=tk.CENTER)
         self.tree.column("status", width=120, anchor=tk.CENTER)
 
         # Grid layout
@@ -159,6 +161,16 @@ class UI(ParentView):
 
         self.lbl_stats = ttk.Label(frm_stats, text="")
         self.lbl_stats.pack(side=tk.LEFT)
+
+        # Mandatory tests indicator (clickable)
+        self.lbl_mandatory = ttk.Label(
+            frm_stats,
+            text="",
+            foreground="red",
+            cursor="hand2"
+        )
+        self.lbl_mandatory.pack(side=tk.RIGHT, padx=(20, 0))
+        self.lbl_mandatory.bind("<Button-1>", self._on_show_missing_mandatory)
 
         # Buttons frame
         frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
@@ -371,6 +383,9 @@ class UI(ParentView):
                 text=f"Workstations: {total_ws}  |  Approved: {approved_ws}  |  Pending: {total_ws - approved_ws}"
             )
 
+            # Check mandatory tests
+            self._update_mandatory_indicator()
+
             # Restore expanded state
             if expanded_ws_ids:
                 self._expand_ws_ids(expanded_ws_ids)
@@ -411,7 +426,8 @@ class UI(ParentView):
         counts_text = f"{total} tot / {pending} pend"
         problems_text = f"{problems} prob" if problems > 0 else ""
 
-        values = (eq_name, counts_text, problems_text, status_text)
+        # time column empty for workstations
+        values = (eq_name, "", counts_text, problems_text, status_text)
         tags = (TAG_WORKSTATION, color)
 
         # Insert with dummy child so it's expandable
@@ -525,9 +541,9 @@ class UI(ParentView):
 
         test_name = f"{test_desc}-{sample}"
         batch_info = f"{lot_number} {level}".strip()
-        result_str = f"{result_val:.2f} @ {time_str}"
+        result_str = f"{result_val:.2f}"
 
-        values = (batch_info, result_str, zscore_str, status_text)
+        values = (batch_info, time_str, result_str, zscore_str, status_text)
         tags = [TAG_RESULT]
         if color:
             tags.append(color)
@@ -702,7 +718,7 @@ class UI(ParentView):
 
             color = self.engine.get_rgb(200, 255, 200)
             values = list(self.tree.item(item_id, "values"))
-            values[3] = "✓"
+            values[4] = "✓"
             self.tree.item(item_id, values=values, tags=(TAG_RESULT, color))
             self.tree.tag_configure(color, background=color)
 
@@ -859,6 +875,79 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror("Error", f"Failed to export:\n{e}")
+
+    # =========================================================================
+    # MANDATORY TESTS
+    # =========================================================================
+
+    def _update_mandatory_indicator(self):
+        """Update the mandatory tests indicator label."""
+        missing = self._get_missing_mandatory()
+        self.missing_mandatory = missing  # Store for click handler
+
+        if missing:
+            self.lbl_mandatory.config(
+                text=f"⚠ Missing mandatory: {len(missing)} (click)",
+                foreground="red"
+            )
+        else:
+            self.lbl_mandatory.config(
+                text="✓ All mandatory OK",
+                foreground="green"
+            )
+
+    def _get_missing_mandatory(self):
+        """Get list of mandatory tests not executed for selected date."""
+        if not self.selected_date:
+            return []
+
+        try:
+            # Get mandatory tests for current section
+            mandatory = self.engine.get_mandatory()
+            if not mandatory:
+                return []
+
+            # Get tests executed today
+            lab_id = self.engine.current_ids.get("lab_id")
+            sql = """
+                SELECT DISTINCT t.description
+                FROM results r
+                INNER JOIN batches b ON r.batch_id = b.batch_id
+                INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+                INNER JOIN tests t ON tm.test_id = t.test_id
+                WHERE DATE(r.received) = ?
+                  AND r.status = 1
+                  AND r.is_delete = 0
+                  AND b.lab_id = ?
+            """
+            rows = self.engine.read(True, sql, (self.selected_date.isoformat(), lab_id))
+
+            executed = set()
+            if rows:
+                executed = {row["description"] for row in rows}
+
+            # Find missing
+            missing = [t for t in mandatory if t not in executed]
+            return missing
+
+        except Exception as e:
+            self.engine.on_log(
+                "_get_missing_mandatory",
+                e, type(e), sys.modules[__name__]
+            )
+            return []
+
+    def _on_show_missing_mandatory(self, evt=None):
+        """Show popup with list of missing mandatory tests."""
+        if not hasattr(self, 'missing_mandatory') or not self.missing_mandatory:
+            messagebox.showinfo("Mandatory Tests", "All mandatory tests have been executed.")
+            return
+
+        missing_list = "\n".join(f"  • {t}" for t in self.missing_mandatory)
+        messagebox.showwarning(
+            "Missing Mandatory Tests",
+            f"The following mandatory tests have not been executed:\n\n{missing_list}"
+        )
 
     def on_close(self, evt=None):
         """Close the window."""
