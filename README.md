@@ -5,12 +5,15 @@
 Biovarase is a comprehensive QC (Quality Control) management application designed for medical laboratories, implementing ISO 15189:2022 standards and Westgard multirule algorithms for analytical quality monitoring.
 
 [![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-89%20passed-brightgreen)](./TESTING.md)
 [![License](https://img.shields.io/badge/license-GNU%20GPL%20v3-blue)](./LICENSE)
 
 ---
 
-## 🎯 Features
+![Biovarase Screenshot](screenshots/biovarase.png)
+
+---
+
+## Features
 
 ### Core Functionality
 - **Westgard Multirule QC** - Statistical process control (1:3S, 2:2S, R:4S, 4:1S, 10:X)
@@ -72,7 +75,7 @@ Biovarase is a comprehensive QC (Quality Control) management application designe
 
 5. **First Run**
    ```bash
-   python3 frames/login.py
+   python3 biovarase.py
    ```
 
    On first run, the Setup Wizard will guide you through:
@@ -91,46 +94,13 @@ After initial setup, use the credentials you created during the wizard.
 
 ---
 
-## 🧪 Testing
-
-Biovarase includes a comprehensive automated test suite with **89 tests** covering critical functionality.
-
-### Run Tests
-
-```bash
-# Activate virtual environment
-source venv/bin/activate
-
-# Install pytest
-pip install pytest
-
-# Run all tests
-pytest tests/test_security.py tests/test_westgards.py tests/test_qc.py -v
-```
-
-### Test Coverage
-
-| Module | Tests | Coverage | Status |
-|--------|-------|----------|--------|
-| Security (encryption, hashing) | 27 | 100% | ✅ |
-| Westgard Rules (medical safety) | 29 | 100% | ✅ |
-| QC Statistics (ISO 15189) | 33 | 100% | ✅ |
-| **Total** | **89** | **100%** | ✅ |
-
-For detailed testing documentation, see **[TESTING.md](./TESTING.md)**.
-
----
-
-## 📖 Usage
+## Usage
 
 ### Launching the Application
 
 ```bash
 # Standard launch
-python3 frames/login.py
-
-# With autologin (viewer account)
-python3 frames/login.py --autologin
+python3 biovarase.py
 ```
 
 ### Basic Workflow
@@ -226,36 +196,27 @@ Biovarase implements the following international standards:
 
 ```
 biovarase/
-├── frames/           # GUI windows and dialogs
-│   ├── login.py      # Application entry point
+├── views/            # GUI windows and dialogs
+│   ├── login.py      # Login window
 │   ├── main.py       # Main application window
-│   ├── security.py   # Encryption/decryption utilities
 │   └── ...
-├── tests/            # Automated test suite
-│   ├── conftest.py   # Shared pytest fixtures
-│   ├── test_security.py
-│   ├── test_westgards.py
-│   └── test_qc.py
 ├── engine.py         # Main Engine class (mixin orchestrator)
 ├── dbms.py           # Database connection and queries
 ├── controller.py     # SQL builders and domain logic
 ├── qc.py             # QC statistical calculations
 ├── westgards.py      # Westgard rule algorithms
 ├── tools.py          # GUI utilities
-├── pytest.ini        # Test configuration
-├── TESTING.md        # Test suite documentation
-├── CLAUDE.md         # Development guidelines
-└── README.md         # This file
+├── biovarase.py      # Application entry point
+└── schema.sql        # Database schema
 ```
 
-### Building Executable
+### Building Executable (Windows)
 
-```bash
-# Compile with Nuitka (single-file executable)
-python3 -m nuitka --standalone --onefile --enable-plugin=tk-inter frames/login.py
-
-# Output: login.bin (Linux) or login.exe (Windows)
+```cmd
+build_biovarase.cmd
 ```
+
+Output: `dist/biovarase.dist/biovarase.exe`
 
 ### Coding Standards
 
@@ -270,39 +231,7 @@ For detailed coding guidelines, see **[CLAUDE.md](./CLAUDE.md)**.
 
 ---
 
-## 📝 Documentation
-
-- **[TESTING.md](./TESTING.md)** - Comprehensive test suite guide
-- **[CLAUDE.md](./CLAUDE.md)** - Project architecture and development rules
-- **[LOG_ROTATION.md](./LOG_ROTATION.md)** - Log management documentation
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-
-1. **Clone** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Write tests** for new functionality
-4. **Ensure** all tests pass (`pytest tests/ -v`)
-5. **Commit** changes (`git commit -m 'Add amazing feature'`)
-6. **Push** to branch (`git push origin feature/amazing-feature`)
-7. **Submit** your changes following the project's contribution guidelines
-
-See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines.
-
-### Before Submitting
-
-- [ ] All tests pass locally
-- [ ] New features have corresponding tests
-- [ ] Code follows project style guidelines
-- [ ] Documentation updated (if needed)
-- [ ] No security vulnerabilities introduced
-
----
-
-## 📜 License
+## License
 
 This project is licensed under the **GNU General Public License v3.0**.
 
@@ -310,15 +239,7 @@ See [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 👤 Author
-
-**Giuseppe Costanzi (1966bc)**
-- Email: giuseppecostanzi@gmail.com
-- Project: Biovarase Professional Edition v4.2
-
----
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Westgard QC** - For statistical process control methodologies
 - **ISO/TC 212** - For medical laboratory standards
@@ -326,16 +247,8 @@ See [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 📞 Support
+## Author
 
-For issues, questions, or feature requests:
-1. Check **[TESTING.md](./TESTING.md)** for test-related issues
-2. Review **[CLAUDE.md](./CLAUDE.md)** for architecture questions
-3. Review **[CONTRIBUTING.md](./CONTRIBUTING.md)** for contribution guidelines
-4. Contact: giuseppecostanzi@gmail.com
-
----
-
-**Made with ❤️ for Medical Laboratory Professionals**
-
-*Ensuring analytical quality, one QC result at a time.*
+**Giuseppe Costanzi (1966bc)**
+- Email: giuseppecostanzi@gmail.com
+- Project: Biovarase Professional Edition v4.2
