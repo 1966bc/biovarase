@@ -65,7 +65,22 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 - `QC` (qc.py) - Statistical calculations (mean, SD, CV, bias, uncertainty)
 - `Westgards` (westgards.py) - Westgard multirule QC evaluation
 - `Exporter`/`Importer` - Data import/export
-- `Tools` (tools.py) - Tkinter GUI utilities
+- `Tools` (tools.py) - Tkinter GUI utilities and helper methods
+
+**Tools helper methods** (call via `self.engine`):
+```python
+# Clear all items from a Treeview
+self.engine.clear_treeview(tree)
+
+# Clear all items from a Listbox
+self.engine.clear_listbox(listbox)
+
+# Create button with optional hotkey
+self.engine.add_button(frm_buttons, "Save", self.on_save, "<Alt-s>", self)
+
+# Open child editor window safely (destroys previous, calls on_open)
+self.engine.open_child(self, EditorClass, index=pk, **kwargs)
+```
 
 **Engine manages:**
 - Global state: `current_ids` (site_id, lab_id, section_id)
@@ -325,7 +340,7 @@ Follow platform HIG (Human Interface Guidelines):
 **Biovarase conventions:**
 - Date format: Italian `dd-mm-yyyy`
 - Window titles: descriptive with context (e.g., "Notes - TestName")
-- Lists: `tk.Listbox` for simple lists, `ttk.Treeview` for tabular data
+- Lists: prefer `ttk.Treeview` (with `iid=str(pk)`), use `tk.Listbox` only for simple single-column lists
 - Row colors: red (>3SD), orange (>2SD), gray (disabled), yellow background (`#fff2cc` for notes)
 - Labels: use `ttk.Label` (no bold `tk.Label`)
 - Alignment: dates left, numbers right, minimum 4 spaces between columns
