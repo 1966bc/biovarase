@@ -430,6 +430,30 @@ I test mandatory si configurano da `Menu → Edit → Tests Methods`, attivando 
 
 Il pulsante Export genera il report Excel Quick Data Analysis per la data selezionata.
 
+**History (Storico Validazioni):**
+
+Il pulsante History apre una finestra popup che mostra tutte le azioni di validazione/invalidazione effettuate nella data selezionata.
+
+| Colonna | Descrizione |
+|---------|-------------|
+| Time | Orario dell'azione |
+| User | Nome dell'operatore |
+| Test | Nome del test-campione |
+| Workstation | Workstation interessata |
+| Action | Validated o Invalidated |
+| Value | Valore del risultato |
+
+Le righe sono colorate:
+- **Verde:** Azione di validazione
+- **Rosso:** Azione di invalidazione
+
+In basso viene mostrato il conteggio totale delle azioni.
+
+Il pulsante Export nella finestra History genera un file Excel con lo storico, utile per:
+- Documentazione dei cambi turno
+- Audit trail delle validazioni h24
+- Tracciabilità delle azioni correttive
+
 ---
 
 ## 7. Grafici e Analisi
