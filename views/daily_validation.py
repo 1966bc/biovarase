@@ -205,6 +205,12 @@ class UI(ParentView):
 
         ttk.Button(
             frm_buttons,
+            text="History",
+            command=self._on_show_history
+        ).pack(side=tk.LEFT, **paddings)
+
+        ttk.Button(
+            frm_buttons,
             text="Close",
             command=self.on_close
         ).pack(side=tk.RIGHT, **paddings)
@@ -872,6 +878,228 @@ class UI(ParentView):
         except Exception as e:
             self.engine.on_log(
                 "_on_export",
+                e, type(e), sys.modules[__name__]
+            )
+            messagebox.showerror("Error", f"Failed to export:\n{e}")
+
+    # =========================================================================
+    # VALIDATION HISTORY
+    # =========================================================================
+
+    def _on_show_history(self):
+        """Show validation history for selected date."""
+        if not self.selected_date:
+            messagebox.showinfo("History", "Please load data first.")
+            return
+
+        history = self._get_validation_history()
+
+        # Create popup window
+        popup = tk.Toplevel(self)
+        popup.title(f"Validation History - {self.selected_date}")
+        popup.geometry("800x400")
+        popup.transient(self)
+
+        # Main frame
+        frm = ttk.Frame(popup, padding=10)
+        frm.pack(fill=tk.BOTH, expand=True)
+
+        # Info label
+        ttk.Label(
+            frm,
+            text=f"Validation actions for {self.selected_date}",
+            font=("TkDefaultFont", 10, "bold")
+        ).pack(anchor=tk.W, pady=(0, 10))
+
+        # Treeview with scrollbar
+        frm_tree = ttk.Frame(frm)
+        frm_tree.pack(fill=tk.BOTH, expand=True)
+
+        sb = ttk.Scrollbar(frm_tree, orient=tk.VERTICAL)
+        cols = ("time", "user", "test", "workstation", "action", "result_value")
+        tree = ttk.Treeview(frm_tree, columns=cols, show="headings", yscrollcommand=sb.set, height=15)
+        sb.config(command=tree.yview)
+
+        tree.heading("time", text="Time", anchor=tk.CENTER)
+        tree.heading("user", text="User", anchor=tk.W)
+        tree.heading("test", text="Test", anchor=tk.W)
+        tree.heading("workstation", text="Workstation", anchor=tk.W)
+        tree.heading("action", text="Action", anchor=tk.CENTER)
+        tree.heading("result_value", text="Value", anchor=tk.E)
+
+        tree.column("time", width=60, anchor=tk.CENTER)
+        tree.column("user", width=120, anchor=tk.W)
+        tree.column("test", width=180, anchor=tk.W)
+        tree.column("workstation", width=150, anchor=tk.W)
+        tree.column("action", width=80, anchor=tk.CENTER)
+        tree.column("result_value", width=80, anchor=tk.E)
+
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Populate
+        for row in history:
+            action = "Validated" if row["validated"] == 1 else "Invalidated"
+            color = self.engine.get_rgb(200, 255, 200) if row["validated"] == 1 else self.engine.get_rgb(255, 200, 200)
+
+            values = (
+                row["time_str"],
+                row["user_name"],
+                row["test_name"],
+                row["workstation_name"],
+                action,
+                f"{row['result_value']:.2f}" if row["result_value"] else ""
+            )
+            item = tree.insert("", tk.END, values=values, tags=(color,))
+            tree.tag_configure(color, background=color)
+
+        # Stats
+        validated_count = sum(1 for r in history if r["validated"] == 1)
+        invalidated_count = sum(1 for r in history if r["validated"] == 0)
+
+        ttk.Label(
+            frm,
+            text=f"Total: {len(history)}  |  Validated: {validated_count}  |  Invalidated: {invalidated_count}"
+        ).pack(anchor=tk.W, pady=(10, 0))
+
+        # Buttons
+        frm_btn = ttk.Frame(frm)
+        frm_btn.pack(fill=tk.X, pady=(10, 0))
+
+        ttk.Button(
+            frm_btn,
+            text="Export",
+            command=lambda: self._export_history(history)
+        ).pack(side=tk.LEFT)
+
+        ttk.Button(
+            frm_btn,
+            text="Close",
+            command=popup.destroy
+        ).pack(side=tk.RIGHT)
+
+    def _get_validation_history(self):
+        """Get validation history from audit_results for selected date."""
+        try:
+            lab_id = self.engine.current_ids.get("lab_id")
+
+            sql = """
+                SELECT
+                    ar.log_time,
+                    ar.validated,
+                    ar.result AS result_value,
+                    u.first_name,
+                    u.last_name,
+                    t.description AS test_description,
+                    s.sample,
+                    w.description AS workstation_name
+                FROM audit_results ar
+                INNER JOIN results r ON ar.result_id = r.result_id
+                INNER JOIN batches b ON r.batch_id = b.batch_id
+                INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+                INNER JOIN tests t ON tm.test_id = t.test_id
+                INNER JOIN samples s ON tm.sample_id = s.sample_id
+                INNER JOIN workstations w ON r.workstation_id = w.workstation_id
+                LEFT JOIN users u ON ar.log_id = u.user_id
+                WHERE DATE(ar.log_time) = ?
+                  AND ar.operation = 'UPDATE'
+                  AND ar.validated IS NOT NULL
+                  AND b.lab_id = ?
+                ORDER BY ar.log_time DESC
+            """
+
+            rows = self.engine.read(True, sql, (self.selected_date.isoformat(), lab_id))
+
+            if not rows:
+                return []
+
+            history = []
+            for row in rows:
+                log_time = row["log_time"]
+                if isinstance(log_time, datetime):
+                    time_str = log_time.strftime("%H:%M")
+                else:
+                    time_str = str(log_time)[:5] if log_time else ""
+
+                user_name = f"{row['first_name'] or ''} {row['last_name'] or ''}".strip() or "Unknown"
+                test_name = f"{row['test_description']}-{row['sample']}"
+
+                history.append({
+                    "time_str": time_str,
+                    "user_name": user_name,
+                    "test_name": test_name,
+                    "workstation_name": row["workstation_name"],
+                    "validated": row["validated"],
+                    "result_value": row["result_value"]
+                })
+
+            return history
+
+        except Exception as e:
+            self.engine.on_log(
+                "_get_validation_history",
+                e, type(e), sys.modules[__name__]
+            )
+            return []
+
+    def _export_history(self, history):
+        """Export validation history to Excel."""
+        if not history:
+            messagebox.showinfo("Export", "No data to export.")
+            return
+
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill
+            import os
+
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Validation History"
+
+            # Header
+            headers = ["Time", "User", "Test", "Workstation", "Action", "Value"]
+            ws.append(headers)
+            for cell in ws[1]:
+                cell.font = Font(bold=True)
+
+            # Data
+            for row in history:
+                action = "Validated" if row["validated"] == 1 else "Invalidated"
+                ws.append([
+                    row["time_str"],
+                    row["user_name"],
+                    row["test_name"],
+                    row["workstation_name"],
+                    action,
+                    row["result_value"]
+                ])
+
+            # Column widths
+            ws.column_dimensions['A'].width = 8
+            ws.column_dimensions['B'].width = 20
+            ws.column_dimensions['C'].width = 25
+            ws.column_dimensions['D'].width = 20
+            ws.column_dimensions['E'].width = 12
+            ws.column_dimensions['F'].width = 10
+
+            # Save
+            filename = f"validation_history_{self.selected_date}.xlsx"
+            filepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), filename)
+            wb.save(filepath)
+
+            messagebox.showinfo("Export", f"History exported to:\n{filename}")
+
+            # Open file
+            if sys.platform == "win32":
+                os.startfile(filepath)
+            else:
+                import subprocess
+                subprocess.run(["xdg-open", filepath], check=False)
+
+        except Exception as e:
+            self.engine.on_log(
+                "_export_history",
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror("Error", f"Failed to export:\n{e}")
