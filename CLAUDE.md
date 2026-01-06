@@ -144,6 +144,45 @@ There should be one obvious way to do it.
 - **No bare `except:`** - Always catch specific exceptions
 - **Log everything** - Use `self.on_log()` for debugging
 
+### Design Principles
+- **Composition over Inheritance** - Prefer has-a over is-a (like Engine mixins)
+- **Single Source of Truth** - One data, one place (`current_ids` in Engine)
+- **Separation of Concerns** - Each module does one thing well
+- **Law of Demeter** - Don't talk to strangers
+  ```python
+  # Good: self.engine.get_user()
+  # Bad:  self.engine.db.cursor.execute()
+  ```
+
+### Code Style
+- **Early Return / Guard Clauses** - Exit early, avoid deep nesting
+  ```python
+  # Good:
+  if not data:
+      return None
+  return process(data)
+
+  # Bad:
+  if data:
+      return process(data)
+  else:
+      return None
+  ```
+- **Meaningful Names** - `batch_id` not `bid`, `calculate_mean()` not `calc()`
+- **Boy Scout Rule** - Leave code cleaner than you found it
+- **No Magic Numbers** - Use constants: `ROLE_ADMIN = 0`, not just `0`
+
+### Defensive Programming
+- **Validate at Boundaries** - Check user input, external APIs
+- **Trust Internal Code** - Don't over-validate between internal modules
+- **Principle of Least Astonishment** - Code should do what it looks like it does
+
+### Function Design
+- **Single Responsibility** - One function, one job
+- **Small Functions** - If it doesn't fit on screen, split it
+- **Pure Functions When Possible** - Same input → same output, no side effects
+- **Max 3 Parameters** - More? Use a dict or dataclass
+
 ## Project Rules
 
 ### Mandatory Reading at Session Start
