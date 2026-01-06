@@ -9,73 +9,33 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import views.sample as ui
+from views.parent_view import ParentView
 
-SQL  = "SELECT * FROM samples ORDER BY description;"
+SQL = "SELECT * FROM samples ORDER BY description;"
 
-class UI(tk.Toplevel):
 
-    _instance = None  # cache singleton
+class UI(ParentView):
 
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-    
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="samples")
+        if self._reusing:
             return
-        super().__init__(name="samples")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
 
         self.table = "samples"
         self.primary_key = "sample_id"
 
         self.child = None
         self.dict_items = {}
-        self.selected_item = None  
+        self.selected_item = None
         self.items = tk.StringVar()
-        
-        
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        
-        self.bind("<Escape>", self.on_cancel)
+
         self.bind("<Alt-c>", self.on_cancel)
-        
-        # --- Build interface ------------------------------------------------
+
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window(self, on_screen=True)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        # Set reasonable window size for table display
-        self.update_idletasks()
-        min_width = 600   # Wide enough for all columns (40+10+12+25+10 + spacing)
-        min_height = 400  # Show ~20-25 rows comfortably
-        self.minsize(min_width, min_height)
-        
-        # Set initial geometry (can be resized by user)
-        self.geometry(f"{min_width}x{min_height}")
+
+        self.minsize(600, 400)
+        self.geometry("600x400")
+        self.show(on_screen=True)
 
 
     def _build_ui(self):
@@ -191,6 +151,5 @@ class UI(tk.Toplevel):
         self.child.on_open()         
 
     def on_cancel(self, _evt=None):
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+        super().on_cancel()
 

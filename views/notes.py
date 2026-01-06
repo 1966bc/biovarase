@@ -15,84 +15,40 @@ and opens the editor mask imported as `ui.UI`.
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-import views.note as ui  
+import views.note as ui
+from views.parent_view import ParentView
 
 STATUS_ACTIVE = 1
 
 
-class UI(tk.Toplevel):
-    """Singleton master window for managing notes of a selected result."""
-
-    _instance = None
-
-    def __new__(cls, parent):
-        """
-        Enforce singleton: if an instance already exists and is alive,
-        reuse it and bring it to front.
-        """
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
+    """Master window for managing notes of a selected result."""
 
     def __init__(self, parent):
-        # Singleton guard: avoid re-running __init__ on the existing instance
-        if getattr(self, "_is_init", False):
+        super().__init__(parent, name="notes")
+        if self._reusing:
             return
 
-        super().__init__(name="notes")
-        self._is_init = True
-
-        # --- Window relationship / engine -----------------------------------
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
-        # --- Basic window setup (anti-flash) --------------------------------
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
         self.table = "notes"
         self.primary_key = "note_id"
 
-        self.selected_item = None      # current selected note (dict)
-        self.selected_test = None      # from parent (dict)
-        self.selected_batch = None     # from parent (dict)
-        self.selected_result = None    # from parent (dict)
-        self.child = None              # child editor window
+        self.selected_item = None
+        self.selected_test = None
+        self.selected_batch = None
+        self.selected_result = None
+        self.child = None
 
-        # --- Tk variables shown in the header -------------------------------
         self.items = tk.StringVar(value="Items: 0")
-
         self.test = tk.StringVar()
         self.batch = tk.StringVar()
         self.description = tk.StringVar()
         self.result = tk.StringVar()
         self.received = tk.StringVar()
 
-        # --- Hotkeys --------------------------------------------------------
-        self.bind("<Escape>", self.on_cancel)
         self.bind("<Return>", self._on_item_activated)
 
-        # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window(self, on_screen=True)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show(on_screen=True)
 
     # --------------------------------------------------------------------- UI
     def _build_ui(self):
@@ -372,12 +328,5 @@ class UI(tk.Toplevel):
 
     # -------------------------------------------------------------- Lifecycle
     def on_cancel(self, _evt=None):
-        """Close window safely and unregister from Engine registry."""
-        try:
-            self.engine.dict_instances.pop(self.winfo_name(), None)
-        except Exception as e:
-            pass
-        try:
-            self.destroy()
-        except Exception as e:
-            pass
+        """Close window safely."""
+        super().on_cancel()

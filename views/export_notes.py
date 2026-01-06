@@ -11,63 +11,22 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from calendarium import Calendarium
+from views.parent_view import ParentView
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
 
-    _instance = None
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
-    
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="export_notes")
+        if self._reusing:
             return
 
-        super().__init__(name="export_notes")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
-        
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
-        # Basic window config
         self.title("Export Notes Data")
         self.resizable(False, False)
-
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        self.bind("<Escape>", self.on_cancel)
         self.bind("<Alt-c>", self.on_cancel)
 
-
-         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window(self, on_screen=True)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.show(on_screen=True)
 
     def _build_ui(self):
 
@@ -222,6 +181,5 @@ class UI(tk.Toplevel):
         self.on_cancel()
 
     def on_cancel(self, _evt=None):
-        """Close window safely and unregister from engine."""
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+        """Close window safely."""
+        super().on_cancel()
