@@ -110,6 +110,40 @@ class UI(ParentView):  # or ChildView
 
 **Cross-window refresh:** `self.engine.refresh_windows_for_table("table_name")`
 
+## Programming Principles
+
+### Core Philosophy
+- **PEP 8** - Python style guide (4 spaces, snake_case, 100 char lines)
+- **KISS** - Keep It Simple, Stupid. Simplest solution that works.
+- **DRY** - Don't Repeat Yourself. Extract shared logic.
+- **YAGNI** - You Aren't Gonna Need It. No speculative features.
+- **Fail Fast** - Stop immediately on error, don't hide problems.
+
+### Structural Programming (Böhm-Jacopini Theorem)
+Only three control structures needed for any algorithm:
+1. **Sequence** - Instructions executed in order
+2. **Selection** - if/elif/else branching
+3. **Iteration** - for/while loops
+
+No goto, no spaghetti code. Clean, linear flow.
+
+### The Zen of Python (`import this`)
+```
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Flat is better than nested.
+Readability counts.
+Errors should never pass silently.
+There should be one obvious way to do it.
+```
+
+### Error Handling
+- **Fail Fast** - Detect and report errors immediately
+- **Fail Safe** - When failure occurs, fail to a safe state
+- **No bare `except:`** - Always catch specific exceptions
+- **Log everything** - Use `self.on_log()` for debugging
+
 ## Project Rules
 
 ### Mandatory Reading at Session Start
