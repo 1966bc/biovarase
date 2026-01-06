@@ -314,6 +314,22 @@ self.engine.is_read_only()         # Autologin (3) or higher
 - **Config encryption:** Fernet (AES-128-CBC) tied to hardware (MAC + machine-id)
 - **Roles:** 0=Admin, 1=Superuser, 2=Technician, 3=Autologin (read-only)
 
+## User Interface Guidelines
+
+Follow platform HIG (Human Interface Guidelines):
+- **Primary**: GNOME HIG (https://developer.gnome.org/hig/)
+- **Secondary**: Windows UX Guidelines
+
+**Key principles:** Consistency, Feedback, Error Prevention, Clear Language, Keyboard Navigation, Forgiveness
+
+**Biovarase conventions:**
+- Date format: Italian `dd-mm-yyyy`
+- Window titles: descriptive with context (e.g., "Notes - TestName")
+- Lists: `tk.Listbox` for simple lists, `ttk.Treeview` for tabular data
+- Row colors: red (>3SD), orange (>2SD), gray (disabled), yellow background (`#fff2cc` for notes)
+- Labels: use `ttk.Label` (no bold `tk.Label`)
+- Alignment: dates left, numbers right, minimum 4 spaces between columns
+
 ## Notes for AI Assistants
 
 - This is a **production system** in active use at medical laboratories
