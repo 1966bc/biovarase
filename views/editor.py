@@ -222,7 +222,7 @@ class Editor(ChildView):
         if hasattr(self.engine, "on_fields_control"):
             if self.engine.on_fields_control(
                 self.frm_main,
-                self.nametowidget(".").title(),
+                self.engine.app_title,
             ) is False:
                 return
 
@@ -232,12 +232,12 @@ class Editor(ChildView):
 
         # Confirm save
         if not messagebox.askyesno(
-            self.nametowidget(".").title(),
+            self.engine.app_title,
             getattr(self.engine, "ask_to_save", "Do you want to save?"),
             parent=self,
         ):
             messagebox.showinfo(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 getattr(self.engine, "abort", "Operation aborted!"),
                 parent=self,
             )
@@ -276,7 +276,7 @@ class Editor(ChildView):
 
         except Exception as exc:
             messagebox.showerror(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 f"Save error:\n{exc}",
                 parent=self,
             )
@@ -302,7 +302,7 @@ class Editor(ChildView):
         # Check if empty
         if not norm:
             messagebox.showwarning(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 f"{self.label_text} is required.",
                 parent=self,
             )
@@ -328,7 +328,7 @@ class Editor(ChildView):
             row = self.engine.read(False, sql, (norm,))
         except Exception as exc:
             messagebox.showerror(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 f"Database error:\n{exc}",
                 parent=self,
             )
@@ -345,7 +345,7 @@ class Editor(ChildView):
 
             if self.index is None or found_id != current_id:
                 messagebox.showwarning(
-                    self.nametowidget(".").title(),
+                    self.engine.app_title,
                     f"{self.label_text} '{norm}' already exists!",
                     parent=self,
                 )

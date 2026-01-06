@@ -682,15 +682,14 @@ class Main(tk.Toplevel):
 
         # Lista risultati
         if getattr(self, "lstResults", None) is not None:
-            self.lstResults.delete(0, tk.END)
+            self.engine.clear_listbox(self.lstResults)
 
     def reset_batch_data(self) -> None:
 
         self.expiration.set('')
         self.target.set(0)
         self.sd.set(0)
-        for item in self.lstBatches.get_children():
-            self.lstBatches.delete(item)
+        self.engine.clear_treeview(self.lstBatches)
 
     def reset_cal_data(self) -> None:
 
@@ -882,8 +881,7 @@ class Main(tk.Toplevel):
 
     def set_workstations(self) -> None:
         """Fill workstations treeview for selected test method."""
-        for item in self.lstWorkstations.get_children():
-            self.lstWorkstations.delete(item)
+        self.engine.clear_treeview(self.lstWorkstations)
         self.selected_workstation = None
         self.workstation_test_methods = {}
 
@@ -960,8 +958,7 @@ class Main(tk.Toplevel):
 
     def _populate_batches(self) -> None:
         """Core logic to populate batch treeview (no early-return checks)."""
-        for item in self.lstBatches.get_children():
-            self.lstBatches.delete(item)
+        self.engine.clear_treeview(self.lstBatches)
         self.dict_batches = {}
 
         sql = """
@@ -1005,16 +1002,14 @@ class Main(tk.Toplevel):
     def set_batches(self) -> None:
         """Fill batches treeview for selected test method and workstation."""
         if self.cbTests.current() == -1 or not self.lstWorkstations.selection():
-            for item in self.lstBatches.get_children():
-                self.lstBatches.delete(item)
+            self.engine.clear_treeview(self.lstBatches)
             self.dict_batches = {}
             self.reset_cal_data()
             self.reset_graph()
             return
 
         if not (self.selected_test_method and self.selected_workstation):
-            for item in self.lstBatches.get_children():
-                self.lstBatches.delete(item)
+            self.engine.clear_treeview(self.lstBatches)
             self.dict_batches = {}
             self.reset_cal_data()
             self.reset_graph()
@@ -1032,7 +1027,7 @@ class Main(tk.Toplevel):
 
     def set_results(self) -> None:
         """Fill results listbox for selected batch and workstation."""
-        self.lstResults.delete(0, tk.END)
+        self.engine.clear_listbox(self.lstResults)
         self.dict_results = {}
 
         if not (self.selected_batch and self.selected_workstation):
@@ -1225,8 +1220,7 @@ class Main(tk.Toplevel):
             return
 
         self.cbTests.set("")
-        for item in self.lstWorkstations.get_children():
-            self.lstWorkstations.delete(item)
+        self.engine.clear_treeview(self.lstWorkstations)
 
         index = self.cbCategories.current()
         pk = self.dict_categories.get(index)
@@ -1245,8 +1239,7 @@ class Main(tk.Toplevel):
             return
 
         if self.cbTests.current() == -1:
-            for item in self.lstWorkstations.get_children():
-                self.lstWorkstations.delete(item)
+            self.engine.clear_treeview(self.lstWorkstations)
             self.reset_batch_data()
             self.reset_cal_data()
             self.reset_graph()
@@ -1633,7 +1626,7 @@ class Main(tk.Toplevel):
     def on_tests(self) -> None:
         if not self.engine.is_admin():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.tests.UI(self).on_open()
@@ -1642,7 +1635,7 @@ class Main(tk.Toplevel):
         """Open Test Methods window (Admin/Superuser only)."""
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.test_methods.UI(self).on_open()
@@ -1650,7 +1643,7 @@ class Main(tk.Toplevel):
     def on_workstation_test_methods(self):
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.workstation_test_methods.UI(self).on_open()
@@ -1658,7 +1651,7 @@ class Main(tk.Toplevel):
     def on_categories(self,):
         if not self.engine.is_admin():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.categories.UI(self).on_open()
@@ -1666,7 +1659,7 @@ class Main(tk.Toplevel):
     def on_samples(self,):
         if not self.engine.is_admin():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.samples.UI(self).on_open()
@@ -1674,7 +1667,7 @@ class Main(tk.Toplevel):
     def on_units(self,):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.units.UI(self).on_open()
@@ -1682,7 +1675,7 @@ class Main(tk.Toplevel):
     def on_methods(self,):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.methods.UI(self).on_open()
@@ -1691,7 +1684,7 @@ class Main(tk.Toplevel):
         """Open Controls window (Admin/Superuser only)."""
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.controls.UI(self).on_open()
@@ -1700,7 +1693,7 @@ class Main(tk.Toplevel):
 
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
 
         else:
             views.equipments.UI(self).on_open()
@@ -1709,7 +1702,7 @@ class Main(tk.Toplevel):
         """Open Workstations window (Admin/Superuser only)."""
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.workstations.UI(self).on_open()
@@ -1718,14 +1711,14 @@ class Main(tk.Toplevel):
 
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
         else:
             views.suppliers.UI(self).on_open()
 
     def on_labs(self):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.labs.UI(self).on_open()
@@ -1733,7 +1726,7 @@ class Main(tk.Toplevel):
     def on_sites(self,):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.sites.UI(self).on_open()
@@ -1741,7 +1734,7 @@ class Main(tk.Toplevel):
     def on_sections(self,):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.sections.UI(self).on_open()
@@ -1759,7 +1752,7 @@ class Main(tk.Toplevel):
         """Open Batches window (Admin/Superuser only)."""
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.batches.UI(self).on_open()
@@ -1767,7 +1760,7 @@ class Main(tk.Toplevel):
     def on_actions(self,):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.actions.UI(self).on_open()
@@ -1775,7 +1768,7 @@ class Main(tk.Toplevel):
     def on_users(self,):
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.users.UI(self).on_open()
@@ -1797,10 +1790,10 @@ class Main(tk.Toplevel):
                                                int(self.observations.get()))
             else:
                 msg = "Not enough data to plot.\nSelect an instrument and a batch."
-                messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+                messagebox.showwarning(self.engine.app_title, msg, parent=self)
         else:
             msg = "Not enough data to plot.\nSelect a test."
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             
     def on_tea(self):
         """
@@ -1811,13 +1804,13 @@ class Main(tk.Toplevel):
         """
 
         if self.cbTests.current() == -1:
-            messagebox.showwarning(self.nametowidget(".").title(),
+            messagebox.showwarning(self.engine.app_title,
                                    "Not enough data to plot.\nSelect a test.",
                                    parent=self)
             return
 
         if not self.lstBatches.selection():
-            messagebox.showwarning(self.nametowidget(".").title(),
+            messagebox.showwarning(self.engine.app_title,
                                    "Not enough data to plot.\nSelect a batch.",
                                    parent=self)
             return
@@ -1829,14 +1822,14 @@ class Main(tk.Toplevel):
         selected = self.nametowidget(".").engine.get_test_method_with_goals(pk)
 
         if not selected:
-            messagebox.showwarning(self.nametowidget(".").title(),
+            messagebox.showwarning(self.engine.app_title,
                                    "Test method not found.",
                                    parent=self)
             return
 
         # Check if TEA is enabled (to_export == 1)
         if selected.get("to_export", 0) != 1:
-            messagebox.showwarning(self.nametowidget(".").title(),
+            messagebox.showwarning(self.engine.app_title,
                                    "Selected test is not enabled for this plot type.",
                                    parent=self)
             return
@@ -1857,7 +1850,7 @@ class Main(tk.Toplevel):
         # A test must be selected
         if self.cbTests.current() == -1:
             msg = "Not enough data to plot.\nSelect a test."
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         # Two batches must be selected
@@ -1867,7 +1860,7 @@ class Main(tk.Toplevel):
                 "Not enough data to plot a Youden chart.\n"
                 "You need to select two batches."
             )
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         if len(items) != 2:
@@ -1875,7 +1868,7 @@ class Main(tk.Toplevel):
                 "Youden plot requires exactly two batches.\n"
                 "Please select only two batches."
             )
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         # Selected test method
@@ -1916,7 +1909,7 @@ class Main(tk.Toplevel):
                 "Not enough data to plot a Youden chart.\n"
                 "Both selected batches must have at least one result."
             )
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         # Even if lengths are different, youden.py will use min(len(L1), len(L2))
@@ -1953,14 +1946,14 @@ class Main(tk.Toplevel):
             self.set_results()
         except AttributeError:
             msg = "Attention please.\nNo batch selected."
-            messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
 
     def on_insert_demo_result(self, evt: Optional[tk.Event] = None) -> None:
 
         if not self.nametowidget(".").engine.is_admin():
             msg = self.nametowidget(".").engine.user_not_enable
-            messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         if self.lstBatches.selection():
@@ -1971,7 +1964,7 @@ class Main(tk.Toplevel):
                 self.selected_batch["description"]
             )
 
-            if messagebox.askyesno(self.nametowidget(".").title(),
+            if messagebox.askyesno(self.engine.app_title,
                                    msg,
                                    parent=self) == True:
 
@@ -2036,7 +2029,7 @@ class Main(tk.Toplevel):
 
         else:
             msg = "Attention please.\nBefore add 30 random results you must select a batch."
-            messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
 
     def on_batch_double_button(self, evt: Optional[tk.Event] = None) -> None:
@@ -2045,7 +2038,7 @@ class Main(tk.Toplevel):
             self.on_add_result()
         else:
             msg = "Attention please.\nSelect a batch."
-            messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
 
     def on_add_result(self):
@@ -2060,7 +2053,7 @@ class Main(tk.Toplevel):
             msg = (
                 "Attention please.\nBefore adding a result you must select a batch."
             )
-            messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
+            messagebox.showinfo(self.engine.app_title, msg, parent=self)
             return
 
         batch_item = self.lstBatches.selection()[0]
@@ -2110,7 +2103,7 @@ class Main(tk.Toplevel):
             selection = self.lstResults.curselection()
             if not selection:
                 msg = "Attention please.\nSelect a result."
-                messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
+                messagebox.showinfo(self.engine.app_title, msg, parent=self)
                 return
 
             # Ensure selected_result is set before opening notes
@@ -2141,7 +2134,7 @@ class Main(tk.Toplevel):
 
         if not ret:
             messagebox.showinfo(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 error_msg,
                 parent=self
             )
@@ -2175,14 +2168,14 @@ class Main(tk.Toplevel):
 
     def on_python_version(self) -> None:
         s = self.nametowidget(".").engine.get_python_version()
-        messagebox.showinfo(self.nametowidget(".").title(), s, parent=self)
+        messagebox.showinfo(self.engine.app_title, s, parent=self)
 
     def on_tkinter_version(self) -> None:
         s = "Tkinter patchlevel\n{0}".format(self.nametowidget(".").tk.call("info", "patchlevel"))
-        messagebox.showinfo(self.nametowidget(".").title(), s, parent=self)
+        messagebox.showinfo(self.engine.app_title, s, parent=self)
 
     def on_about(self) -> None:
-        messagebox.showinfo(self.nametowidget(".").title(),
+        messagebox.showinfo(self.engine.app_title,
                             self.nametowidget(".").info,
                             parent=self)
 

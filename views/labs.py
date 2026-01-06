@@ -115,8 +115,7 @@ class UI(ParentView):
     def _load_tree(self):
         """Build Companies → Hospitals tree."""
         # reset
-        for iid in self.Sites.get_children():
-            self.Sites.delete(iid)
+        self.engine.clear_treeview(self.Sites)
 
         root = self.Sites.insert("", tk.END, iid="root", text="Sites")
 
@@ -204,8 +203,7 @@ class UI(ParentView):
 
     def _load_labs_for_hospital(self, site_id: int):
         """Load labs for the given site_id into the right list."""
-        for iid in self.lstLabs.get_children():
-            self.lstLabs.delete(iid)
+        self.engine.clear_treeview(self.lstLabs)
 
         sql = """
             SELECT 

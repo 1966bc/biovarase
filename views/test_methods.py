@@ -142,24 +142,8 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(pane_right, style="Panel.TFrame")
         frm_buttons.pack(side=tk.LEFT, fill=tk.Y, expand=0)
 
-        def add_btn(text, cmd, *, underline=None, shortcut=None):
-            """
-            Create a button in the right pane with optional underline and keyboard shortcut.
-            """
-            btn = ttk.Button(frm_buttons, text=text, command=cmd)
-
-            if underline is not None:
-                btn.configure(underline=underline)
-
-            if shortcut:
-                # Shortcut bound to the Toplevel, not to the single button.
-                self.bind(shortcut, lambda _e: cmd())
-
-            btn.pack(fill=tk.X, pady=2)
-            return btn
-
-        add_btn("Goals", self.on_analytical_goal, underline=0, shortcut="<Alt-g>")
-        add_btn("Cancel", self.on_cancel,         underline=0, shortcut="<Alt-c>")
+        self.engine.add_button(frm_buttons, "Goals", self.on_analytical_goal, "<Alt-g>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         # Place sashes after first layout
         self.after_idle(self._place_sashes)
@@ -213,8 +197,7 @@ class UI(ParentView):
 
     def _clear_methods(self):
         """Clear the methods tree."""
-        for iid in self.lstMethods.get_children():
-            self.lstMethods.delete(iid)
+        self.engine.clear_treeview(self.lstMethods)
 
     def _load_methods_for_selected_test(self):
         """Populate methods tree for the currently selected test."""

@@ -82,16 +82,9 @@ class UI(ParentView):
         # Right: buttons
         frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
 
-        def add_btn(text, cmd, *, underline=None, shortcut=None):
-            btn = ttk.Button(frm_buttons, text=text, command=cmd, underline=underline)
-            btn.pack(fill=tk.X, padx=5, pady=5)
-            if shortcut:
-                self.bind(shortcut, lambda e, c=cmd: c())
-            return btn
-
-        add_btn("Add", self._on_add, underline=0, shortcut="<Alt-a>")
-        add_btn("Update", self._on_item_activated, underline=0, shortcut="<Alt-u>")
-        add_btn("Cancel", self.on_cancel, underline=0, shortcut="<Alt-c>")
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
@@ -178,36 +171,13 @@ class UI(ParentView):
             return
 
         idx = sel[0]
-        self._open_child(idx)
+        pk = self.dict_items.get(idx)
+        if pk is not None:
+            self.engine.open_child(self, ui.UI, index=pk)
 
     def _on_add(self, _evt=None):
         """Open editor in INSERT mode."""
-        self._open_child(None)
-
-    def _open_child(self, index=None):
-        """Destroy previous child and open a new editor window."""
-
-        # Destroy existing child if open
-        try:
-            if self.child is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except Exception as e:
-            pass
-
-        # INSERT mode
-        if index is None:
-            self.child = ui.UI(self, index=None)
-            self.child.on_open()
-            return
-
-        # UPDATE mode
-        pk = self.dict_items.get(index)
-        if pk is None:
-            return
-
-        self.child = ui.UI(self, index=pk)
-        self.child.on_open()
-
+        self.engine.open_child(self, ui.UI, index=None)
 
     def on_cancel(self, evt=None):
         """Close window."""

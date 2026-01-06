@@ -423,8 +423,7 @@ class UI(ParentView):
     def _clear_tests_methods(self):
         """Clear the right-hand list and reset assigned methods."""
         self.test_methods_assigned = []
-        for iid in self.lstTestsMethods.get_children():
-            self.lstTestsMethods.delete(iid)
+        self.engine.clear_treeview(self.lstTestsMethods)
 
     def on_branch_selected(self, _evt=None):
         """Triggered when a node is selected.

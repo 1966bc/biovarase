@@ -139,8 +139,7 @@ class UI(ParentView):
           by engine.parse_iid().
         """
         # Clear current content
-        for iid in self.Sites.get_children():
-            self.Sites.delete(iid)
+        self.engine.clear_treeview(self.Sites)
 
         # Decide which sites are visible:
         # - Admin (role_id == 0 in log_user[5]): all sites.
@@ -277,7 +276,7 @@ class UI(ParentView):
          # INSERT mode
         self.selected_section = self.engine.get_selected("sections", "section_id", pk)
         self.selected_workstation = None
-        self._open_child(index=None)
+        self.engine.open_child(self, workstation_ui.UI, index=None)
 
   
     def _reset_workstations(self):
@@ -368,7 +367,7 @@ class UI(ParentView):
         sel = self.lstWorkstations.selection()
         if not sel:
             messagebox.showwarning(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 self.engine.no_selected,
                 parent=self,
             )
@@ -380,18 +379,7 @@ class UI(ParentView):
             self.table, self.primary_key, pk
         )
 
-        self._open_child(index=pk)
-
-    def _open_child(self, index=None) -> None:
-        """Open the workstation editor child window."""
-        try:
-            if getattr(self, "child", None) is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except Exception as e:
-            pass
-
-        self.child = workstation_ui.UI(self, index=index)
-        self.child.on_open()
+        self.engine.open_child(self, workstation_ui.UI, index=pk)
 
     def on_cancel(self, _evt=None) -> None:
         """Close window safely."""

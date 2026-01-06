@@ -133,7 +133,7 @@ class UI(ChildView):
         """
         # Optional global validation hook
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.nametowidget(".").title()) is False:
+            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
          # Uniqueness check for symbol
@@ -145,12 +145,12 @@ class UI(ChildView):
              return
 
         if not messagebox.askyesno(
-            self.nametowidget(".").title(),
+            self.engine.app_title,
             getattr(self.engine, "ask_to_save", "Do you want to save?"),
             parent=self,
         ):
             messagebox.showinfo(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 getattr(self.engine, "abort", "Abort."),
                 parent=self,
             )
@@ -173,7 +173,7 @@ class UI(ChildView):
             self._reselect_in_parent(last_id if self.index is None else None)
             self.on_cancel()
         except Exception as exc:
-            messagebox.showerror(self.nametowidget(".").title(), f"Save error:\n{exc}", parent=self)
+            messagebox.showerror(self.engine.app_title, f"Save error:\n{exc}", parent=self)
 
 
     def check_symbol(self) -> int:
@@ -209,7 +209,7 @@ class UI(ChildView):
 
         msg = f"Symbol {symbol} has already been assigned!"
         messagebox.showwarning(
-            self.nametowidget(".").title(),
+            self.engine.app_title,
             msg,
             parent=self,
         )
@@ -238,7 +238,7 @@ class UI(ChildView):
         # Must contain something
         if not norm:
             messagebox.showwarning(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 "Description is required.",
                 parent=self,
             )
@@ -284,7 +284,7 @@ class UI(ChildView):
 
             if duplicate:
                 messagebox.showwarning(
-                    self.nametowidget(".").title(),
+                    self.engine.app_title,
                     f"Description '{norm}' has already been assigned!",
                     parent=self,
                 )

@@ -351,18 +351,18 @@ class UI(ChildView):
         if hasattr(self.engine, "on_fields_control"):
             if self.engine.on_fields_control(
                 self.frm_main,
-                self.nametowidget(".").title(),
+                self.engine.app_title,
             ) is False:
                 return
 
         # 2. Confirm save
         if not messagebox.askyesno(
-            self.nametowidget(".").title(),
+            self.engine.app_title,
             getattr(self.engine, "ask_to_save", "Do you want to save?"),
             parent=self,
         ):
             messagebox.showinfo(
-                self.nametowidget(".").title(),
+                self.engine.app_title,
                 getattr(self.engine, "abort", "Operation cancelled."),
                 parent=self,
             )

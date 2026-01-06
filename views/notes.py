@@ -115,20 +115,9 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=6, pady=6)
 
-        def add_btn(text, cmd, hotkey=None):
-            btn = ttk.Button(
-                frm_buttons,
-                style="App.TButton",
-                text=text,
-                command=cmd,
-            )
-            btn.pack(fill=tk.X, pady=4)
-            if hotkey:
-                self.bind(hotkey, cmd)
-
-        add_btn("Add",    self._on_add,            "<Alt-a>")
-        add_btn("Update", self._on_item_activated, "<Alt-u>")
-        add_btn("Close",  self.on_cancel,         "<Alt-c>")
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Close", self.on_cancel, "<Alt-c>", self)
 
     # ----------------------------------------------------------------- Public
     def on_open(self):
@@ -191,16 +180,14 @@ class UI(ParentView):
         """
         if not isinstance(self.selected_result, dict):
             # No valid result bound → clear list
-            for iid in self.lstItems.get_children():
-                self.lstItems.delete(iid)
+            self.engine.clear_treeview(self.lstItems)
             self.items.set("Items: 0")
             self.selected_item = None
             return
 
         result_id = self.selected_result.get("result_id")
         if result_id is None:
-            for iid in self.lstItems.get_children():
-                self.lstItems.delete(iid)
+            self.engine.clear_treeview(self.lstItems)
             self.items.set("Items: 0")
             self.selected_item = None
             return
@@ -220,8 +207,7 @@ class UI(ParentView):
         rs = self.engine.read(True, sql, (result_id,)) or []
 
         # Clear current content
-        for iid in self.lstItems.get_children():
-            self.lstItems.delete(iid)
+        self.engine.clear_treeview(self.lstItems)
 
         count = 0
         for row in rs:
@@ -279,29 +265,11 @@ class UI(ParentView):
             return
 
         self._on_item_selected()
-        self._open_child(index=sel[0])
+        self.engine.open_child(self, ui.UI, index=sel[0])
 
     def _on_add(self, _evt=None):
         """Open the editor for a new note."""
-        self._open_child(index=None)
-
-    # -------------------------------------------------------------- Child UI
-    def _open_child(self, index=None):
-        """
-        Safely (re)open the child editor window.
-
-        The imported mask is `ui.UI`, which receives this master as parent
-        and an optional index (note_id).
-        """
-        try:
-            if getattr(self, "child", None) is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except Exception as e:
-            pass
-
-        self.child = ui.UI(self, index=index)
-        if hasattr(self.child, "on_open"):
-            self.child.on_open()
+        self.engine.open_child(self, ui.UI, index=None)
 
     # -------------------------------------------------------------- Lifecycle
     def on_cancel(self, _evt=None):
