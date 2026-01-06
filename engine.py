@@ -712,7 +712,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def set_section_id(self, value):
 
         try:
-            with open("section_id", "w") as f:
+            path = self.get_file("section_id")
+            with open(path, "w") as f:
                 f.write(str(value))
 
         except (FileNotFoundError, IOError) as e:

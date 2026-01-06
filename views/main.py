@@ -580,12 +580,7 @@ class Main(tk.Toplevel):
             tm.refresh_context_from_section()
 
         # 3) Reset main's own section-dependent lists/filters
-        try:
-            self.on_reset()
-            self.set_categories()
-            # eventually: self.set_tests(), self.set_workstations(), ...
-        except Exception as e:
-            pass
+        self.on_reset()
 
     def _close_untracked_windows(self):
         """
@@ -2237,201 +2232,169 @@ class Main(tk.Toplevel):
             )
             messagebox.showerror("Error", f"Failed to change user: {exc}", parent=self)
 
-    def on_change_section(self, _evt=None):
-        """
-        Change Section - Switch to different section without logout.
-        
-        Permission:
-        - Admin (role=0): Can change to any section
-        - Superuser (role=1): Can change to sections in their lab
-        - Technician (role=2): Can change to sections in their lab
-        - Autologin (role=3): BLOCKED (read-only users)
-        
-        Workflow:
-        1. Check permissions
-        2. Fetch available sections based on role
-        3. Show selection dialog
-        4. Update section_id
-        5. Close section-dependent windows
-        6. Reload main window
-        
+    def _fetch_available_sections(self, role):
+        """Fetch sections available to user based on role.
+
         Args:
-            _evt: Optional Tkinter event (for keyboard shortcut)
+            role: User role (0=Admin, 1=Superuser, 2=Technician)
+
+        Returns:
+            List of section dicts with section_id and description, or None on error.
         """
-        role = self.engine.get_user_role()
-        
-        # Permission check - only autologin (role=3) is blocked
-        if role == 3:
-            messagebox.showwarning(
-                "Permission Denied",
-                "Read-only users cannot change section.",
-                parent=self
-            )
-            return
-        
-        try:
-            # Fetch available sections based on role
-            if role == 0:
-                # Admin: all active sections
-                sql = """
-                    SELECT section_id, description
-                    FROM sections
-                    WHERE status = 1
-                    ORDER BY description
-                """
-                args = ()
-            else:
-                # Superuser/Technician: only sections in their lab
-                lab_id = self.engine.current_ids.get("lab_id")
-                sql = """
-                    SELECT section_id, description
-                    FROM sections
-                    WHERE lab_id = ? AND status = 1
-                    ORDER BY description
-                """
-                args = (lab_id,)
-            
-            sections = self.engine.read(True, sql, args)
-            
-            if not sections:
-                messagebox.showwarning(
-                    "No Sections",
-                    "No sections available for selection.",
-                    parent=self
-                )
+        if role == 0:
+            # Admin: all active sections
+            sql = """
+                SELECT section_id, description
+                FROM sections
+                WHERE status = 1
+                ORDER BY description
+            """
+            args = ()
+        else:
+            # Superuser/Technician: only sections in their lab
+            lab_id = self.engine.current_ids.get("lab_id")
+            sql = """
+                SELECT section_id, description
+                FROM sections
+                WHERE lab_id = ? AND status = 1
+                ORDER BY description
+            """
+            args = (lab_id,)
+
+        return self.engine.read(True, sql, args)
+
+    def _show_section_picker_dialog(self, sections, current_section_id):
+        """Show modal dialog to pick a section.
+
+        Args:
+            sections: List of section dicts
+            current_section_id: Currently active section ID
+
+        Returns:
+            Selected section_id or None if canceled.
+        """
+        dialog = tk.Toplevel(self)
+        dialog.title("Change Section")
+        dialog.geometry("400x300")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Center dialog on parent
+        dialog.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - dialog.winfo_width()) // 2
+        y = self.winfo_y() + (self.winfo_height() - dialog.winfo_height()) // 2
+        dialog.geometry(f"+{x}+{y}")
+
+        # Label
+        tk.Label(
+            dialog,
+            text="Select new section:",
+            font=("TkDefaultFont", 10, "bold")
+        ).pack(padx=10, pady=10, anchor=tk.W)
+
+        # Listbox with scrollbar
+        frame = tk.Frame(dialog)
+        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
+        listbox = tk.Listbox(
+            frame,
+            yscrollcommand=scrollbar.set,
+            font=("TkFixedFont", 10),
+            activestyle="dotbox"
+        )
+        scrollbar.config(command=listbox.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Populate listbox
+        dict_sections = {}
+        for idx, section in enumerate(sections):
+            section_id = section["section_id"]
+            dict_sections[idx] = section_id
+            listbox.insert(tk.END, section["description"])
+
+            if section_id == current_section_id:
+                listbox.selection_set(idx)
+                listbox.see(idx)
+
+        # Result container (mutable for closure)
+        selected_section_id = [None]
+
+        def on_select():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Please select a section.", parent=dialog)
                 return
-            
-            # Create selection dialog
-            dialog = tk.Toplevel(self)
-            dialog.title("Change Section")
-            dialog.geometry("400x300")
-            dialog.resizable(False, False)
-            dialog.transient(self)
-            dialog.grab_set()
-            
-            # Center dialog
-            dialog.update_idletasks()
-            x = self.winfo_x() + (self.winfo_width() - dialog.winfo_width()) // 2
-            y = self.winfo_y() + (self.winfo_height() - dialog.winfo_height()) // 2
-            dialog.geometry(f"+{x}+{y}")
-            
-            # Label
-            tk.Label(
-                dialog,
-                text="Select new section:",
-                font=("TkDefaultFont", 10, "bold")
-            ).pack(padx=10, pady=10, anchor=tk.W)
-            
-            # Listbox with scrollbar
-            frame = tk.Frame(dialog)
-            frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-            
-            scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
-            listbox = tk.Listbox(
-                frame,
-                yscrollcommand=scrollbar.set,
-                font=("TkFixedFont", 10),
-                activestyle="dotbox"
-            )
-            scrollbar.config(command=listbox.yview)
-            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            
-            # Populate listbox
-            dict_sections = {}
+            selected_section_id[0] = dict_sections[selection[0]]
+            dialog.destroy()
+
+        def on_cancel():
+            dialog.destroy()
+
+        # Buttons
+        btn_frame = tk.Frame(dialog)
+        btn_frame.pack(pady=10)
+
+        tk.Button(btn_frame, text="OK", width=10, command=on_select).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Cancel", width=10, command=on_cancel).pack(side=tk.LEFT, padx=5)
+
+        listbox.bind("<Double-Button-1>", lambda e: on_select())
+
+        self.wait_window(dialog)
+        return selected_section_id[0]
+
+    def _apply_section_change(self, new_section_id, sections):
+        """Apply section change: update state, close windows, reload.
+
+        Args:
+            new_section_id: The section ID to switch to
+            sections: List of section dicts (for name lookup)
+        """
+        self.engine.set_section_id(new_section_id)
+
+        # Update all hierarchical IDs (site_id, lab_id, section_id, etc.)
+        ids = self.engine.get_idd_by_section_id(new_section_id)
+        if ids:
+            self.engine.current_ids.update(ids)
+
+        self.refresh_context_from_section()
+
+        section_name = next(
+            (s["description"] for s in sections if s["section_id"] == new_section_id),
+            f"Section {new_section_id}"
+        )
+        messagebox.showinfo("Section Changed", f"Now working in: {section_name}", parent=self)
+
+    def on_change_section(self, _evt=None):
+        """Change Section - Switch to different section without logout."""
+        role = self.engine.get_user_role()
+
+        if role == 3:
+            messagebox.showwarning("Permission Denied", "Read-only users cannot change section.", parent=self)
+            return
+
+        try:
+            sections = self._fetch_available_sections(role)
+
+            if not sections:
+                messagebox.showwarning("No Sections", "No sections available for selection.", parent=self)
+                return
+
             current_section_id = self.engine.get_section_id()
-            
-            for idx, section in enumerate(sections):
-                section_id = section["section_id"]
-                description = section["description"]
-                dict_sections[idx] = section_id
-                
-                display = f"{description}"
-                listbox.insert(tk.END, display)
-                
-                # Highlight current section
-                if section_id == current_section_id:
-                    listbox.selection_set(idx)
-                    listbox.see(idx)
-            
-            # Result variable
-            selected_section_id = [None]
-            
-            def on_select():
-                """Handle selection."""
-                selection = listbox.curselection()
-                if not selection:
-                    messagebox.showwarning("No Selection", "Please select a section.", parent=dialog)
-                    return
-                
-                idx = selection[0]
-                selected_section_id[0] = dict_sections[idx]
-                dialog.destroy()
-            
-            def on_cancel():
-                """Handle cancel."""
-                dialog.destroy()
-            
-            # Buttons
-            btn_frame = tk.Frame(dialog)
-            btn_frame.pack(pady=10)
-            
-            tk.Button(
-                btn_frame,
-                text="OK",
-                width=10,
-                command=on_select
-            ).pack(side=tk.LEFT, padx=5)
-            
-            tk.Button(
-                btn_frame,
-                text="Cancel",
-                width=10,
-                command=on_cancel
-            ).pack(side=tk.LEFT, padx=5)
-            
-            # Double-click to select
-            listbox.bind("<Double-Button-1>", lambda e: on_select())
-            
-            # Wait for dialog to close
-            self.wait_window(dialog)
-            
-            # Check if section was selected
-            if selected_section_id[0] is None:
-                return  # User canceled
-            
-            new_section_id = selected_section_id[0]
-            
-            # Check if same section
+            new_section_id = self._show_section_picker_dialog(sections, current_section_id)
+
+            if new_section_id is None:
+                return
+
             if new_section_id == current_section_id:
                 messagebox.showinfo("Same Section", "Already in this section.", parent=self)
                 return
-            
-            # Update section_id
-            self.engine.set_section_id(new_section_id)
-            self.engine.current_ids["section_id"] = new_section_id
-            
-            # Close section-dependent windows
-            self.engine.close_unregistered_toplevels(self)
-            
-            # Reload main window
-            self.on_open()
-            
-            # Get section name for confirmation
-            section_name = next(
-                (s["description"] for s in sections if s["section_id"] == new_section_id),
-                f"Section {new_section_id}"
-            )
-            
-            # Confirmation message
-            messagebox.showinfo(
-                "Section Changed",
-                f"Now working in: {section_name}",
-                parent=self
-            )
-            
+
+            self._apply_section_change(new_section_id, sections)
+
         except Exception as exc:
-            # Log error
             self.engine.on_log(
                 "on_change_section",
                 str(exc),
