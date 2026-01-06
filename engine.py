@@ -1003,60 +1003,39 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         sys.modules[__name__])        
             return {}
 
-    def get_bvv(self):
+    def launch_document(self, key):
+        """
+        Launch a document from the documents folder.
+
+        Args:
+            key: Document key from documents.json (e.g., "user_manual", "guidelines")
+
+        Returns:
+            True if document was launched successfully, False otherwise
+        """
         try:
-            path = self.get_file('bvv')
-            with open(path, 'r') as f:
-                v = f.readline().strip()
-            return v
-        except:
+            import json
+            config_path = self.get_file("documents.json")
+
+            with open(config_path, 'r', encoding='utf-8') as f:
+                documents = json.load(f)
+
+            if key not in documents:
+                return False
+
+            filename = documents[key]["filename"]
+            path = self.get_file(os.path.join("documents", filename))
+
+            return self.launch(path)
+
+        except Exception as e:
             self.on_log(inspect.stack()[0][3],
                         sys.exc_info()[1],
                         sys.exc_info()[0],
-                        sys.modules[__name__]) 
-            return None
-
-    def get_user_manual(self):
-        try:
-            path = self.get_file('manual')
-            with open(path, 'r') as f:
-                v = f.readline().strip()
-            return v
-        except:
-            self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__]) 
-            return None
+                        sys.modules[__name__])
+            return False
 
 
-    def get_guidelines(self):
-        try:
-            path = self.get_file('guidelines')
-            with open(path, 'r') as f:
-                v = f.readline().strip()
-            return v
-        except:
-            self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__]) 
-            return None
-
-    def get_qc_thecnical_manual(self):
-        try:
-            path = self.get_file('qc_thecnical_manual')
-            with open(path, 'r') as f:
-                v = f.readline().strip()
-            return v
-        except:
-            self.on_log(inspect.stack()[0][3],
-                        sys.exc_info()[1],
-                        sys.exc_info()[0],
-                        sys.modules[__name__]) 
-            return None
-
-    
 def main():
     """
     Test/debug entry point.

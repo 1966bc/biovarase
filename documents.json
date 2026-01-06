@@ -1,0 +1,18 @@
+{
+    "user_manual": {
+        "filename": "biovarase_user_manual.pdf",
+        "description": "Biovarase User Manual"
+    },
+    "qc_technical": {
+        "filename": "nt_tr_569_ed4.pdf",
+        "description": "QC Technical Manual"
+    },
+    "guidelines": {
+        "filename": "guidelines.pdf",
+        "description": "Biovarase Guidelines"
+    },
+    "biological_values": {
+        "filename": "BVValues1Final.pdf",
+        "description": "Biological Variation Values"
+    }
+}

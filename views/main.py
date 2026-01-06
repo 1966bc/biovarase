@@ -2102,84 +2102,46 @@ class Main(tk.Toplevel):
                 sys.modules[__name__],
             )
 
-    def on_bvv(self) -> None:
-
+    def _open_document(self, key: str, error_msg: str) -> None:
+        """Helper to open documents from documents.json."""
         engine = self.nametowidget(".").engine
         engine.busy(self)
 
         try:
-            filename = engine.get_bvv()
-            path = engine.get_file(os.path.join("documents", filename))
-            ret = engine.launch(path)
+            ret = engine.launch_document(key)
         finally:
             engine.not_busy(self)
 
         if not ret:
             messagebox.showinfo(
                 self.nametowidget(".").title(),
-                "The file Biological Variation Values does not exist or cannot be opened.",
+                error_msg,
                 parent=self
             )
 
+    def on_bvv(self) -> None:
+        self._open_document(
+            "biological_values",
+            "The file Biological Variation Values does not exist or cannot be opened."
+        )
+
     def on_user_manual(self) -> None:
-
-        engine = self.nametowidget(".").engine
-        engine.busy(self)
-
-        try:
-            filename = engine.get_user_manual()
-            path = engine.get_file(os.path.join("documents", filename))
-            ret = engine.launch(path)
-        finally:
-            engine.not_busy(self)
-
-        if not ret:
-            messagebox.showinfo(
-                self.nametowidget(".").title(),
-                "The Biovarase User Manual does not exist or cannot be opened.",
-                parent=self,
-            )
-
+        self._open_document(
+            "user_manual",
+            "The Biovarase User Manual does not exist or cannot be opened."
+        )
 
     def on_qc_thecnical_manual(self) -> None:
-
-        engine = self.nametowidget(".").engine
-
-        engine.busy(self)
-
-        file = engine.get_qc_thecnical_manual()
-        path = engine.get_file(os.path.join("documents", file))
-
-        ret = engine.launch(path)
-
-        engine.not_busy(self)
-
-        if not ret:
-            messagebox.showinfo(
-                self.nametowidget(".").title(),
-                "The QC Technical Manual does not exist or cannot be opened.",
-                parent=self,
-            )
+        self._open_document(
+            "qc_technical",
+            "The QC Technical Manual does not exist or cannot be opened."
+        )
 
     def on_get_guidelines(self) -> None:
-
-        engine = self.nametowidget(".").engine
-
-        engine.busy(self)
-
-        file = engine.get_guidelines()
-        path = engine.get_file(os.path.join("documents", file))
-
-        ret = engine.launch(path)
-
-        engine.not_busy(self)
-
-        if not ret:
-            messagebox.showinfo(
-                self.nametowidget(".").title(),
-                "The Biovarase Guidelines file does not exist or cannot be opened.",
-                parent=self,
-            )
+        self._open_document(
+            "guidelines",
+            "The Biovarase Guidelines file does not exist or cannot be opened."
+        )
 
     def on_license(self) -> None:
         views.license.UI(self).on_open()
