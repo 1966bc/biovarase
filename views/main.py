@@ -1964,8 +1964,10 @@ class Main(tk.Toplevel):
                     args = (self.selected_batch["batch_id"], self.selected_workstation["workstation_id"])
                     cur.execute(sql_delete, args)
 
-                    min_val = round((self.selected_batch["target"] - self.selected_batch["sd"]), 2)
-                    max_val = round((self.selected_batch["target"] + self.selected_batch["sd"]), 2)
+                    target = float(self.selected_batch["target"])
+                    sd = float(self.selected_batch["sd"])
+                    min_val = round(target - sd, 2)
+                    max_val = round(target + sd, 2)
                                                                                         
                     sql_insert = "INSERT INTO results(batch_id, workstation_id, result, received, log_time, log_id) VALUES(?,?,?,?,?,?)"
                     log_time = self.nametowidget(".").engine.get_log_time()
