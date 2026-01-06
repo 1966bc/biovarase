@@ -1,0 +1,60 @@
+# Credentials and local config
+config.enc
+
+# Logs
+log.txt
+
+# Backup files
+*.bak
+*.bak.*
+*.bak_*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# pytest
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+
+# Local folders (not for production)
+sql/
+scripts/
+stuff/
+batches/
+documents/
+imports/
+quarantine/
+services/
+tests/
+dist/
+migrations/
+
+# Test files (local only)
+test_congif.py
+test_log_rotation.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.dist/

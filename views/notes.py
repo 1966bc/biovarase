@@ -1,0 +1,380 @@
+# -*- coding: utf-8 -*-
+#-----------------------------------------------------------------------------
+# project:  biovarase
+# authors:  1966bc
+# mailto:   [giuseppecostanzi@gmail.com]
+# modify:   ver MMXXV
+#-----------------------------------------------------------------------------
+"""
+Notes master window.
+
+This Toplevel shows all notes linked to the currently selected result
+and opens the editor mask imported as `ui.UI`.
+"""
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+import views.note as ui  
+
+STATUS_ACTIVE = 1
+
+
+class UI(tk.Toplevel):
+    """Singleton master window for managing notes of a selected result."""
+
+    _instance = None
+
+    def __new__(cls, parent):
+        """
+        Enforce singleton: if an instance already exists and is alive,
+        reuse it and bring it to front.
+        """
+        if cls._instance is not None:
+            try:
+                if cls._instance.winfo_exists():
+                    cls._instance.deiconify()
+                    cls._instance.lift()
+                    cls._instance.after_idle(cls._instance.focus_set)
+                    return cls._instance
+            except Exception as e:
+                cls._instance = None
+
+        obj = super().__new__(cls)
+        cls._instance = obj
+        return obj
+
+    def __init__(self, parent):
+        # Singleton guard: avoid re-running __init__ on the existing instance
+        if getattr(self, "_is_init", False):
+            return
+
+        super().__init__(name="notes")
+        self._is_init = True
+
+        # --- Window relationship / engine -----------------------------------
+        self.parent = parent
+        self.engine = self.nametowidget(".").engine
+        self.engine.dict_instances[self.winfo_name()] = self
+
+        # --- Basic window setup (anti-flash) --------------------------------
+        self.withdraw()
+        self.attributes("-alpha", 0.0)
+       
+        self.table = "notes"
+        self.primary_key = "note_id"
+
+        self.selected_item = None      # current selected note (dict)
+        self.selected_test = None      # from parent (dict)
+        self.selected_batch = None     # from parent (dict)
+        self.selected_result = None    # from parent (dict)
+        self.child = None              # child editor window
+
+        # --- Tk variables shown in the header -------------------------------
+        self.items = tk.StringVar(value="Items: 0")
+
+        self.test = tk.StringVar()
+        self.batch = tk.StringVar()
+        self.description = tk.StringVar()
+        self.result = tk.StringVar()
+        self.received = tk.StringVar()
+
+        # --- Hotkeys --------------------------------------------------------
+        self.bind("<Escape>", self._on_cancel)
+        self.bind("<Return>", self._on_item_activated)
+
+        # --- Build interface ------------------------------------------------
+        self._build_ui()
+        # Stabilize real geometry, then center and show
+        self.update_idletasks()
+        self.engine.center_window_on_screen(self)
+        self.deiconify()
+        self.attributes("-alpha", 1.0)
+        self.lift()
+        self.update_idletasks()
+        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+
+    # --------------------------------------------------------------------- UI
+    def _build_ui(self):
+        """Build the complete master layout."""
+
+        frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
+        frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
+
+        # Left: context info (test, batch, result, etc.)
+        frm_left = ttk.Frame(
+            frm_main,
+            style="App.TFrame",
+            relief=tk.GROOVE,
+            padding=8,
+        )
+        frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
+
+        ttk.Label(frm_left, text="Test:").pack(side=tk.TOP, anchor=tk.W)
+        tk.Label(
+            frm_left,
+            font="Verdana 12 bold",
+            textvariable=self.test,
+        ).pack(side=tk.TOP, anchor=tk.W)
+
+        ttk.Label(frm_left, text="Batch:").pack(side=tk.TOP, anchor=tk.W)
+        tk.Label(
+            frm_left,
+            font="Verdana 12 bold",
+            textvariable=self.batch,
+        ).pack(side=tk.TOP, anchor=tk.W)
+
+        ttk.Label(frm_left, text="Description:").pack(side=tk.TOP, anchor=tk.W)
+        tk.Label(
+            frm_left,
+            font="Verdana 12 bold",
+            textvariable=self.description,
+        ).pack(side=tk.TOP, anchor=tk.W)
+
+        ttk.Label(frm_left, text="Result:").pack(side=tk.TOP, anchor=tk.W)
+        tk.Label(
+            frm_left,
+            font="Verdana 12 bold",
+            textvariable=self.result,
+        ).pack(side=tk.TOP, anchor=tk.W)
+
+        ttk.Label(frm_left, text="Received:").pack(side=tk.TOP, anchor=tk.W)
+        tk.Label(
+            frm_left,
+            font="Verdana 12 bold",
+            textvariable=self.received,
+        ).pack(side=tk.TOP, anchor=tk.W)
+
+        # Middle: Treeview with notes
+        frm_middle = ttk.Frame(
+            frm_main,
+            style="App.TFrame",
+            relief=tk.GROOVE,
+            padding=8,
+        )
+        frm_middle.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
+
+        ttk.Label(
+            frm_middle,
+            style="App.TLabel",
+            textvariable=self.items,
+        ).pack(fill=tk.X, padx=2, pady=2)
+
+        cols = (
+            ["#0", "ID",         "w", False, 60,  60],
+            ["#1", "Description","w", True,  180, 180],
+            ["#2", "Modified",   "w", True,  140, 140],
+        )
+
+        # Treeview is created inside the middle frame
+        self.lstItems = self.engine.get_tree(frm_middle, cols)
+        self.lstItems.tag_configure(
+            "status",
+            background=self.engine.get_rgb(211, 211, 211),
+        )
+
+        self.lstItems.bind("<<TreeviewSelect>>", self._on_item_selected)
+        self.lstItems.bind("<Double-1>", self._on_item_activated)
+
+        # Right: Buttons
+        frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
+        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=6, pady=6)
+
+        def add_btn(text, cmd, hotkey=None):
+            btn = ttk.Button(
+                frm_buttons,
+                style="App.TButton",
+                text=text,
+                command=cmd,
+            )
+            btn.pack(fill=tk.X, pady=4)
+            if hotkey:
+                self.bind(hotkey, cmd)
+
+        add_btn("Add",    self._on_add,            "<Alt-a>")
+        add_btn("Update", self._on_item_activated, "<Alt-u>")
+        add_btn("Close",  self._on_cancel,         "<Alt-c>")
+
+    # ----------------------------------------------------------------- Public
+    def on_open(self):
+        """
+        Configure title, load parent context, reload data and center the window.
+        This method MUST always be called after construction.
+        """
+        self.title(f"{self.winfo_name().capitalize()} management")
+
+        # Parent MUST provide dicts (PROJECT_RULES: use read_dict).
+        self.selected_test = getattr(self.parent, "selected_test", None)
+        self.selected_batch = getattr(self.parent, "selected_batch", None)
+        self.selected_result = getattr(self.parent, "selected_result", None)
+
+        # Test description
+        if isinstance(self.selected_test, dict):
+            self.test.set(self.selected_test.get("description", ""))
+        else:
+            self.test.set("")
+
+        # Batch: lot_number + description
+        if isinstance(self.selected_batch, dict):
+            self.batch.set(self.selected_batch.get("lot_number", ""))
+            self.description.set(self.selected_batch.get("description", ""))
+        else:
+            self.batch.set("")
+            self.description.set("")
+
+        # Result: numeric value + received datetime
+        if isinstance(self.selected_result, dict):
+            value = self.selected_result.get("result")
+            received = self.selected_result.get("received")
+
+            if isinstance(value, (int, float)):
+                self.result.set(round(value, 3))
+            else:
+                self.result.set("")
+
+            try:
+                if hasattr(received, "strftime"):
+                    self.received.set(received.strftime("%Y-%m-%d"))
+                else:
+                    self.received.set("")
+            except Exception as e:
+                self.received.set("")
+        else:
+            self.result.set("")
+            self.received.set("")
+
+        self._set_values()
+
+    def _set_values(self):
+        """
+        Reload Treeview data for the current result.
+
+        PROJECT_RULES:
+        - result_id MUST be obtained from a dict (read_dict).
+        - No positional indexing on database rows.
+        """
+        if not isinstance(self.selected_result, dict):
+            # No valid result bound → clear list
+            for iid in self.lstItems.get_children():
+                self.lstItems.delete(iid)
+            self.items.set("Items: 0")
+            self.selected_item = None
+            return
+
+        result_id = self.selected_result.get("result_id")
+        if result_id is None:
+            for iid in self.lstItems.get_children():
+                self.lstItems.delete(iid)
+            self.items.set("Items: 0")
+            self.selected_item = None
+            return
+
+        sql = """
+            SELECT
+                notes.note_id,
+                actions.description AS description,
+                notes.modified      AS modified,
+                notes.status        AS status
+            FROM notes
+            INNER JOIN actions
+                ON notes.action_id = actions.action_id
+            WHERE notes.result_id = ?;
+        """
+
+        rs = self.engine.read(True, sql, (result_id,)) or []
+
+        # Clear current content
+        for iid in self.lstItems.get_children():
+            self.lstItems.delete(iid)
+
+        count = 0
+        for row in rs:
+            status = int(row["status"])
+            tags = ("status",) if status != STATUS_ACTIVE else ()
+            self.lstItems.insert(
+                "",
+                tk.END,
+                iid=str(row["note_id"]),
+                text=str(row["note_id"]),
+                values=(
+                    row["description"],
+                    row["modified"],
+                ),
+                tags=tags,
+            )
+            count += 1
+
+    
+        self.items.set(f"Items: {count}")
+
+        self.selected_item = None
+
+    # --------------------------------------------------------- Tree callbacks
+    def _on_item_selected(self, _evt=None):
+        """Update self.selected_item with the current note (dict)."""
+        sel = self.lstItems.selection()
+        if not sel:
+            self.selected_item = None
+            return
+
+        # Treeview iid is NOT a DB row; PROJECT_RULES are about SQL rows.
+        note_id = sel[0]
+
+        # get_selected returns a hybrid dict; we only use named keys.
+        self.selected_item = self.engine.get_selected(
+            self.table,
+            self.primary_key,
+            note_id,
+        )
+
+    def _on_item_activated(self, _evt=None):
+        """
+        Activate current selection:
+        - if a note is selected, open the editor on that note
+        - otherwise, show warning.
+        """
+        sel = self.lstItems.selection()
+        if not sel:
+            messagebox.showwarning(
+                self.engine.app_title,
+                self.engine.no_selected,
+                parent=self,
+            )
+            return
+
+        self._on_item_selected()
+        self._open_child(index=sel[0])
+
+    def _on_add(self, _evt=None):
+        """Open the editor for a new note."""
+        self._open_child(index=None)
+
+    # -------------------------------------------------------------- Child UI
+    def _open_child(self, index=None):
+        """
+        Safely (re)open the child editor window.
+
+        The imported mask is `ui.UI`, which receives this master as parent
+        and an optional index (note_id).
+        """
+        try:
+            if getattr(self, "child", None) is not None and self.child.winfo_exists():
+                self.child.destroy()
+        except Exception as e:
+            pass
+
+        self.child = ui.UI(self, index=index)
+        if hasattr(self.child, "on_open"):
+            self.child.on_open()
+
+    # -------------------------------------------------------------- Lifecycle
+    def _on_cancel(self, _evt=None):
+        """Close window safely and unregister from Engine registry."""
+        try:
+            self.engine.dict_instances.pop(self.winfo_name(), None)
+        except Exception as e:
+            pass
+        try:
+            self.destroy()
+        except Exception as e:
+            pass
