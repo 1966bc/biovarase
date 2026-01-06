@@ -692,12 +692,16 @@ class UI(ParentView):
             # Update tree display
             row = self.dict_results[item_id]
             row["validated"] = 1
+            ws_id = row["workstation_id"]
 
             color = self.engine.get_rgb(200, 255, 200)
             values = list(self.tree.item(item_id, "values"))
             values[3] = "✓"
             self.tree.item(item_id, values=values, tags=(TAG_RESULT, color))
             self.tree.tag_configure(color, background=color)
+
+            # Check if all results are now validated → auto-approve WS
+            self._check_auto_approve_workstation(ws_id, user_id)
 
             # Refresh parent workstation counts (preserve expansion)
             self._load_data(preserve_expansion=True)
@@ -708,6 +712,56 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror("Error", f"Failed to validate:\n{e}")
+
+    def _check_auto_approve_workstation(self, ws_id, user_id):
+        """Check if all results are validated and offer to approve workstation."""
+        try:
+            lab_id = self.engine.current_ids.get("lab_id")
+
+            # Check if already approved
+            sql_approved = """
+                SELECT approval_id FROM daily_approvals
+                WHERE workstation_id = ? AND approval_date = ?
+            """
+            approved = self.engine.read(True, sql_approved, (ws_id, self.selected_date.isoformat()))
+            if approved:
+                return  # Already approved
+
+            # Count pending results
+            sql_pending = """
+                SELECT COUNT(*) AS pending
+                FROM results r
+                INNER JOIN batches b ON r.batch_id = b.batch_id
+                WHERE r.workstation_id = ?
+                  AND DATE(r.received) = ?
+                  AND r.validated = 0
+                  AND r.status = 1
+                  AND r.is_delete = 0
+                  AND b.lab_id = ?
+            """
+            result = self.engine.read(True, sql_pending, (ws_id, self.selected_date.isoformat(), lab_id))
+            pending = result[0]["pending"] if result else 0
+
+            if pending > 0:
+                return  # Still has pending results
+
+            # All validated! Offer to approve workstation
+            if messagebox.askyesno(
+                "All Validated",
+                "All results for this workstation are now validated.\n\n"
+                "Approve the workstation?"
+            ):
+                sql_approve = """
+                    INSERT INTO daily_approvals (approval_date, workstation_id, approved_by)
+                    VALUES (?, ?, ?)
+                """
+                self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
+
+        except Exception as e:
+            self.engine.on_log(
+                "_check_auto_approve_workstation",
+                e, type(e), sys.modules[__name__]
+            )
 
     def _on_invalidate(self):
         """Invalidate a validated result."""
