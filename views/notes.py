@@ -80,14 +80,14 @@ class UI(tk.Toplevel):
         self.received = tk.StringVar()
 
         # --- Hotkeys --------------------------------------------------------
-        self.bind("<Escape>", self._on_cancel)
+        self.bind("<Escape>", self.on_cancel)
         self.bind("<Return>", self._on_item_activated)
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
         # Stabilize real geometry, then center and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -160,18 +160,21 @@ class UI(tk.Toplevel):
             textvariable=self.items,
         ).pack(fill=tk.X, padx=2, pady=2)
 
-        cols = (
-            ["#0", "ID",         "w", False, 60,  60],
-            ["#1", "Description","w", True,  180, 180],
-            ["#2", "Modified",   "w", True,  140, 140],
-        )
+        cols_notes = ("description", "modified")
+        self.lstItems = ttk.Treeview(frm_middle, columns=cols_notes, show="headings")
 
-        # Treeview is created inside the middle frame
-        self.lstItems = self.engine.get_tree(frm_middle, cols)
-        self.lstItems.tag_configure(
-            "status",
-            background=self.engine.get_rgb(211, 211, 211),
-        )
+        self.lstItems.column("description", width=180, minwidth=180, anchor=tk.W, stretch=True)
+        self.lstItems.heading("description", text="Description", anchor=tk.W)
+
+        self.lstItems.column("modified", width=140, minwidth=140, anchor=tk.W, stretch=True)
+        self.lstItems.heading("modified", text="Modified", anchor=tk.W)
+
+        sb_notes = ttk.Scrollbar(frm_middle, orient=tk.VERTICAL, command=self.lstItems.yview)
+        self.lstItems.configure(yscrollcommand=sb_notes.set)
+        self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_notes.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.lstItems.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
 
         self.lstItems.bind("<<TreeviewSelect>>", self._on_item_selected)
         self.lstItems.bind("<Double-1>", self._on_item_activated)
@@ -193,7 +196,7 @@ class UI(tk.Toplevel):
 
         add_btn("Add",    self._on_add,            "<Alt-a>")
         add_btn("Update", self._on_item_activated, "<Alt-u>")
-        add_btn("Close",  self._on_cancel,         "<Alt-c>")
+        add_btn("Close",  self.on_cancel,         "<Alt-c>")
 
     # ----------------------------------------------------------------- Public
     def on_open(self):
@@ -368,7 +371,7 @@ class UI(tk.Toplevel):
             self.child.on_open()
 
     # -------------------------------------------------------------- Lifecycle
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         """Close window safely and unregister from Engine registry."""
         try:
             self.engine.dict_instances.pop(self.winfo_name(), None)

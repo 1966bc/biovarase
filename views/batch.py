@@ -3,7 +3,7 @@
 # project:  biovarase
 # authors:  1966bc
 # mailto:   [giuseppecostanzi@gmail.com]
-# modify:   autumn MMXXV 
+# modify:   autumn MMXXV
 #-----------------------------------------------------------------------------
 import sys
 import tkinter as tk
@@ -12,28 +12,16 @@ from tkinter import messagebox
 from calendarium import Calendarium
 from datetime import date, datetime
 
-class UI(tk.Toplevel):
+from views.child_view import ChildView
+
+
+class UI(ChildView):
     def __init__(self, parent, index=None):
-        super().__init__(name="batch")
+        super().__init__(parent, name="batch")
 
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        try:
-            self.transient(parent)
-        except Exception as e:
-            pass
-
-        self.parent = parent
         self.index = index
-        self.engine = self.nametowidget(".").engine
-       
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        
+
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self.on_save)
         
         self.lot_number = tk.StringVar()
@@ -77,17 +65,8 @@ class UI(tk.Toplevel):
         # Build UI
         self._build_ui()
 
-        # Automatic minimum size based on widgets (NO magic numbers)
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-
-        # Center window
-        if hasattr(self.engine, "center_window_on_screen"):
-            self.engine.center_window_relative_to_parent(self)
-
-        # Show window (end anti-flash)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
+        # Show window (centered by ChildView)
+        self.show()
         
     def _build_ui(self):
         paddings = {"padx": 8, "pady": 8}
@@ -95,9 +74,9 @@ class UI(tk.Toplevel):
         self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
         self.frm_main.grid(row=0, column=0)
 
-        
-        self.engine.cols_configure(self.frm_main)
-
+        self.frm_main.columnconfigure(0, weight=1)
+        self.frm_main.columnconfigure(1, weight=2)
+        self.frm_main.columnconfigure(2, weight=1)
 
         # Left: fields
         frm_left = ttk.Frame(self.frm_main, style="App.TFrame")
@@ -207,10 +186,10 @@ class UI(tk.Toplevel):
 
         r += 1
         btn = ttk.Button(
-            frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self._on_cancel
+            frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.on_cancel
         )
-        self.bind("<Alt-c>", self._on_cancel)
-        #self.bind("<Escape>", self._on_cancel)  # togli se preferisci solo Alt+F
+        self.bind("<Alt-c>", self.on_cancel)
+        #self.bind("<Escape>", self.on_cancel)  # togli se preferisci solo Alt+F
         btn.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
@@ -242,7 +221,7 @@ class UI(tk.Toplevel):
         # Fail fast: mandatory context
         if not selected_test_method or not selected_workstation:
             messagebox.showerror(self.engine.app_title, "Missing context: test method or workstation.", parent=self)
-            self._on_cancel()
+            self.on_cancel()
             return
 
         self.selected_workstation = selected_workstation
@@ -277,7 +256,7 @@ class UI(tk.Toplevel):
         
         if not self.selected_test:
             messagebox.showerror(self.engine.app_title, "Test not found.", parent=self)
-            self._on_cancel()
+            self.on_cancel()
             return
 
         self.selected_test_method = selected_test_method
@@ -286,7 +265,7 @@ class UI(tk.Toplevel):
             # UPDATE mode
             if not selected_batch:
                 messagebox.showerror(self.engine.app_title, "Batch not found.", parent=self)
-                self._on_cancel()
+                self.on_cancel()
                 return
 
             self.selected_batch = selected_batch
@@ -536,28 +515,15 @@ class UI(tk.Toplevel):
 
         target_id = self.selected_batch[0] if self.index is not None else last_id
 
-        # Refresh views (child + main). Fail-safe: wrap in try blocks.
-        try:
-            self.parent.set_batches()
-        except Exception as e:
-            pass
-        
-        # Cross-window refresh per Batches → Main, Batches, ecc.
-        if hasattr(self.engine, "refresh_windows_for_table"):
-            try:
-                self.engine.refresh_windows_for_table("batches")
-            except Exception as e:
-                pass
-
-
         # Persist "remember" cache (safe)
         self._update_remember_batch_data()
 
-        # Restore selection (safe)
-        self._set_index(target_id)
+        # Notify all subscribers (Observer pattern)
+        # This will refresh: batches.py, main.py, and any other listener
+        self.engine.notify("batch_changed", {"batch_id": target_id})
 
         # Close
-        self._on_cancel()
+        self.on_cancel()
 
     def _update_remember_batch_data(self):
         """Store the 'remember' flag and optionally the last entered values in the engine."""
@@ -567,43 +533,5 @@ class UI(tk.Toplevel):
         else:
             self.engine.batch_data = None
 
-    def _set_index(self, target_id):
-        """
-        Select the saved/updated row in both the child and main Listboxes.
-        Fail-safe: return early when maps are missing.
-        """
-
-        try:
-            tv = self.parent.lstBatches
-        except Exception as e:
-            return
-
-        item_id = str(target_id)
-
-        try:
-            # Se l'item esiste, selezionalo e scorrilo in vista
-            if item_id in tv.get_children(""):
-                tv.selection_set(item_id)
-                tv.focus(item_id)
-                tv.see(item_id)
-                tv.event_generate("<<TreeviewSelect>>")
-        except Exception as e:
-            pass
-        
-        # Main list
-        try:
-            main_window = self.nametowidget(".main")
-            mapping = getattr(main_window, "dict_batchs", None)
-            if not mapping:
-                return
-            idxs = [i for i, bid in mapping.items() if bid == target_id]
-            if idxs:
-                i = idxs[0]
-                main_window.lstBatches.selection_set(i)
-                main_window.lstBatches.see(i)
-                main_window.lstBatches.event_generate("<<ListboxSelect>>")
-        except Exception as e:
-            pass
-
-    def _on_cancel(self, evt=None):
-        super().destroy()
+    def on_cancel(self, evt=None):
+        super().on_cancel(evt)

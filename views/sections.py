@@ -68,15 +68,15 @@ class UI(tk.Toplevel):
 
         self.resizable(True, True)
 
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.bind("<Escape>", self.on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
         # Stabilize real geometry, then center and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -95,13 +95,14 @@ class UI(tk.Toplevel):
         grp_left = ttk.Frame(pane_left, style="App.TFrame", relief=tk.GROOVE, padding=8)
         grp_left.pack(fill=tk.BOTH, expand=1)
 
-        cols_tree = (
-            ["#0", "", "w", False, 280, 280],
-            ["#1", "", "w", False, 0, 0]
-        )
+        self.Sites = ttk.Treeview(grp_left, show="tree")
+        self.Sites.column("#0", width=280, minwidth=280, stretch=False)
 
-        self.Sites = self.engine.get_tree(grp_left, cols_tree, show="tree")
-        self.Sites.pack(fill=tk.BOTH, padx=2, pady=2, expand=1)
+        sb_sites = ttk.Scrollbar(grp_left, orient=tk.VERTICAL, command=self.Sites.yview)
+        self.Sites.configure(yscrollcommand=sb_sites.set)
+        self.Sites.pack(side=tk.LEFT, fill=tk.BOTH, padx=2, pady=2, expand=1)
+        sb_sites.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.Sites.bind("<<TreeviewSelect>>", self.on_branch_selected)
         self.Sites.bind("<Double-1>", self.on_branch_activated)
 
@@ -113,17 +114,23 @@ class UI(tk.Toplevel):
         self.lblSections = ttk.Labelframe(grp_right, text="Sections")
         self.lblSections.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        cols_right = (
-            ["#0", "id", "w", False, 0, 0],
-            ["#1", "Manager", "w", True, 220, 220],
-            ["#2", "Description", "w", True, 240, 240],
-        )
+        cols_sections = ("manager", "description")
+        self.lstSections = ttk.Treeview(self.lblSections, columns=cols_sections, show="headings")
 
-        self.lstSections = self.engine.get_tree(self.lblSections, cols_right)
+        self.lstSections.column("manager", width=220, minwidth=220, anchor=tk.W, stretch=True)
+        self.lstSections.heading("manager", text="Manager", anchor=tk.W)
+
+        self.lstSections.column("description", width=240, minwidth=240, anchor=tk.W, stretch=True)
+        self.lstSections.heading("description", text="Description", anchor=tk.W)
+
+        sb_sections = ttk.Scrollbar(self.lblSections, orient=tk.VERTICAL, command=self.lstSections.yview)
+        self.lstSections.configure(yscrollcommand=sb_sections.set)
+        self.lstSections.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_sections.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.lstSections.tag_configure("inactive", background="light gray")
         self.lstSections.bind("<<TreeviewSelect>>", self.on_section_selected)
         self.lstSections.bind("<Double-1>", self.on_section_activated)
-        self.lstSections.pack(fill=tk.BOTH, expand=1)
 
         self.pw.add(pane_left, minsize=260)
         self.pw.add(pane_right, minsize=520)
@@ -358,7 +365,7 @@ class UI(tk.Toplevel):
             self._load_sections_for_lab(lab_id)
 
     # ---------------------------------------------------------------------- CLOSE
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         """Proper window close + deregister from Engine."""
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.engine.safe_close(self)

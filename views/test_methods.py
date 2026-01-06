@@ -80,8 +80,8 @@ class UI(tk.Toplevel):
         self.resizable(True, True)
 
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.bind("<Escape>", self.on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
         self.bind("<Alt-b>", self.on_analytical_goal)
         self.bind("<Return>", self._open_current_selection)
         
@@ -94,7 +94,7 @@ class UI(tk.Toplevel):
         self._build_ui()
         # Stabilize real geometry, then center and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -144,19 +144,32 @@ class UI(tk.Toplevel):
         lf_methods = ttk.Labelframe(frm_methods, text="Methods")
         lf_methods.pack(fill=tk.BOTH, expand=1)
 
-        cols = (
-            ["#0", "id",      "w", False,   0,   0],
-            ["#1", "Code",    "w", True,   80,  80],
-            ["#2", "Sample",  "w", True,  140, 140],
-            ["#3", "Method",  "w", True,  180, 180],
-            ["#4", "Unit",    "w", True,  100, 100],
-            ["#5", "Section", "w", True,  100, 100],
-        )
-        self.lstMethods = self.engine.get_tree(lf_methods, cols)
+        cols_methods = ("code", "sample", "method", "unit", "section")
+        self.lstMethods = ttk.Treeview(lf_methods, columns=cols_methods, show="headings")
+
+        self.lstMethods.column("code", width=80, minwidth=80, anchor=tk.W, stretch=True)
+        self.lstMethods.heading("code", text="Code", anchor=tk.W)
+
+        self.lstMethods.column("sample", width=140, minwidth=140, anchor=tk.W, stretch=True)
+        self.lstMethods.heading("sample", text="Sample", anchor=tk.W)
+
+        self.lstMethods.column("method", width=180, minwidth=180, anchor=tk.W, stretch=True)
+        self.lstMethods.heading("method", text="Method", anchor=tk.W)
+
+        self.lstMethods.column("unit", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstMethods.heading("unit", text="Unit", anchor=tk.W)
+
+        self.lstMethods.column("section", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstMethods.heading("section", text="Section", anchor=tk.W)
+
+        sb_methods = ttk.Scrollbar(lf_methods, orient=tk.VERTICAL, command=self.lstMethods.yview)
+        self.lstMethods.configure(yscrollcommand=sb_methods.set)
+        self.lstMethods.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_methods.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.lstMethods.tag_configure("inactive", background="light gray")
         self.lstMethods.bind("<<TreeviewSelect>>", self.on_test_method_selected)
         self.lstMethods.bind("<Double-1>", self.on_test_method_activated)
-        self.lstMethods.pack(fill=tk.BOTH, expand=1)
 
         # --- Right pane: Actions
         pane_right = ttk.Frame(self.pw, style="App.TFrame")
@@ -182,7 +195,7 @@ class UI(tk.Toplevel):
             return btn
 
         add_btn("Goals", self.on_analytical_goal, underline=0, shortcut="<Alt-g>")
-        add_btn("Cancel", self._on_cancel,         underline=0, shortcut="<Alt-c>")
+        add_btn("Cancel", self.on_cancel,         underline=0, shortcut="<Alt-c>")
 
         # Place sashes after first layout
         self.after_idle(self._place_sashes)
@@ -347,6 +360,6 @@ class UI(tk.Toplevel):
             self.engine.on_log("test_methods.refresh_context_from_section",
                                e, type(e), __name__)
 
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.engine.safe_close(self)

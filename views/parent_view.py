@@ -107,14 +107,17 @@ class ParentView(tk.Toplevel):
         # Window close button calls on_cancel
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
 
-    def show(self):
+    def show(self, on_screen=False):
         """
         Center and show the window after UI construction.
 
         Call this at the end of subclass __init__ after init_ui().
         Automatically centers the window before showing.
+
+        Args:
+            on_screen: If True, center on screen. If False (default), center on parent.
         """
-        self.engine.center_window(self)
+        self.engine.center_window(self, on_screen=on_screen)
         self.deiconify()
 
     def on_cancel(self, evt=None):

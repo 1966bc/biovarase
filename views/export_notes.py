@@ -53,16 +53,16 @@ class UI(tk.Toplevel):
         self.title("Export Notes Data")
         self.resizable(False, False)
 
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.bind("<Escape>", self.on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
 
 
          # --- Build interface ------------------------------------------------
         self._build_ui()
         # Stabilize real geometry, then center and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
+        self.engine.center_window(self, on_screen=True)
         self.deiconify()
         self.attributes("-alpha", 1.0)
         self.lift()
@@ -111,11 +111,11 @@ class UI(tk.Toplevel):
             style="App.TButton",
             text="Cancel",
             underline=0,
-            command=self._on_cancel,
+            command=self.on_cancel,
         )
         btn_cancel.grid(row=1, column=0, sticky=tk.EW, **padd)
-        self.bind("<Alt-c>", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
+        self.bind("<Escape>", self.on_cancel)
 
         self.after_idle(self._focus_calendar)
 
@@ -219,9 +219,9 @@ class UI(tk.Toplevel):
             except Exception as e:
                 pass
 
-        self._on_cancel()
+        self.on_cancel()
 
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, _evt=None):
         """Close window safely and unregister from engine."""
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.engine.safe_close(self)

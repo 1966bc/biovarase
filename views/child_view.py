@@ -86,14 +86,17 @@ class ChildView(tk.Toplevel):
         if name:
             self.engine.dict_instances[name] = self
 
-    def show(self):
+    def show(self, on_screen=False):
         """
         Center and show the window after UI construction.
 
         Call this at the end of subclass __init__ after init_ui().
         Automatically centers the window before showing.
+
+        Args:
+            on_screen: If True, center on screen. If False (default), center on parent.
         """
-        self.engine.center_window(self)
+        self.engine.center_window(self, on_screen=on_screen)
         self.deiconify()
 
     def on_cancel(self, evt=None):

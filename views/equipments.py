@@ -9,6 +9,8 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+
+from views.parent_view import ParentView
 import views.equipment as ui
 
 
@@ -19,39 +21,13 @@ SQL = """
 """
 
 
-class UI(tk.Toplevel):
-
-    _instance = None
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
 
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="equipments")
+
+        if self._reusing:
             return
-
-        super().__init__(name="equipments")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        
-        self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
 
         self.table = "equipments"
         self.primary_key = "equipment_id"
@@ -63,26 +39,15 @@ class UI(tk.Toplevel):
 
         self.resizable(True, True)
 
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
-
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        # Set reasonable window size for table display
-        self.update_idletasks()
-        min_width = 600   # Wide enough for all columns (40+10+12+25+10 + spacing)
-        min_height = 400  # Show ~20-25 rows comfortably
+
+        min_width = 600
+        min_height = 400
         self.minsize(min_width, min_height)
-        
-        # Set initial geometry (can be resized by user)
         self.geometry(f"{min_width}x{min_height}")
+
+        self.show()
 
     def _build_ui(self):
 
@@ -126,7 +91,7 @@ class UI(tk.Toplevel):
 
         add_btn("Add", self._on_add, underline=0, shortcut="<Alt-a>")
         add_btn("Update", self._on_item_activated, underline=0, shortcut="<Alt-u>")
-        add_btn("Cancel", self._on_cancel, underline=0, shortcut="<Alt-c>")
+        add_btn("Cancel", self.on_cancel, underline=0, shortcut="<Alt-c>")
 
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
@@ -244,7 +209,6 @@ class UI(tk.Toplevel):
         self.child.on_open()
 
 
-    def _on_cancel(self, _evt=None):
-        """Close window safely and unregister from engine."""
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None):
+        """Close window."""
+        super().on_cancel(evt)

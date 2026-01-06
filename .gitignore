@@ -35,6 +35,7 @@ env/
 .claude/
 
 # Local folders (not for production)
+inventarium/
 sql/
 scripts/
 stuff/

@@ -16,12 +16,14 @@ z-score, limits) while presenting them in a compact, readable layout.
 """
 
 import tkinter as tk
+
+from views.child_view import ChildView
 from tkinter import ttk
 
 from total_error_canvas import TotalErrorCanvas
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     def __init__(self, parent, index=None):
         super().__init__()
 
@@ -38,12 +40,7 @@ class UI(tk.Toplevel):
         self._header_var = tk.StringVar(value="")
 
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 

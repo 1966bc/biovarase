@@ -6,53 +6,25 @@
 #-----------------------------------------------------------------------------
 
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 
 import views.lab as ui
 
 
-class UI(tk.Toplevel):
-
-    _instance = None
-
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
 
     def __init__(self, parent):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="labs")
+
+        if self._reusing:
             return
 
-        super().__init__(name="labs")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
-        self._is_init = True
-        self.parent = parent
         self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
         # Window
-        self.resizable(True, True)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
-        # Hot keys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.resizable(True, True)        # Hot keys        self.bind("<Alt-c>", self.on_cancel)
 
         # State
         self.table = "labs"
@@ -65,12 +37,7 @@ class UI(tk.Toplevel):
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
@@ -85,10 +52,14 @@ class UI(tk.Toplevel):
         grp_left = ttk.Frame(pane_left, style="App.TFrame", relief=tk.GROOVE, padding=8)
         grp_left.pack(fill=tk.BOTH, expand=1)
 
-        cols_tree = (["#0", "", "w", False, 280, 280],
-                     ["#1", "", "w", False,   0,   0])
-        self.Sites = self.engine.get_tree(grp_left, cols_tree, show="tree")
-        self.Sites.pack(fill=tk.BOTH, padx=2, pady=2, expand=1)
+        self.Sites = ttk.Treeview(grp_left, show="tree")
+        self.Sites.column("#0", width=280, minwidth=280, stretch=False)
+
+        sb_sites = ttk.Scrollbar(grp_left, orient=tk.VERTICAL, command=self.Sites.yview)
+        self.Sites.configure(yscrollcommand=sb_sites.set)
+        self.Sites.pack(side=tk.LEFT, fill=tk.BOTH, padx=2, pady=2, expand=1)
+        sb_sites.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.Sites.bind("<<TreeviewSelect>>", self.on_branch_selected)
         self.Sites.bind("<Double-1>", self.on_branch_activated)
 
@@ -100,14 +71,23 @@ class UI(tk.Toplevel):
         self.lblLaboratories = ttk.Labelframe(grp_right, text="Laboratories")
         self.lblLaboratories.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        cols_right = (["#0", "id",      "w", False,   0,   0],
-                      ["#1", "Manager", "w", True,  220, 220],
-                      ["#2", "Lab",     "w", True,  260, 260])
-        self.lstLabs = self.engine.get_tree(self.lblLaboratories, cols_right)
+        cols_labs = ("manager", "lab")
+        self.lstLabs = ttk.Treeview(self.lblLaboratories, columns=cols_labs, show="headings")
+
+        self.lstLabs.column("manager", width=220, minwidth=220, anchor=tk.W, stretch=True)
+        self.lstLabs.heading("manager", text="Manager", anchor=tk.W)
+
+        self.lstLabs.column("lab", width=260, minwidth=260, anchor=tk.W, stretch=True)
+        self.lstLabs.heading("lab", text="Lab", anchor=tk.W)
+
+        sb_labs = ttk.Scrollbar(self.lblLaboratories, orient=tk.VERTICAL, command=self.lstLabs.yview)
+        self.lstLabs.configure(yscrollcommand=sb_labs.set)
+        self.lstLabs.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_labs.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.lstLabs.tag_configure("inactive", background="light gray")
         self.lstLabs.bind("<<TreeviewSelect>>", self.on_lab_selected)
         self.lstLabs.bind("<Double-1>", self.on_lab_activated)
-        self.lstLabs.pack(fill=tk.BOTH, expand=1)
 
         # Add panes to PanedWindow
         self.pw.add(pane_left, minsize=260)   # ~30%
@@ -386,6 +366,6 @@ class UI(tk.Toplevel):
         except Exception as e:
             pass
 
-    def _on_cancel(self, _evt=None):
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None):
+        """Close window."""
+        super().on_cancel(evt)

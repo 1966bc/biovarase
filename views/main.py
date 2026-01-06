@@ -37,6 +37,7 @@ import tkinter as tk
 from tkinter import filedialog as fd
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import font
 
 from ljcanvas import LeveyJenningsCanvas
 from bias_canvas import BiasCanvas
@@ -106,6 +107,9 @@ class Main(tk.Toplevel):
         self.engine = self.nametowidget(".").engine
         self.engine.dict_instances[self.winfo_name()] = self
         self.parent = parent
+
+        # Subscribe to batch changes (Observer pattern)
+        self.engine.subscribe("batch_changed", self._on_batch_changed)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -319,12 +323,12 @@ class Main(tk.Toplevel):
         self.cbTests.pack(side=tk.TOP, fill=tk.X, pady=5, expand=0)
 
         w = ttk.LabelFrame(frm_lists, text='Workstation Data Source')
-        self.lstWorkstations = self.nametowidget(".").engine.get_listbox(w, height=5, width=2, color="white")
+        self.lstWorkstations = self._create_listbox(w, height=5, width=2, color="white")
         self.lstWorkstations.bind("<<ListboxSelect>>", self.on_selected_workstation)
         w.pack(side=tk.TOP, fill=tk.BOTH, expand=0)
 
         w = ttk.LabelFrame(frm_lists, text="Batches")
-        self.lstBatches = self.nametowidget(".").engine.get_listbox(w, height=5, color="white")
+        self.lstBatches = self._create_listbox(w, height=5, color="white")
         self.lstBatches.selectmode = tk.MULTIPLE
         self.lstBatches.bind("<<ListboxSelect>>", self.on_selected_batch)
         self.lstBatches.bind('<Double-Button-1>', self.on_batch_double_button)
@@ -404,7 +408,7 @@ class Main(tk.Toplevel):
         w.pack(side=tk.RIGHT, fill=tk.X, expand=0)
 
         w = ttk.LabelFrame(frm_lists, text="Results")
-        self.lstResults = self.nametowidget(".").engine.get_listbox(w, color="white")
+        self.lstResults = self._create_listbox(w, color="white")
         self.lstResults.bind("<<ListboxSelect>>", self.on_selected_result)
         self.lstResults.bind("<Double-Button-1>", self.on_update_result)
         w.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
@@ -471,7 +475,7 @@ class Main(tk.Toplevel):
 
         self.status_bar_text.set(msg)
 
-        f = self.nametowidget(".").engine.set_font(family="TkDefaultFont", size=10, weight="bold")
+        f = font.Font(family="TkDefaultFont", size=10, weight="bold")
 
         frm_status_bar = ttk.Frame(self.frm_main,  style="StatusBar.TFrame",)
 
@@ -607,6 +611,24 @@ class Main(tk.Toplevel):
                 except Exception as e:
                     pass
 
+    def _create_listbox(self, container, height=None, width=None, color=None):
+        """Create a listbox with vertical scrollbar."""
+        sb = ttk.Scrollbar(container, orient=tk.VERTICAL)
+        w = tk.Listbox(
+            container,
+            relief=tk.GROOVE,
+            selectmode=tk.EXTENDED,
+            exportselection=0,
+            height=height,
+            width=width,
+            background=color,
+            font='TkFixedFont',
+            yscrollcommand=sb.set
+        )
+        sb.config(command=w.yview)
+        w.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb.pack(fill=tk.Y, expand=1)
+        return w
 
     def set_observations(self):
         self.observations.set(self.nametowidget(".").engine.get_observations())
@@ -887,21 +909,43 @@ class Main(tk.Toplevel):
             self.lstWorkstations.select_set(0)
             self.lstWorkstations.event_generate("<<ListboxSelect>>")
 
-    def set_batches(self) -> None:
-        """Fill batches listbox for selected test method and workstation."""
+    def _on_batch_changed(self, data=None) -> None:
+        """Observer callback for batch changes - refresh batch list.
+
+        Bypasses GUI selection checks and preserves current batch selection.
+        """
+        # Only refresh if we have valid selection context (instance variables)
+        if not (self.selected_test_method and self.selected_workstation):
+            return
+
+        # Save current batch_id to restore selection
+        current_batch_id = (
+            self.selected_batch.get("batch_id") if self.selected_batch else None
+        )
+
+        # Refresh batch list (reuse core logic)
+        self._populate_batches()
+
+        # Restore previous selection if possible
+        if current_batch_id:
+            for idx, batch_id in self.dict_batches.items():
+                if batch_id == current_batch_id:
+                    self.lstBatches.selection_clear(0, tk.END)
+                    self.lstBatches.selection_set(idx)
+                    self.lstBatches.see(idx)
+                    self.lstBatches.event_generate("<<ListboxSelect>>")
+                    return
+
+        # If batch not found, select first item
+        if self.dict_batches:
+            self.lstBatches.select_set(0)
+            self.lstBatches.event_generate("<<ListboxSelect>>")
+
+    def _populate_batches(self) -> None:
+        """Core logic to populate batch listbox (no early-return checks)."""
         self.lstBatches.delete(0, tk.END)
         self.dict_batches = {}
         index = 0
-
-        if self.cbTests.current() == -1 or not self.lstWorkstations.curselection():
-            self.reset_cal_data()
-            self.reset_graph()
-            return
-
-        if not (self.selected_test_method and self.selected_workstation):
-            self.reset_cal_data()
-            self.reset_graph()
-            return
 
         sql = """
             SELECT batches.batch_id,
@@ -911,7 +955,7 @@ class Main(tk.Toplevel):
                    batches.sd,
                    batches.lot_number,
                    batches.expiration
-            FROM batches 
+            FROM batches
             WHERE batches.test_method_id  = ?
               AND batches.workstation_id  = ?
               AND batches.status          = 1
@@ -923,7 +967,7 @@ class Main(tk.Toplevel):
             self.selected_workstation["workstation_id"],
         )
 
-        rs = self.nametowidget(".").engine.read(True, sql, args)
+        rs = self.engine.read(True, sql, args)
 
         if rs:
             for row in rs:
@@ -941,6 +985,25 @@ class Main(tk.Toplevel):
                 self.dict_batches[index] = row["batch_id"]
                 index += 1
 
+    def set_batches(self) -> None:
+        """Fill batches listbox for selected test method and workstation."""
+        if self.cbTests.current() == -1 or not self.lstWorkstations.curselection():
+            self.lstBatches.delete(0, tk.END)
+            self.dict_batches = {}
+            self.reset_cal_data()
+            self.reset_graph()
+            return
+
+        if not (self.selected_test_method and self.selected_workstation):
+            self.lstBatches.delete(0, tk.END)
+            self.dict_batches = {}
+            self.reset_cal_data()
+            self.reset_graph()
+            return
+
+        self._populate_batches()
+
+        if self.dict_batches:
             self.lstBatches.select_set(0)
             self.lstBatches.event_generate("<<ListboxSelect>>")
         else:
@@ -1303,7 +1366,7 @@ class Main(tk.Toplevel):
                 "workstations", "workstation_id", workstation_id
             )
 
-            frames.result.UI(self, index).on_open()
+            views.result.UI(self, index).on_open()
 
         except Exception as e:
             self.engine.on_log(
@@ -1544,7 +1607,7 @@ class Main(tk.Toplevel):
             )
             return
         
-        frames.daily_validation.UI(self).on_open()
+        views.daily_validation.UI(self).on_open()
 
     def on_tests(self) -> None:
         if not self.engine.is_admin():
@@ -1552,7 +1615,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.tests.UI(self).on_open()
+        views.tests.UI(self).on_open()
 
     def on_test_methods(self) -> None:
         """Open Test Methods window (Admin/Superuser only)."""
@@ -1561,7 +1624,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.test_methods.UI(self).on_open()
+        views.test_methods.UI(self).on_open()
 
     def on_workstation_test_methods(self):
         if not self.engine.can_validate_qc():
@@ -1569,7 +1632,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.workstation_test_methods.UI(self).on_open()
+        views.workstation_test_methods.UI(self).on_open()
 
     def on_categories(self,):
         if not self.engine.is_admin():
@@ -1577,7 +1640,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.categories.UI(self).on_open()
+        views.categories.UI(self).on_open()
 
     def on_samples(self,):
         if not self.engine.is_admin():
@@ -1585,7 +1648,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.samples.UI(self).on_open()
+        views.samples.UI(self).on_open()
 
     def on_units(self,):
         if not self.nametowidget(".").engine.is_admin():
@@ -1593,7 +1656,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.units.UI(self).on_open()
+        views.units.UI(self).on_open()
 
     def on_methods(self,):
         if not self.nametowidget(".").engine.is_admin():
@@ -1601,7 +1664,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.methods.UI(self).on_open()
+        views.methods.UI(self).on_open()
 
     def on_controls(self,):
         """Open Controls window (Admin/Superuser only)."""
@@ -1610,7 +1673,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.controls.UI(self).on_open()
+        views.controls.UI(self).on_open()
 
     def on_equipments(self):
 
@@ -1619,7 +1682,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
 
         else:
-            frames.equipments.UI(self).on_open()
+            views.equipments.UI(self).on_open()
 
     def on_workstations(self,):
         """Open Workstations window (Admin/Superuser only)."""
@@ -1628,7 +1691,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.workstations.UI(self).on_open()
+        views.workstations.UI(self).on_open()
 
     def on_suppliers(self,):
 
@@ -1636,7 +1699,7 @@ class Main(tk.Toplevel):
             msg = self.nametowidget(".").engine.user_not_enable
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
         else:
-            frames.suppliers.UI(self).on_open()
+            views.suppliers.UI(self).on_open()
 
     def on_labs(self):
         if not self.nametowidget(".").engine.is_admin():
@@ -1644,7 +1707,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.labs.UI(self).on_open()
+        views.labs.UI(self).on_open()
 
     def on_sites(self,):
         if not self.nametowidget(".").engine.is_admin():
@@ -1652,7 +1715,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.sites.UI(self).on_open()
+        views.sites.UI(self).on_open()
 
     def on_sections(self,):
         if not self.nametowidget(".").engine.is_admin():
@@ -1660,16 +1723,16 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.sections.UI(self).on_open()
+        views.sections.UI(self).on_open()
 
     def on_observations(self,):
-        frames.observations.UI(self).on_open()
+        views.observations.UI(self).on_open()
         
     def on_analitical(self,):
-        frames.analytical.UI(self).on_open()
+        views.analytical.UI(self).on_open()
 
     def on_set_zscore(self,):
-        frames.set_zscore.UI(self).on_open()
+        views.set_zscore.UI(self).on_open()
 
     def on_batches(self) -> None:
         """Open Batches window (Admin/Superuser only)."""
@@ -1678,7 +1741,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
 
-        frames.batches.UI(self).on_open()
+        views.batches.UI(self).on_open()
 
     def on_actions(self,):
         if not self.nametowidget(".").engine.is_admin():
@@ -1686,7 +1749,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.actions.UI(self).on_open()
+        views.actions.UI(self).on_open()
 
     def on_users(self,):
         if not self.nametowidget(".").engine.is_admin():
@@ -1694,10 +1757,10 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.nametowidget(".").title(), msg, parent=self)
             return
         
-        frames.users.UI(self).on_open()
+        views.users.UI(self).on_open()
 
     def on_zscore(self,):
-        frames.zscore.UI(self,)
+        views.zscore.UI(self,)
 
     def on_plots(self,):
 
@@ -1708,7 +1771,7 @@ class Main(tk.Toplevel):
                 index = self.cbTests.current()
                 pk = self.test_methods[index]
                 selected_test_method = self.nametowidget(".").engine.get_selected("test_methods", "test_method_id", pk)
-                frames.plots.UI(self,).on_open(selected_test_method,
+                views.plots.UI(self,).on_open(selected_test_method,
                                                self.selected_workstation,
                                                int(self.observations.get()))
             else:
@@ -1758,7 +1821,7 @@ class Main(tk.Toplevel):
             return
 
         # Everything OK → open TEA
-        frames.tea.UI(self).on_open(
+        views.tea.UI(self).on_open(
             selected,                       # unified dict
             self.selected_workstation,
             int(self.observations.get())
@@ -1836,7 +1899,7 @@ class Main(tk.Toplevel):
             return
 
         # Even if lengths are different, youden.py will use min(len(L1), len(L2))
-        frames.youden.UI(self).on_open(
+        views.youden.UI(self).on_open(
             selected_test_method,
             self.selected_workstation,
             batches,
@@ -1844,17 +1907,17 @@ class Main(tk.Toplevel):
         )
 
     def on_export_notes(self) -> None:
-        frames.export_notes.UI(self).on_open()
+        views.export_notes.UI(self).on_open()
 
     # Quick Data Analysis removed - functionality integrated into Daily Validation
     # def on_quick_data_analysis(self,):
-    #     frames.quick_data_analysis.UI(self).on_open()
+    #     views.quick_data_analysis.UI(self).on_open()
 
     def on_analitycal_goals(self,):
-        frames.analitycal_goals.UI(self).on_open()
+        views.analitycal_goals.UI(self).on_open()
 
     def on_export_counts(self) -> None:
-        frames.counts.UI(self).on_open()
+        views.counts.UI(self).on_open()
 
     def on_ddof(self,):
 
@@ -2010,7 +2073,7 @@ class Main(tk.Toplevel):
         workstation_id = self.selected_batch["workstation_id"]
         self.selected_workstation = self.engine.get_selected("workstations", "workstation_id", workstation_id)
 
-        frames.result.UI(self).on_open()
+        views.result.UI(self).on_open()
 
 
     def on_update_result(self, evt: Optional[tk.Event] = None) -> None:
@@ -2027,7 +2090,7 @@ class Main(tk.Toplevel):
                 messagebox.showinfo(self.nametowidget(".").title(), msg, parent=self)
                 return
 
-            frames.notes.UI(self).on_open()
+            views.notes.UI(self).on_open()
 
         except Exception as e:
             self.engine.on_log(
@@ -2117,7 +2180,7 @@ class Main(tk.Toplevel):
             )
 
     def on_license(self) -> None:
-        frames.license.UI(self).on_open()
+        views.license.UI(self).on_open()
 
     def on_python_version(self) -> None:
         s = self.nametowidget(".").engine.get_python_version()
@@ -2133,7 +2196,7 @@ class Main(tk.Toplevel):
                             parent=self)
 
     def on_change_password(self) -> None:
-        frames.change_password.UI(self, ).on_open()
+        views.change_password.UI(self, ).on_open()
 
     def on_log(self,):
         self.nametowidget(".").engine.get_log_file()
@@ -2145,7 +2208,7 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
-        frames.importer.UI(self, ).on_open()
+        views.importer.UI(self, ).on_open()
    
 
     def on_change_user(self, _evt=None):
@@ -2176,7 +2239,7 @@ class Main(tk.Toplevel):
             self.engine.log_user.clear()
             
             # Show login dialog
-            login_window = frames.login.Login(self)
+            login_window = views.login.Login(self)
             
             # Wait for login to complete
             self.wait_window(login_window)
@@ -2415,5 +2478,7 @@ class Main(tk.Toplevel):
             messagebox.showerror("Error", f"Failed to change section: {exc}", parent=self)
 
     def on_close(self) -> None:
+        # Unsubscribe from events (Observer pattern)
+        self.engine.unsubscribe("batch_changed", self._on_batch_changed)
         self.nametowidget(".").engine.dict_instances.pop(self.winfo_name(), None)
         self.nametowidget(".").on_exit()

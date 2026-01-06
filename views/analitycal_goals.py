@@ -71,7 +71,7 @@ class UI(tk.Toplevel):
         # Finalize geometry: center and show without shaking
         self.update_idletasks()
         try:
-            self.engine.center_window_on_screen(self)
+            self.engine.center_window(self, on_screen=True)
         except Exception as e:
             pass
 

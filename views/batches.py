@@ -37,6 +37,7 @@ from tkinter import ttk
 from tkinter import messagebox
 from typing import Optional, List, Tuple, Dict, Any
 
+from views.parent_view import ParentView
 import views.batch as batch
 
 # Module constants
@@ -61,7 +62,7 @@ ROLE_TECHNICIAN = 2  # Section worker - data entry, section-only access
 ROLE_AUTOLOGIN = 3   # Guest user - read-only access
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Batches master window (singleton).
 
@@ -81,51 +82,14 @@ class UI(tk.Toplevel):
         Superuser → WHERE lab_id = ? (lab-wide)
         Technician/Autologin → WHERE section_id = ? (section-only)
 
-    Singleton Pattern:
-        Only one instance can exist. Subsequent calls to constructor
-        reuse the existing window (deiconify and lift).
-
-    Window Lifecycle:
-        - Registered in engine.dict_instances on __init__
-        - Unregistered on close via _on_cancel()
-        - Widget tree preserved across hide/show cycles
-
     Attributes:
-        _instance: Class variable for singleton pattern
-        _is_init: Flag to prevent widget rebuilding on reuse
         _loaded: Flag for lazy tree loading
         _weights: Pane weight ratios for sash placement
-        engine: Reference to main Engine instance
         selected_workstation: Currently selected workstation (dict)
         selected_test_method: Currently selected test method (dict)
         selected_batch: Currently selected batch (dict)
         child: Reference to open batch editor window
     """
-
-    _instance: Optional['UI'] = None  # singleton
-
-    def __new__(cls, parent: tk.Widget) -> 'UI':
-        """
-        Create or reuse singleton instance.
-
-        Args:
-            parent: Parent widget (usually main window)
-
-        Returns:
-            The singleton UI instance
-        """
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except (AttributeError, tk.TclError) as e:
-                cls._instance = None
-        child = super().__new__(cls)
-        cls._instance = child
-        return child
 
     def __init__(self, parent: tk.Widget) -> None:
         """
@@ -134,28 +98,13 @@ class UI(tk.Toplevel):
         Args:
             parent: Parent widget (usually main window)
         """
-        # Reuse: avoid rebuilding widgets
-        if getattr(self, "_is_init", False):
-            self.parent = parent
+        super().__init__(parent, name="batches")
+
+        if self._reusing:
             return
 
-        super().__init__(name="batches")
-
-        # Anti-flash pattern: build off-screen
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-
-        self._is_init: bool = True
         self._loaded: bool = False
-        self.parent: tk.Widget = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-
         self.resizable(True, True)
-
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
 
         # Selection state
         self.child: Optional[tk.Toplevel] = None
@@ -163,17 +112,16 @@ class UI(tk.Toplevel):
         self.selected_test_method: Optional[Dict[str, Any]] = None
         self.selected_batch: Optional[Dict[str, Any]] = None
 
+        # Subscribe to events (Observer pattern)
+        self.engine.subscribe("batch_changed", self._on_batch_changed)
+
         # Build interface
         self._build_ui()
 
-        # Stabilize real geometry, then center and show
+        # Set minimum size and show
         self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        self.minsize(800, 500)
+        self.show()
 
     # ---------------------------------------------------------------------
     # UI Construction
@@ -188,6 +136,7 @@ class UI(tk.Toplevel):
             - Right pane: Batches list
 
         Uses pack() layout as required for master windows (PROJECT_RULES 7.2).
+        Widget creation follows Inventarium pattern (direct ttk.Treeview).
         """
         # PanedWindow must be stored on self (used by _place_sashes)
         self.pw = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashwidth=6)
@@ -204,52 +153,93 @@ class UI(tk.Toplevel):
         self.pw.add(pane_mid, minsize=300)
         self.pw.add(pane_right, minsize=300)
 
-        # Left pane: Sites → Labs → Sections → Workstations
-        cols_sites = [
-            ["#0", "Sites", "w", True, 180, 220],
-            ["#1", "", "w", True, 0, 0],
-        ]
-        self.Sites = self.engine.get_tree(pane_left, cols_sites, show="tree headings")
-        self.Sites["displaycolumns"] = ()
+        # ---------------------------------------------------------------------
+        # Left pane: Sites → Labs → Sections → Workstations (hierarchical tree)
+        # ---------------------------------------------------------------------
+        self.Sites = ttk.Treeview(pane_left, show="tree")
+
+        self.Sites.column("#0", width=220, minwidth=180, stretch=True)
+        self.Sites.heading("#0", text=TREE_ROOT_LABEL, anchor=tk.W)
+
+        sb_sites = ttk.Scrollbar(pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
+        self.Sites.configure(yscrollcommand=sb_sites.set)
+        self.Sites.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_sites.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.Sites.bind("<<TreeviewSelect>>", self._on_branch_selected)
 
+        # ---------------------------------------------------------------------
         # Middle pane: Test Methods
+        # ---------------------------------------------------------------------
         frm_tests = ttk.Frame(pane_mid)
-
         self.lblTests = ttk.LabelFrame(frm_tests, style="App.TLabelframe", text=LBL_TEST_METHODS_PREFIX)
 
-        cols_tests = (
-            ["#0", "test_method_id", "w", False, 0, 0],
-            ["#1", "Test", "w", True, 100, 100],
-            ["#2", "Code", "w", True, 60, 60],
-            ["#3", "Sample", "w", True, 100, 100],
-            ["#4", "Method", "w", True, 100, 100],
-            ["#5", "Unit", "w", True, 80, 80],
-        )
-        self.lstTestsMethods = self.engine.get_tree(self.lblTests, cols_tests)
+        cols_tests = ("test", "code", "sample", "method", "unit")
+        self.lstTestsMethods = ttk.Treeview(self.lblTests, columns=cols_tests, show="headings")
+
+        self.lstTestsMethods.column("test", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("test", text="Test", anchor=tk.W)
+
+        self.lstTestsMethods.column("code", width=60, minwidth=60, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("code", text="Code", anchor=tk.W)
+
+        self.lstTestsMethods.column("sample", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("sample", text="Sample", anchor=tk.W)
+
+        self.lstTestsMethods.column("method", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("method", text="Method", anchor=tk.W)
+
+        self.lstTestsMethods.column("unit", width=80, minwidth=80, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("unit", text="Unit", anchor=tk.W)
+
+        sb_tests = ttk.Scrollbar(self.lblTests, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
+        self.lstTestsMethods.configure(yscrollcommand=sb_tests.set)
+        self.lstTestsMethods.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_tests.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Tags for status
+        self.lstTestsMethods.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
+
         self.lstTestsMethods.bind("<<TreeviewSelect>>", self._on_test_method_selected)
         self.lstTestsMethods.bind("<Double-1>", self._on_test_method_activated)
 
         self.lblTests.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         frm_tests.pack(fill=tk.BOTH, expand=1)
 
+        # ---------------------------------------------------------------------
         # Right pane: Batches
+        # ---------------------------------------------------------------------
         frm_batches = ttk.Frame(pane_right)
-        self.lblBatches = tk.LabelFrame(frm_batches, text=LBL_BATCHES_PREFIX)
+        self.lblBatches = ttk.LabelFrame(frm_batches, style="App.TLabelframe", text=LBL_BATCHES_PREFIX)
 
-        cols_batches = (
-            ["#0", "batch_id", "w", False, 0, 0],
-            ["#1", "Control", "w", True, 100, 100],
-            ["#2", "Lot", "w", True, 80, 80],
-            ["#3", "Description", "w", True, 100, 100],
-            ["#4", "Expiration", "center", True, 80, 80],
-            ["#5", "Target", "center", True, 80, 80],
-        )
-        self.lstBatches = self.engine.get_tree(self.lblBatches, cols_batches)
-        self.lstBatches.tag_configure(
-            "status",
-            background=self.engine.get_rgb(211, 211, 211),
-        )
+        cols_batches = ("control", "lot", "description", "expiration", "target")
+        self.lstBatches = ttk.Treeview(self.lblBatches, columns=cols_batches, show="headings")
+
+        self.lstBatches.column("control", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstBatches.heading("control", text="Control", anchor=tk.W)
+
+        self.lstBatches.column("lot", width=80, minwidth=80, anchor=tk.W, stretch=True)
+        self.lstBatches.heading("lot", text="Lot", anchor=tk.W)
+
+        self.lstBatches.column("description", width=100, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstBatches.heading("description", text="Description", anchor=tk.W)
+
+        self.lstBatches.column("expiration", width=80, minwidth=80, anchor=tk.CENTER, stretch=True)
+        self.lstBatches.heading("expiration", text="Expiration", anchor=tk.CENTER)
+
+        self.lstBatches.column("target", width=80, minwidth=80, anchor=tk.CENTER, stretch=True)
+        self.lstBatches.heading("target", text="Target", anchor=tk.CENTER)
+
+        sb_batches = ttk.Scrollbar(self.lblBatches, orient=tk.VERTICAL, command=self.lstBatches.yview)
+        self.lstBatches.configure(yscrollcommand=sb_batches.set)
+        self.lstBatches.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_batches.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Tags for expired/expiring batches
+        self.lstBatches.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
+        self.lstBatches.tag_configure("expired", background="coral")
+        self.lstBatches.tag_configure("expiring", background="khaki")
+
         self.lstBatches.bind("<<TreeviewSelect>>", self._on_batch_selected)
         self.lstBatches.bind("<Double-1>", self._on_batch_activated)
 
@@ -866,15 +856,36 @@ class UI(tk.Toplevel):
         self.child = batch.UI(self, index=batch_id)
         self.child.on_open(self.selected_test_method, self.selected_workstation, self.selected_batch)
 
-    def _on_cancel(self, _evt: Optional[tk.Event] = None) -> None:
+    # ---------------------------------------------------------------------
+    # Observer Pattern Callbacks
+    # ---------------------------------------------------------------------
+    def _on_batch_changed(self, data=None) -> None:
         """
-        Close window safely and unregister from engine.
+        Callback when a batch is modified elsewhere.
 
-        Removes window from engine.dict_instances registry.
-        Called on Escape, Alt-c, or window close button.
+        Refreshes the batches list for the current selection.
 
         Args:
-            _evt: Tkinter event (unused, for event binding compatibility)
+            data: Optional event data (unused)
         """
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+        self.set_batches()
+
+    def on_cancel(self, evt: Optional[tk.Event] = None) -> None:
+        """
+        Close window safely.
+
+        Unsubscribes from events, closes any open child editor,
+        and calls parent cleanup.
+
+        Args:
+            evt: Tkinter event (unused, for event binding compatibility)
+        """
+        # Unsubscribe from events (Observer pattern)
+        self.engine.unsubscribe("batch_changed", self._on_batch_changed)
+
+        if self.child is not None:
+            try:
+                self.child.destroy()
+            except Exception:
+                pass
+        super().on_cancel(evt)

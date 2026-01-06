@@ -24,6 +24,20 @@ Key Responsibilities:
     - Error logging (on_log method)
     - User session management (log_user, log_ip)
 
+Observer Pattern:
+    Engine provides an event system for decoupled view communication:
+    - subscribe(event, callback): Register for an event
+    - unsubscribe(event, callback): Unregister from an event
+    - notify(event, data): Emit an event to all subscribers
+
+    Events:
+    - "batch_changed": Fired when a batch is modified
+    - "result_changed": Fired when a QC result is modified
+    - "section_changed": Fired when section context changes
+    - "supplier_changed": Fired when a supplier is modified
+    - "equipment_changed": Fired when equipment is modified
+    - "test_method_changed": Fired when a test method is modified
+
 Global Context (current_ids):
     The Engine maintains application-wide context for multi-site operations:
     - site_id: Current laboratory site
@@ -146,6 +160,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         current_ids (dict): Global context (site/lab/section IDs)
         log_user (dict): Currently logged-in user
         log_ip (str): Client IP address
+        _subscribers (dict): Event subscribers registry for Observer pattern
 
     Example:
         >>> engine = Engine("biovarase", "password", "biovarase")
@@ -155,9 +170,11 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def __init__(self, user, password, database, host='localhost', port=3306, autocommit=True):
         super().__init__(user=user, password=password, database=database, host=host, port=port, autocommit=autocommit)
 
-
         # Windows registry: name -> widget
         self.dict_instances = {}
+
+        # Event system: event_name -> [callbacks]
+        self._subscribers = {}
         self.poller = None
         self.log_out = None
         self.log_user = {}
@@ -178,6 +195,68 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def __str__(self):
         return "class: {0}\nMRO: {1}".format(self.__class__.__name__,
                                                        [x.__name__ for x in Engine.__mro__])
+
+    # -------------------------------------------------------------------------
+    # Observer Pattern: Event System
+    # -------------------------------------------------------------------------
+
+    def subscribe(self, event: str, callback) -> None:
+        """
+        Register a callback for an event.
+
+        Views call this to receive notifications when something changes.
+        Remember to unsubscribe in on_cancel() to avoid dead references.
+
+        Args:
+            event: Event name (e.g., "batch_changed", "result_changed")
+            callback: Function to call when event fires
+
+        Example:
+            # In batches.__init__:
+            self.engine.subscribe("batch_changed", self.on_batch_changed)
+        """
+        if event not in self._subscribers:
+            self._subscribers[event] = []
+        if callback not in self._subscribers[event]:
+            self._subscribers[event].append(callback)
+
+    def unsubscribe(self, event: str, callback) -> None:
+        """
+        Remove a callback from an event.
+
+        Call this in on_cancel() before the window closes.
+
+        Args:
+            event: Event name
+            callback: Function to remove
+        """
+        if event in self._subscribers:
+            try:
+                self._subscribers[event].remove(callback)
+            except ValueError:
+                pass
+
+    def notify(self, event: str, data=None) -> None:
+        """
+        Notify all subscribers of an event.
+
+        Views call this after making changes that other views might
+        need to know about. Subscribers receive the event asynchronously.
+
+        Args:
+            event: Event name
+            data: Optional data to pass to callbacks
+
+        Example:
+            # In batch editor after saving:
+            self.engine.notify("batch_changed")
+        """
+        for callback in self._subscribers.get(event, []):
+            try:
+                callback(data)
+            except Exception:
+                # Subscriber might be dead or have errors, ignore
+                pass
 
     # -------------------------------------------------------------------------
     # Permission Helper Methods (Role-Based Access Control)

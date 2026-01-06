@@ -7,11 +7,13 @@
 # -----------------------------------------------------------------------------
 
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from calendarium import Calendarium
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Quick Data Analysis dialog with view-only Treeview display.
 
@@ -24,23 +26,6 @@ class UI(tk.Toplevel):
     _instance = None  # singleton holder
 
     # --- Singleton allocation -------------------------------------------------
-    def __new__(cls, parent, index=None):
-        """
-        Ensure only one instance of this Toplevel exists.
-
-        Reuse the existing one if it is still alive, otherwise create a new one.
-        """
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    return cls._instance
-            except Exception as e:
-                # If anything goes wrong, fall back to a fresh instance.
-                pass
-
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
 
     # --- One-time initialization (guarded by _is_init) -----------------------
     def __init__(self, parent, index=None):
@@ -48,32 +33,13 @@ class UI(tk.Toplevel):
         Build the dialog UI once. On subsequent calls, only update references.
         """
         if getattr(self, "_is_init", False):
-            # Reuse: just refresh parent / index references.
             self.parent = parent
             self.index = index
             return
 
-        super().__init__(name="quick_data_analysis")
-
+        super().__init__(parent, name="quick_data_analysis")
         self._is_init = True
-        self.parent = parent
         self.index = index
-
-        # Engine is attached to the root window "."
-        self.engine = self.nametowidget(".").engine
-
-        # Register this window in the Engine registry
-        self.engine.dict_instances[self.winfo_name()] = self
-
-        # Build off-screen to avoid flicker
-        self.withdraw()
-        self.attributes("-alpha", 0.0)  # anti-flash trick
-
-        try:
-            self.transient(parent)
-        except Exception as e:
-            # In case parent is not a valid toplevel yet, fail silently.
-            pass
 
         self.resizable(True, True)
         self.title("Quick Data Analysis")
@@ -222,13 +188,8 @@ class UI(tk.Toplevel):
         )
         self.status_label.grid(row=2, column=0, sticky=tk.W, **padd)
 
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
+        self.show(on_screen=True)
         self.attributes("-topmost", True)
-        self.lift()
         self.after_idle(self._focus_entry)
 
     # --- Public API ----------------------------------------------------------

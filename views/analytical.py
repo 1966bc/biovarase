@@ -5,8 +5,11 @@
 # modify:   autumn MMXXV
 # -----------------------------------------------------------------------------
 import tkinter as tk
+from tkinter import ttk
 
-class UI(tk.Toplevel):
+from views.parent_view import ParentView
+
+class UI(ParentView):
 
     """
     Informational window for 'Analytical Goals Explained'.
@@ -15,49 +18,28 @@ class UI(tk.Toplevel):
     """
     _instance = None  # cache singleton
 
-    def __new__(cls, parent):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                # Instance might be dead, but reference not cleared; force recreation
-                cls._instance = None                 
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
-
     def __init__(self, parent):
-        # Prevents double initialization if the instance was retrieved from __new__
         if getattr(self, "_is_init", False):
             self.parent = parent
             return
-            
-        super().__init__(name="analytical")
 
+        super().__init__(parent, name="analytical")
         self._is_init = True
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
-        
-        # Window configuration
+
         self.title("Analytical Goals Explained")
-        
         self.transient(parent)
         self.resizable(0, 0)
 
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        self.bind("<Escape>", self.on_cancel)
-        
         self._init_ui()
-        self.engine.center_window_on_screen(self)
+        self.show(on_screen=True)
         
     def _init_ui(self):
-    
         """Builds the user interface"""
-        w = self.engine.get_init_ui(self)
+        w = ttk.Frame(self, style="App.TFrame")
+        w.columnconfigure(0, weight=1)
+        w.columnconfigure(1, weight=2)
+        w.columnconfigure(2, weight=1)
+        w.grid(row=0, column=0, sticky=tk.N + tk.W + tk.S + tk.E)
 
         # Colonna 1: k CV
         items_cv = (("k CV:", None), ("0.25", "green"), ("0.50", "yellow"), ("0.75", "red"),)

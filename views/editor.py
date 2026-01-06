@@ -7,8 +7,10 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from views.child_view import ChildView
 
-class Editor(tk.Toplevel):
+
+class Editor(ChildView):
     """
     Generic editor for tables with the following structure:
 
@@ -47,8 +49,6 @@ class Editor(tk.Toplevel):
     ):
         super().__init__(parent, name=ui_name)
 
-        self.engine = self.nametowidget(".").engine
-        self.parent = parent
         self.index = index               # None -> INSERT mode; not-None -> UPDATE
         self.selected_item = None        # will be filled in UPDATE mode
 
@@ -58,14 +58,7 @@ class Editor(tk.Toplevel):
         self.desc_field = desc_field
         self.label_text = label_text     # e.g. "Unit", "Action", "Category"
 
-        # Window configuration
-        self.transient(parent)
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
         # Key bindings
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
@@ -79,7 +72,7 @@ class Editor(tk.Toplevel):
 
         # Build UI and position window
         self._build_ui()
-        self.engine.center_window_relative_to_parent(self)
+        self.show()
 
     # ------------------------------------------------------------------
     # UI
@@ -147,7 +140,7 @@ class Editor(tk.Toplevel):
             style="App.TButton",
             text="Cancel",
             underline=0,
-            command=self._on_cancel,
+            command=self.on_cancel,
         ).grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
         frm_buttons.columnconfigure(0, weight=1)
@@ -170,7 +163,7 @@ class Editor(tk.Toplevel):
                     f"No {self.label_text.lower()} selected for update.",
                     parent=self,
                 )
-                self._on_cancel()
+                self.on_cancel()
                 return
             self._set_values()
         else:
@@ -279,7 +272,7 @@ class Editor(tk.Toplevel):
             if hasattr(self.engine, "refresh_windows_for_table"):
                 self.engine.refresh_windows_for_table(self.table)
 
-            self._on_cancel()  # Close window
+            self.on_cancel()  # Close window
 
         except Exception as exc:
             messagebox.showerror(
@@ -423,7 +416,7 @@ class Editor(tk.Toplevel):
     # ------------------------------------------------------------------
     # CLOSE
     # ------------------------------------------------------------------
-    def _on_cancel(self, _evt=None):
+    def on_cancel(self, evt=None):
         """Return focus to parent and close the editor."""
         self.parent.focus_set()
-        self.engine.safe_close(self)
+        super().on_cancel(evt)

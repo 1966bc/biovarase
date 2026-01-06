@@ -5,12 +5,14 @@
 # modify:   autumn MMXXIII  (refactor 2025-11: Calendarium v2.2, singleton polish)
 #-----------------------------------------------------------------------------
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 from calendarium import Calendarium
 
 
-class UI(tk.Toplevel):
+class UI(ParentView):
     """
     Single-instance dialog (singleton) for exporting counts.
 
@@ -21,46 +23,20 @@ class UI(tk.Toplevel):
     _instance = None  # singleton cache
 
     # --- Singleton allocation ------------------------------------------------
-    def __new__(cls, parent, index=None):
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    return cls._instance
-            except Exception as e:
-                pass
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
 
     # --- Init once (guarded) -------------------------------------------------
     def __init__(self, parent):
         if getattr(self, "_is_init", False):
-            # Reuse path: only update parent reference
             self.parent = parent
             return
 
-        super().__init__(name="counts")
-
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
+        super().__init__(parent, name="counts")
         self._is_init = True
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
 
-        # Basic window config
         self.resizable(False, False)
 
-       # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
         
@@ -106,13 +82,10 @@ class UI(tk.Toplevel):
             style="App.TButton",
             text="Cancel",
             underline=0,
-            command=self._on_cancel,
+            command=self.on_cancel,
         )
         btn_cancel.grid(row=1, column=0, sticky=tk.EW, **padd)
-        self.bind("<Alt-c>", self._on_cancel)
-        self.bind("<Escape>", self._on_cancel)
-
-    # --- Lifecycle -----------------------------------------------------------
+        self.bind("<Alt-c>", self.on_cancel)    # --- Lifecycle -----------------------------------------------------------
     def on_open(self):
         """Called by parent to (re)show the dialog."""
     
@@ -171,9 +144,8 @@ class UI(tk.Toplevel):
         if messagebox.askyesno(self.engine.app_title, "Export data?", parent=self):
             args = (selected_date,)  # tuple(date,)
             self.engine.get_counts(args)
-            self._on_cancel()
+            self.on_cancel()
 
-    def _on_cancel(self, _evt=None):
-        """Close window safely and unregister from engine."""
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None):
+        """Close window."""
+        super().on_cancel(evt)

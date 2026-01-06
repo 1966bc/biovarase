@@ -6,51 +6,33 @@
 #-----------------------------------------------------------------------------
 import tkinter as tk
 from tkinter import ttk
+from tkinter.scrolledtext import ScrolledText
+
+from views.parent_view import ParentView
 
 
-class UI(tk.Toplevel):
-    
-    _instance = None
-
-    def __new__(cls, parent, index=None):
-        # Reuse a living instance if present, otherwise create a new one.
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus_set)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None  # stale reference; recreate
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
     
     def __init__(self, parent):
-        # Prevent double initialization when the singleton is reused
         if getattr(self, "_is_init", False):
             self.parent = parent
             return
-        
-        super().__init__(name="license")
 
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
-        #self.resizable(0, 0)
-        self.attributes("-topmost", True)
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
-        self.bind("<Escape>", self.on_cancel)
-        
-        self._build_ui()
-        self.engine.center_window_on_screen(self)
+        super().__init__(parent, name="license")
         self._is_init = True
+
+        self.attributes("-topmost", True)
+
+        self._build_ui()
+        self.show(on_screen=True)
 
     def _build_ui(self):
 
         main = ttk.Frame(self, style="App.TFrame", padding=8)
         main.pack(fill=tk.BOTH, expand=True)
-        self.txLicense = self.engine.get_text_box(main,)
+        self.txLicense = ScrolledText(main, wrap=tk.WORD, bg='light yellow',
+                                       relief=tk.GROOVE, font='TkFixedFont')
+        self.txLicense.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
     def on_open(self):
 

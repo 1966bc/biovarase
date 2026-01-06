@@ -6,12 +6,14 @@
 # modify:   ver MMXXV – Use LeveyJenningsCanvas (one chart per batch) + scrollbar
 # -----------------------------------------------------------------------------
 import tkinter as tk
+
+from views.child_view import ChildView
 from tkinter import ttk
 
 from ljcanvas import LeveyJenningsCanvas
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     """
     Levey–Jennings plots window.
 
@@ -121,8 +123,8 @@ class UI(tk.Toplevel):
 
         ttk.Sizegrip(self).grid(row=1, column=0, sticky="se")
 
-        # Center window relative to parent
-        self.engine.center_window_on_screen(self)
+        # Center and show window
+        self.show(on_screen=True)
 
     # -------------------------------------------------------------------------
     # OPEN WINDOW

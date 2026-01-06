@@ -10,24 +10,15 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from views.child_view import ChildView
 
-class UI(tk.Toplevel):
+
+class UI(ChildView):
 
     def __init__(self, parent, index=None):
-        super().__init__(name="equipment")
+        super().__init__(parent, name="equipment")
 
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        try:
-            self.transient(parent)
-        except Exception as e:
-            pass
-
-        # References
-        self.parent = parent
         self.index = index  # None → INSERT, pk → UPDATE
-        self.engine = self.nametowidget(".").engine
 
         # Selected equipment row (hybrid dict from engine.get_selected)
         self.selected_item = None
@@ -39,13 +30,7 @@ class UI(tk.Toplevel):
         # Combobox index → supplier_id mapping
         self.dict_suppliers = {}
 
-        # Window configuration
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
         # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
@@ -55,18 +40,8 @@ class UI(tk.Toplevel):
 
         # Build UI
         self._build_ui()
-
-        # Automatic minimum size based on widgets (NO magic numbers)
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-
-        # Center window relative to parent (if helper is available)
-        if hasattr(self.engine, "center_window_relative_to_parent"):
-            self.engine.center_window_relative_to_parent(self)
-
-        # Show window (end anti-flash)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
+        self.show()
 
     def _build_ui(self):
 
@@ -122,7 +97,7 @@ class UI(tk.Toplevel):
             style="App.TButton",
             text="Cancel",
             underline=0,
-            command=self._on_cancel,
+            command=self.on_cancel,
         )
         btn_cancel.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
@@ -323,7 +298,7 @@ class UI(tk.Toplevel):
             except Exception as e:
                 pass
 
-            self._on_cancel()
+            self.on_cancel()
 
         except Exception as exc:
             # Log and notify user (logging MUST NOT break the UI)
@@ -454,13 +429,6 @@ class UI(tk.Toplevel):
         self.description.set(norm)
         return 1
 
-    def _on_cancel(self, _evt=None):
-        """Close the editor window.
-
-        This child window is not registered as a singleton in Engine,
-        so a simple destroy() is enough.
-        """
-        try:
-            self.destroy()
-        except Exception as e:
-            pass
+    def on_cancel(self, evt=None):
+        """Close the editor window."""
+        super().on_cancel(evt)

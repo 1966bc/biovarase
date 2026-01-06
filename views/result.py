@@ -16,6 +16,8 @@ import inspect
 from datetime import datetime
 from typing import Optional, Any, List
 import tkinter as tk
+
+from views.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
 from calendarium import Calendarium
@@ -25,7 +27,7 @@ FOCUS_DELAY_MS = 50  # Delay for event queue to settle before focusing
 DEFAULT_REAGENT_LOT = "NOT ASSIGNED"  # Default value for optional reagent_lot field
 
 
-class UI(tk.Toplevel):
+class UI(ChildView):
     """
     Editor window for QC test results.
 
@@ -46,11 +48,7 @@ class UI(tk.Toplevel):
         self.engine = self.nametowidget(".").engine
         self.parent = parent
         self.index = index
-        self.table = "results"
-
-        self.resizable(False, False)
-
-        # UI variables
+        self.table = "results"        # UI variables
         self.test = tk.StringVar()
         self.batch = tk.StringVar()
         self.level = tk.StringVar()
@@ -74,13 +72,7 @@ class UI(tk.Toplevel):
 
         # Register window in engine (per PROJECT_RULES.md section 7.1)
         self.engine.dict_instances[self.winfo_name()] = self
-
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
@@ -214,9 +206,9 @@ class UI(tk.Toplevel):
             style="App.TButton",
             text="Cancel",
             underline=0,
-            command=self._on_cancel,
+            command=self.on_cancel,
         )
-        self.bind("<Alt-c>", self._on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
         btn.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
     def on_open(self) -> None:
@@ -471,7 +463,7 @@ class UI(tk.Toplevel):
 
         self._update_main_results_lists()
         self._set_index(last_id)
-        self._on_cancel()
+        self.on_cancel()
 
     def _update_main_results_lists(self) -> None:
         """
@@ -557,9 +549,9 @@ class UI(tk.Toplevel):
         self.engine.write(sql, args)
 
         self._update_main_results_lists()
-        self._on_cancel()
+        self.on_cancel()
 
-    def _on_cancel(self, _evt: Optional[tk.Event] = None) -> None:
+    def on_cancel(self, _evt: Optional[tk.Event] = None) -> None:
         """
         Close the window without saving.
 

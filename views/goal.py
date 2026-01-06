@@ -11,8 +11,10 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from views.child_view import ChildView
 
-class UI(tk.Toplevel):
+
+class UI(ChildView):
     """
     Analytical Goal Editor (child window, NOT a singleton).
 
@@ -29,20 +31,9 @@ class UI(tk.Toplevel):
     """
 
     def __init__(self, parent, index=None):
-        super().__init__(name="goal")
+        super().__init__(parent, name="goal")
 
-        # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-        try:
-            self.transient(parent)
-        except Exception as e:
-            pass
-
-        # References
-        self.parent = parent
         self.index = index          # test_method_id
-        self.engine = self.nametowidget(".").engine
 
         # Tk variables
         self.cvw      = tk.DoubleVar()
@@ -62,33 +53,15 @@ class UI(tk.Toplevel):
         # Float validation provided by engine
         self.float_vcmd = self.engine.get_float_vcmd(self)
 
-        # Window configuration
-        self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-
         # Global key bindings
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.bind("<Alt-c>", self.on_cancel)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)
 
         # Build UI
         self._build_ui()
-
-        # Autosize
-        self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-
-        # Center window
-        try:
-            if hasattr(self.engine, "center_window_relative_to_parent"):
-                self.engine.center_window_relative_to_parent(self)
-        except Exception as e:
-            pass
-
-        # Show (end anti-flash)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
+        self.show()
 
     # ---------------------------------------------------------------------
     # UI BUILD
@@ -147,7 +120,7 @@ class UI(tk.Toplevel):
 
         ttk.Button(
             frm_buttons, style="App.TButton", text="Cancel",
-            underline=0, command=self._on_cancel
+            underline=0, command=self.on_cancel
         ).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
 
     # ---------------------------------------------------------------------
@@ -308,7 +281,7 @@ class UI(tk.Toplevel):
             if hasattr(self.parent, "on_test_method_selected"):
                 self.parent.on_test_method_selected()
 
-            self._on_cancel()
+            self.on_cancel()
 
         except Exception as exc:
             messagebox.showerror(
@@ -317,8 +290,6 @@ class UI(tk.Toplevel):
                 parent=self,
             )
 
-    def _on_cancel(self, _evt=None):
-        try:
-            super().destroy()
-        except Exception as e:
-            pass
+    def on_cancel(self, evt=None):
+        """Close dialog."""
+        super().on_cancel(evt)

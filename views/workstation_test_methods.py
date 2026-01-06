@@ -29,6 +29,8 @@ Singleton window (per PROJECT_RULES.md section 7.1).
 """
 
 import tkinter as tk
+
+from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
 
@@ -44,24 +46,7 @@ ROLE_AUTOLOGIN = 3   # Guest user - read-only access
 TREE_ROOT_LABEL = "Sites"
 
 
-class UI(tk.Toplevel):
-
-    _instance = None  
-
-    def __new__(cls, parent):
-        """Return the existing instance if alive; otherwise create a new one."""
-        if cls._instance is not None:
-            try:
-                if cls._instance.winfo_exists():
-                    cls._instance.deiconify()
-                    cls._instance.lift()
-                    cls._instance.after_idle(cls._instance.focus)
-                    return cls._instance
-            except Exception as e:
-                cls._instance = None
-        obj = super().__new__(cls)
-        cls._instance = obj
-        return obj
+class UI(ParentView):
 
     def __init__(self, parent):
         """
@@ -80,14 +65,7 @@ class UI(tk.Toplevel):
         self._is_init = True
         self.parent = parent
         self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
-        
-        self.resizable(True, True)
-        
-        self.protocol("WM_DELETE_WINDOW", self._on_cancel)
-        # Hotkeys
-        self.bind("<Escape>", self._on_cancel)
-        self.bind("<Alt-c>", self._on_cancel)
+        self.resizable(True, True)        # Hotkeys        self.bind("<Alt-c>", self.on_cancel)
 
         self.child = None  
         self.selected_workstation = None
@@ -95,12 +73,7 @@ class UI(tk.Toplevel):
                 
        # --- Build interface ------------------------------------------------
         self._build_ui()
-        # Stabilize real geometry, then center and show
-        self.update_idletasks()
-        self.engine.center_window_on_screen(self)
-        self.deiconify()
-        self.attributes("-alpha", 1.0)
-        self.lift()
+        self.show()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
@@ -116,11 +89,15 @@ class UI(tk.Toplevel):
         pw.add(pane_left,  minsize=160)
         pw.add(pane_right, minsize=300)
 
-        # Left: tree        
-        cols_left = (["#0", "",  "w", False, 240, 300],
-                     ["#1", "",  "w", False,   0,   0])
-        self.Sites = self.engine.get_tree(pane_left, cols_left, show="tree")
-        self.Sites["displaycolumns"] = ()
+        # Left: hierarchical tree (Sites → Labs → Sections → Workstations)
+        self.Sites = ttk.Treeview(pane_left, show="tree")
+        self.Sites.column("#0", width=300, minwidth=240, stretch=False)
+
+        sb_sites = ttk.Scrollbar(pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
+        self.Sites.configure(yscrollcommand=sb_sites.set)
+        self.Sites.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_sites.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.Sites.bind("<<TreeviewSelect>>", self.on_branch_selected)
         self.Sites.bind("<Double-1>", self.on_branch_activated)
 
@@ -128,16 +105,31 @@ class UI(tk.Toplevel):
         frm_right = ttk.Frame(pane_right, style="App.TFrame", relief=tk.GROOVE, padding=8)
         frm_right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
-        cols_right = (["#0", "id",     "w", False,   0,   0],
-                      ["#1", "Test",   "w", True,  220, 220],
-                      ["#2", "Code",   "w", True,   90,  90],
-                      ["#3", "Sample", "w", True,  120, 120],
-                      ["#4", "Method", "w", True,  140, 140],
-                      ["#5", "Unit",   "w", True,   90,  90])
-        self.lstTestsMethods = self.engine.get_tree(frm_right, cols_right)
+        cols_methods = ("test", "code", "sample", "method", "unit")
+        self.lstTestsMethods = ttk.Treeview(frm_right, columns=cols_methods, show="headings")
+
+        self.lstTestsMethods.column("test", width=220, minwidth=220, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("test", text="Test", anchor=tk.W)
+
+        self.lstTestsMethods.column("code", width=90, minwidth=90, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("code", text="Code", anchor=tk.W)
+
+        self.lstTestsMethods.column("sample", width=120, minwidth=120, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("sample", text="Sample", anchor=tk.W)
+
+        self.lstTestsMethods.column("method", width=140, minwidth=140, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("method", text="Method", anchor=tk.W)
+
+        self.lstTestsMethods.column("unit", width=90, minwidth=90, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("unit", text="Unit", anchor=tk.W)
+
+        sb_methods = ttk.Scrollbar(frm_right, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
+        self.lstTestsMethods.configure(yscrollcommand=sb_methods.set)
+        self.lstTestsMethods.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        sb_methods.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.lstTestsMethods.tag_configure("inactive", background="light gray")
         self.lstTestsMethods.bind("<Double-1>", self.on_test_method_activated)
-        self.lstTestsMethods.pack(fill=tk.BOTH, expand=1)
 
     def on_open(self):
         self.title("Workstations — Test Methods Mapping")
@@ -683,6 +675,6 @@ class UI(tk.Toplevel):
         self._set_tests_methods((ws_id,))
 
 
-    def _on_cancel(self, _evt=None):
-        self.engine.dict_instances.pop(self.winfo_name(), None)
-        self.engine.safe_close(self)
+    def on_cancel(self, evt=None):
+        """Close window."""
+        super().on_cancel(evt)
