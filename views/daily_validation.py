@@ -779,10 +779,25 @@ class UI(ParentView):
             messagebox.showinfo("Invalidate", "This result is not validated.")
             return
 
-        if not messagebox.askyesno("Confirm", f"Invalidate result {row['result_id']}?"):
+        ws_id = row["workstation_id"]
+
+        # Check if workstation is approved
+        ws_approved = self._is_workstation_approved(ws_id)
+
+        if ws_approved:
+            msg = (
+                f"Invalidate result {row['result_id']}?\n\n"
+                "⚠ This workstation is approved.\n"
+                "The approval will be revoked."
+            )
+        else:
+            msg = f"Invalidate result {row['result_id']}?"
+
+        if not messagebox.askyesno("Confirm", msg):
             return
 
         try:
+            # Invalidate the result
             sql = """
                 UPDATE results
                 SET validated = 0,
@@ -792,7 +807,17 @@ class UI(ParentView):
             """
             self.engine.write(sql, (row["result_id"],))
 
-            messagebox.showinfo("Success", "Result invalidated.")
+            # Revoke workstation approval if it was approved
+            if ws_approved:
+                sql_revoke = """
+                    DELETE FROM daily_approvals
+                    WHERE workstation_id = ? AND approval_date = ?
+                """
+                self.engine.write(sql_revoke, (ws_id, self.selected_date.isoformat()))
+                messagebox.showinfo("Success", "Result invalidated. Workstation approval revoked.")
+            else:
+                messagebox.showinfo("Success", "Result invalidated.")
+
             self._load_data(preserve_expansion=True)
 
         except Exception as e:
@@ -801,6 +826,18 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror("Error", f"Failed to invalidate:\n{e}")
+
+    def _is_workstation_approved(self, ws_id):
+        """Check if workstation is approved for selected date."""
+        try:
+            sql = """
+                SELECT approval_id FROM daily_approvals
+                WHERE workstation_id = ? AND approval_date = ?
+            """
+            result = self.engine.read(True, sql, (ws_id, self.selected_date.isoformat()))
+            return bool(result)
+        except Exception:
+            return False
 
     def on_close(self, evt=None):
         """Close the window."""
