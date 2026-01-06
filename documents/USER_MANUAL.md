@@ -14,6 +14,7 @@
 4. [Avvio e Login](#4-avvio-e-login)
 5. [Gestione Anagrafica](#5-gestione-anagrafica)
 6. [Operatività Quotidiana](#6-operatività-quotidiana)
+   - [6.5 Validazione Giornaliera (Daily Validation)](#65-validazione-giornaliera-daily-validation)
 7. [Grafici e Analisi](#7-grafici-e-analisi)
 8. [Export Dati](#8-export-dati)
 9. [Amministrazione](#9-amministrazione)
@@ -358,6 +359,77 @@ Il risultato della valutazione appare nella scheda "Other data" sotto il grafico
 - **Warning** (giallo): violazione 1:2S
 - **Reject** (rosso): violazione regole di rifiuto
 
+### 6.5 Validazione Giornaliera (Daily Validation)
+
+`Menu → File → Daily Validation`
+
+La finestra Daily Validation permette di approvare i risultati QC prima di iniziare la routine analitica giornaliera. È progettata per i validatori che devono verificare lo stato del QC senza doversi recare fisicamente davanti ad ogni workstation.
+
+> **Nota sui permessi:**
+> - Visualizzazione: tutti i livelli
+> - Validazione risultati e approvazione workstation: solo **Livello 0 e 1**
+
+**Struttura della vista:**
+
+La finestra mostra una TreeView gerarchica:
+- **Livello 1 (Workstations):** Elenco workstation con conteggi aggregati
+- **Livello 2 (Risultati):** Singoli risultati QC (visibili espandendo la workstation)
+
+| Colonna | Workstation | Risultato |
+|---------|-------------|-----------|
+| Nome | Nome workstation | Nome test-campione |
+| Equipment/Batch | Modello strumento | Lotto e livello |
+| Time | - | Orario arrivo QC |
+| Counts/Result | Tot / Pending | Valore misurato |
+| Problems/Z-Score | N. problemi | Scostamento in SD |
+| Status | Stato approvazione | Stato validazione |
+
+**Codice colori:**
+- **Verde:** Workstation approvata / Risultato validato
+- **Giallo:** In attesa (pending)
+- **Rosso:** Problemi (risultato oltre ±3 SD)
+
+**Flusso di lavoro:**
+
+1. Selezionare la data dal calendario
+2. Premere Load per caricare i dati
+3. Espandere le workstation per vedere i singoli risultati
+4. Validare i risultati singolarmente (doppio click o pulsante "Validate Result")
+5. Quando tutti i risultati di una workstation sono validati, approvare la workstation
+
+**Approvazione workstation:**
+
+Selezionare la workstation e premere "Approve Workstation". Questo:
+- Valida automaticamente tutti i risultati pending
+- Registra chi ha approvato e quando (audit trail)
+- Cambia il colore della riga in verde
+
+Se si approva una workstation con risultati oltre ±3 SD, viene mostrato un avviso di conferma.
+
+**Auto-approvazione:**
+
+Quando si valida l'ultimo risultato pending di una workstation, il sistema propone automaticamente di approvare la workstation.
+
+**Revoca approvazione:**
+
+Se si invalida un risultato di una workstation già approvata:
+- Viene mostrato un avviso
+- L'approvazione della workstation viene revocata automaticamente
+
+**Test Mandatory:**
+
+In alto a destra viene mostrato un indicatore:
+- **"✓ All mandatory OK"** (verde): Tutti i test obbligatori sono stati eseguiti
+- **"⚠ Missing mandatory: N (click)"** (rosso): N test obbligatori mancanti
+
+Cliccando sull'indicatore rosso viene mostrata la lista dei test mancanti.
+
+I test mandatory si configurano da `Menu → Edit → Tests Methods`, attivando il flag "Mandatory".
+
+**Export:**
+
+Il pulsante Export genera il report Excel Quick Data Analysis per la data selezionata.
+
 ---
 
 ## 7. Grafici e Analisi
@@ -511,6 +583,16 @@ Esporta le note/commenti inseriti sui risultati a partire da una data specificat
 | Modifica risultato | ✓ | ✓ | ✓ | - |
 | Elimina risultato | ✓ | ✓ | - | - |
 | Disattiva risultato (Status) | ✓ | ✓ | ✓ | - |
+
+#### Menu File → Daily Validation
+
+| Funzione | Liv. 0 | Liv. 1 | Liv. 2 | Liv. 3 |
+|----------|--------|--------|--------|--------|
+| Visualizza workstation/risultati | ✓ | ✓ | ✓ | ✓ |
+| Valida risultato | ✓ | ✓ | - | - |
+| Invalida risultato | ✓ | ✓ | - | - |
+| Approva workstation | ✓ | ✓ | - | - |
+| Export | ✓ | ✓ | ✓ | ✓ |
 
 #### Finestra Principale
 
