@@ -49,10 +49,12 @@ build_biovarase.cmd
 
 ### Mixin Pattern (Multiple Inheritance)
 
-The `Engine` class combines specialized functionality through multiple inheritance:
+The `Engine` class combines specialized functionality through multiple inheritance.
+Uses `_EngineMeta` metaclass to ensure only one instance exists (Singleton pattern).
 
 ```python
-class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tools):
+class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tools,
+             metaclass=_EngineMeta):
     pass
 ```
 
@@ -95,8 +97,8 @@ affected = self.engine.write(False, "UPDATE results SET validated = 1 WHERE resu
 ```python
 class UI(ParentView):  # or ChildView
     def __init__(self, parent):
-        super().__init__(name="myview")
-        if self._reusing:  # ParentView only
+        super().__init__(parent, name="myview")  # parent is required!
+        if self._reusing:  # ParentView sets this - skip rebuild if reusing
             return
         # ... build UI ...
         self.show()  # or self.show(on_screen=True)
