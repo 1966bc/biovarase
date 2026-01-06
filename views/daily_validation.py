@@ -897,23 +897,27 @@ class UI(ParentView):
         # Create popup window
         popup = tk.Toplevel(self)
         popup.title(f"Validation History - {self.selected_date}")
-        popup.geometry("800x400")
+        popup.geometry("800x450")
         popup.transient(self)
 
-        # Main frame
+        # Main frame with grid layout
         frm = ttk.Frame(popup, padding=10)
         frm.pack(fill=tk.BOTH, expand=True)
+        frm.rowconfigure(1, weight=1)
+        frm.columnconfigure(0, weight=1)
 
-        # Info label
+        # Info label (row 0)
         ttk.Label(
             frm,
             text=f"Validation actions for {self.selected_date}",
             font=("TkDefaultFont", 10, "bold")
-        ).pack(anchor=tk.W, pady=(0, 10))
+        ).grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
 
-        # Treeview with scrollbar
+        # Treeview with scrollbar (row 1)
         frm_tree = ttk.Frame(frm)
-        frm_tree.pack(fill=tk.BOTH, expand=True)
+        frm_tree.grid(row=1, column=0, sticky=tk.NSEW)
+        frm_tree.rowconfigure(0, weight=1)
+        frm_tree.columnconfigure(0, weight=1)
 
         sb = ttk.Scrollbar(frm_tree, orient=tk.VERTICAL)
         cols = ("time", "user", "test", "workstation", "action", "result_value")
@@ -934,8 +938,8 @@ class UI(ParentView):
         tree.column("action", width=80, anchor=tk.CENTER)
         tree.column("result_value", width=80, anchor=tk.E)
 
-        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        sb.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.grid(row=0, column=0, sticky=tk.NSEW)
+        sb.grid(row=0, column=1, sticky=tk.NS)
 
         # Populate
         for row in history:
@@ -953,30 +957,30 @@ class UI(ParentView):
             item = tree.insert("", tk.END, values=values, tags=(color,))
             tree.tag_configure(color, background=color)
 
-        # Stats
+        # Stats (row 2)
         validated_count = sum(1 for r in history if r["validated"] == 1)
         invalidated_count = sum(1 for r in history if r["validated"] == 0)
 
         ttk.Label(
             frm,
             text=f"Total: {len(history)}  |  Validated: {validated_count}  |  Invalidated: {invalidated_count}"
-        ).pack(anchor=tk.W, pady=(10, 0))
+        ).grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
 
-        # Buttons
+        # Buttons (row 3)
         frm_btn = ttk.Frame(frm)
-        frm_btn.pack(fill=tk.X, pady=(10, 0))
+        frm_btn.grid(row=3, column=0, sticky=tk.EW, pady=(10, 0))
 
         ttk.Button(
             frm_btn,
             text="Export",
             command=lambda: self._export_history(history)
-        ).pack(side=tk.LEFT)
+        ).pack(side=tk.LEFT, padx=5)
 
         ttk.Button(
             frm_btn,
             text="Close",
             command=popup.destroy
-        ).pack(side=tk.RIGHT)
+        ).pack(side=tk.RIGHT, padx=5)
 
     def _get_validation_history(self):
         """Get validation history from audit_results for selected date."""
@@ -1000,10 +1004,9 @@ class UI(ParentView):
                 INNER JOIN tests t ON tm.test_id = t.test_id
                 INNER JOIN samples s ON tm.sample_id = s.sample_id
                 INNER JOIN workstations w ON r.workstation_id = w.workstation_id
-                LEFT JOIN users u ON ar.log_id = u.user_id
+                LEFT JOIN users u ON ar.validated_by = u.user_id
                 WHERE DATE(ar.log_time) = ?
-                  AND ar.operation = 'UPDATE'
-                  AND ar.validated IS NOT NULL
+                  AND ar.validated_by IS NOT NULL
                   AND b.lab_id = ?
                 ORDER BY ar.log_time DESC
             """
