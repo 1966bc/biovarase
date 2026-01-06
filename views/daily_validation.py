@@ -443,12 +443,15 @@ class UI(ParentView):
                     b.lot_number,
                     b.description AS level,
                     t.description AS test_description,
-                    s.sample
+                    s.sample,
+                    u.first_name AS validated_first_name,
+                    u.last_name AS validated_last_name
                 FROM results r
                 INNER JOIN batches b ON r.batch_id = b.batch_id
                 INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
                 INNER JOIN tests t ON tm.test_id = t.test_id
                 INNER JOIN samples s ON tm.sample_id = s.sample_id
+                LEFT JOIN users u ON r.validated_by = u.user_id
                 WHERE r.workstation_id = ?
                   AND DATE(r.received) = ?
                   AND r.status = 1
@@ -501,7 +504,8 @@ class UI(ParentView):
 
         # Status
         if validated == 1:
-            status_text = "✓"
+            validated_by = f"{row.get('validated_first_name') or ''} {row.get('validated_last_name') or ''}".strip()
+            status_text = f"✓ {validated_by}" if validated_by else "✓"
             color = self.engine.get_rgb(200, 255, 200)  # Green
         elif abs(zscore) >= 3:
             status_text = "⚠ >3SD"
