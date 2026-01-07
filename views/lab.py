@@ -8,6 +8,7 @@
 import sys
 import tkinter as tk
 
+from i18n import _
 from views.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
@@ -57,28 +58,28 @@ class UI(ChildView):
 
         r, c = 0, 1
 
-        ttk.Label(frm_left, text="Hospital:").grid(
+        ttk.Label(frm_left, text=_("Hospital:")).grid(
             row=r, column=0, sticky=tk.W, **paddings
         )
         self.cbSites = ttk.Combobox(frm_left, state="readonly")
         self.cbSites.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Manager:").grid(
+        ttk.Label(frm_left, text=_("Manager:")).grid(
             row=r, column=0, sticky=tk.W, **paddings
         )
         self.cbUsers = ttk.Combobox(frm_left, state="readonly")
         self.cbUsers.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Laboratory:").grid(
+        ttk.Label(frm_left, text=_("Laboratory:")).grid(
             row=r, column=0, sticky=tk.W, **paddings
         )
         self.txtLab = ttk.Entry(frm_left, textvariable=self.description)
         self.txtLab.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
         chk = ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -98,7 +99,7 @@ class UI(ChildView):
         btn_save = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Save",
+            text=_("Save"),
             underline=0,
             command=self._on_save,
         )
@@ -107,7 +108,7 @@ class UI(ChildView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self.on_cancel,
         )
@@ -139,7 +140,7 @@ class UI(ChildView):
             except Exception as e:
                 self.selected_lab = None
 
-            title = "Update Lab"
+            title = _("Update Lab")
             self._set_values()
             try:
                 self.txtLab.focus_set()
@@ -148,7 +149,7 @@ class UI(ChildView):
 
         else:
             # ------------------------- INSERT MODE -------------------------
-            title = "Insert Lab"
+            title = _("Add Lab")
             # Preselect current hospital in combo using 'site_id'
             try:
                 if isinstance(self.selected_hospital, dict):
@@ -307,9 +308,9 @@ class UI(ChildView):
             ValueError: if required combobox selections are missing.
         """
         if self.cbSites.current() < 0:
-            raise ValueError("Select a Hospital.")
+            raise ValueError(_("Select a Hospital."))
         if self.cbUsers.current() < 0:
-            raise ValueError("Select a Manager.")
+            raise ValueError(_("Select a Manager."))
 
         site_id = self.dict_sites[self.cbSites.current()]
         user_id = self.dict_users[self.cbUsers.current()]
@@ -388,7 +389,7 @@ class UI(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 title,
-                f"Save error:\n{exc}",
+                f"{_('Save error:')}\n{exc}",
                 parent=self,
             )
 

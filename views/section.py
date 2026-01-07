@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -65,22 +66,22 @@ class UI(ChildView):
         self.frm_main.columnconfigure(1, weight=1)
 
         r = 0
-        ttk.Label(self.frm_main, text="Labs:").grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(self.frm_main, text=_("Labs:")).grid(row=r, column=0, sticky=tk.W, **paddings)
         self.cbLabs = ttk.Combobox(self.frm_main, state="readonly")
         self.cbLabs.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(self.frm_main, text="Manager:").grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(self.frm_main, text=_("Manager:")).grid(row=r, column=0, sticky=tk.W, **paddings)
         self.cbUsers = ttk.Combobox(self.frm_main, state="readonly")
         self.cbUsers.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(self.frm_main, text="Description:").grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(self.frm_main, text=_("Description:")).grid(row=r, column=0, sticky=tk.W, **paddings)
         self.txSection = ttk.Entry(self.frm_main, textvariable=self.description)
         self.txSection.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(self.frm_main, text="Status:").grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(self.frm_main, text=_("Status:")).grid(row=r, column=0, sticky=tk.W, **paddings)
         ttk.Checkbutton(
             self.frm_main,
             variable=self.status,
@@ -95,7 +96,7 @@ class UI(ChildView):
         btn_save = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Save",
+            text=_("Save"),
             underline=0,
             command=self.on_save,
         )
@@ -104,7 +105,7 @@ class UI(ChildView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self.on_cancel,
         )
@@ -113,7 +114,7 @@ class UI(ChildView):
         # "Set It" checkbox: marks this section as the current one
         ttk.Checkbutton(
             frm_buttons,
-            text="Set It",
+            text=_("Set It"),
             variable=self.set_it,
             onvalue=1,
             offvalue=0,
@@ -174,7 +175,7 @@ class UI(ChildView):
             if self.selected_section:
                 self._set_values()
 
-            title = "Update Lab Section"
+            title = _("Update Section")
 
         else:
             # ------------------------ INSERT MODE ------------------------
@@ -182,7 +183,7 @@ class UI(ChildView):
                 self.status.set(True)
             except Exception as e:
                 self.engine.on_log("on_open:set_status", e, type(e), sys.modules[__name__])
-            title = "Insert Lab Section"
+            title = _("Add Section")
 
         # Set window title
         self.title(title)
@@ -322,9 +323,9 @@ class UI(ChildView):
     def _get_values(self):
        
         if self.cbLabs.current() < 0:
-            raise ValueError("Select a Lab.")
+            raise ValueError(_("Select a Lab."))
         if self.cbUsers.current() < 0:
-            raise ValueError("Select a Manager.")
+            raise ValueError(_("Select a Manager."))
 
         lab_id = self.dict_labs[self.cbLabs.current()]
         user_id = self.dict_users[self.cbUsers.current()]
@@ -418,7 +419,7 @@ class UI(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
-                f"Save error (sections):\n{exc}",
+                f"{_('Save error:')}\n{exc}",
                 parent=self,
             )
 
