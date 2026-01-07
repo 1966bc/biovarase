@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -56,17 +57,17 @@ class UI(ChildView):
 
         r, c = 0, 1
 
-        ttk.Label(frm_left, text="Suppliers:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Suppliers:")).grid(row=r, column=0, sticky=tk.W)
         self.cbSuppliers = ttk.Combobox(frm_left, state="readonly")
         self.cbSuppliers.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Description:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Description:")).grid(row=r, column=0, sticky=tk.W)
         self.txtDescription = ttk.Entry(frm_left, textvariable=self.description)
         self.txtDescription.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
         chk = ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -86,7 +87,7 @@ class UI(ChildView):
         btn_save = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Save",
+            text=_("Save"),
             underline=0,
             command=self._on_save,
         )
@@ -95,7 +96,7 @@ class UI(ChildView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self.on_cancel,
         )
@@ -109,7 +110,7 @@ class UI(ChildView):
         self._set_suppliers()
 
         if self.index is not None:
-            self.title(f"Update {self.winfo_name().title()}")
+            self.title(_("Update Equipment"))
             try:
                 self.selected_item = self.engine.get_selected(
                     self.parent.table,
@@ -131,7 +132,7 @@ class UI(ChildView):
             if self.selected_item:
                 self._set_values()
         else:
-            self.title(f"Insert {self.winfo_name().title()}")
+            self.title(_("Add Equipment"))
             self.status.set(True)
             # Default to "Not Assigned" supplier if present
             try:
@@ -179,7 +180,7 @@ class UI(ChildView):
             rows = []
 
         # Append virtual "Not Assigned" supplier (id = 0)
-        rows.append({"supplier_id": 0, "description": "Not Assigned"})
+        rows.append({"supplier_id": 0, "description": _("Not Assigned")})
 
         for idx, row in enumerate(rows):
             supplier_id = int(row["supplier_id"])
@@ -312,7 +313,7 @@ class UI(ChildView):
             except Exception as e:
                 pass
 
-            messagebox.showerror(title, f"Save error:\n{exc}", parent=self)
+            messagebox.showerror(title, f"{_('Save error:')}\n{exc}", parent=self)
 
     def _reselect_in_parent(self, target_pk):
         """Reselect item in parent using dict_items (index → pk) after save."""
@@ -353,7 +354,7 @@ class UI(ChildView):
             - Updates field with normalized value on success
         """
         # Field metadata (explicitly from parent to show external origin)
-        label_text = "Description"
+        label_text = _("Description:").rstrip(":")
         desc_field = "description"
         table = self.parent.table
         pk_field = self.parent.primary_key
@@ -365,7 +366,7 @@ class UI(ChildView):
         if not norm:
             messagebox.showwarning(
                 self.engine.app_title,
-                f"{label_text} is required.",
+                _("Description is required."),
                 parent=self,
             )
             return 0
@@ -403,7 +404,7 @@ class UI(ChildView):
 
             messagebox.showerror(
                 self.engine.app_title,
-                f"Database error:\n{exc}",
+                f"{_('Database error:')}\n{exc}",
                 parent=self,
             )
             return 0
@@ -420,7 +421,7 @@ class UI(ChildView):
             if self.index is None or found_id != current_id:
                 messagebox.showwarning(
                     self.engine.app_title,
-                    f"{label_text} '{norm}' already exists!",
+                    f"{label_text} '{norm}' {_('already exists!')}",
                     parent=self,
                 )
                 return 0

@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 import views.section as ui
 from views.parent_view import ParentView
 
@@ -70,17 +71,17 @@ class UI(ParentView):
         grp_right = ttk.Frame(pane_right, style="Panel.TFrame")
         grp_right.pack(fill=tk.BOTH, expand=1)
 
-        self.lblSections = ttk.Labelframe(grp_right, text="Sections")
+        self.lblSections = ttk.Labelframe(grp_right, text=_("Sections"))
         self.lblSections.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         cols_sections = ("manager", "description")
         self.lstSections = ttk.Treeview(self.lblSections, columns=cols_sections, show="headings")
 
         self.lstSections.column("manager", width=220, minwidth=220, anchor=tk.W, stretch=True)
-        self.lstSections.heading("manager", text="Manager", anchor=tk.W)
+        self.lstSections.heading("manager", text=_("Manager:").rstrip(":"), anchor=tk.W)
 
         self.lstSections.column("description", width=240, minwidth=240, anchor=tk.W, stretch=True)
-        self.lstSections.heading("description", text="Description", anchor=tk.W)
+        self.lstSections.heading("description", text=_("Description:").rstrip(":"), anchor=tk.W)
 
         sb_sections = ttk.Scrollbar(self.lblSections, orient=tk.VERTICAL, command=self.lstSections.yview)
         self.lstSections.configure(yscrollcommand=sb_sections.set)
@@ -109,7 +110,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------- OPEN
     def on_open(self):
         """Called when window becomes visible."""
-        self.title("Sections Management")
+        self.title(_("Sections Management"))
         self._load_tree()
 
     # ---------------------------------------------------------------------- TREE
@@ -118,7 +119,7 @@ class UI(ParentView):
         try:
             self.engine.clear_treeview(self.Sites)
 
-            root = self.Sites.insert("", tk.END, iid="root", text="Sites")
+            root = self.Sites.insert("", tk.END, iid="root", text=_("Sites"))
 
             sql_sites = """
                 SELECT 
@@ -219,7 +220,7 @@ class UI(ParentView):
                     tags=tags,
                 )
 
-            self.lblSections["text"] = f"Sections: {len(rows)}"
+            self.lblSections["text"] = f"{_('Sections')}: {len(rows)}"
 
         except Exception as e:
             self.engine.on_log("_load_sections_for_lab", e, type(e), sys.modules[__name__])

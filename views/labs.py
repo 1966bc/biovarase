@@ -7,6 +7,7 @@
 
 import tkinter as tk
 
+from i18n import _
 from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -68,17 +69,17 @@ class UI(ParentView):
         grp_right = ttk.Frame(pane_right, style="Panel.TFrame")
         grp_right.pack(fill=tk.BOTH, expand=1)
 
-        self.lblLaboratories = ttk.Labelframe(grp_right, text="Laboratories")
+        self.lblLaboratories = ttk.Labelframe(grp_right, text=_("Laboratories"))
         self.lblLaboratories.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         cols_labs = ("manager", "lab")
         self.lstLabs = ttk.Treeview(self.lblLaboratories, columns=cols_labs, show="headings")
 
         self.lstLabs.column("manager", width=220, minwidth=220, anchor=tk.W, stretch=True)
-        self.lstLabs.heading("manager", text="Manager", anchor=tk.W)
+        self.lstLabs.heading("manager", text=_("Manager:").rstrip(":"), anchor=tk.W)
 
         self.lstLabs.column("lab", width=260, minwidth=260, anchor=tk.W, stretch=True)
-        self.lstLabs.heading("lab", text="Lab", anchor=tk.W)
+        self.lstLabs.heading("lab", text=_("Lab:").rstrip(":"), anchor=tk.W)
 
         sb_labs = ttk.Scrollbar(self.lblLaboratories, orient=tk.VERTICAL, command=self.lstLabs.yview)
         self.lstLabs.configure(yscrollcommand=sb_labs.set)
@@ -108,7 +109,7 @@ class UI(ParentView):
 
     # Lifecycle ---------------------------------------------------------------
     def on_open(self):
-        self.title("Labs Management")
+        self.title(_("Labs Management"))
         self._load_tree()
 
     # --------------------------------------------------------------- data load
@@ -117,7 +118,7 @@ class UI(ParentView):
         # reset
         self.engine.clear_treeview(self.Sites)
 
-        root = self.Sites.insert("", tk.END, iid="root", text="Sites")
+        root = self.Sites.insert("", tk.END, iid="root", text=_("Sites"))
 
         # Companies (group by supplier that owns hospitals)
         sql_companies = """
@@ -236,7 +237,7 @@ class UI(ParentView):
                     tags=tags,
                 )
 
-        self.lblLaboratories["text"] = f"Laboratories: {len(self.lstLabs.get_children())}"
+        self.lblLaboratories["text"] = f"{_('Laboratories')}: {len(self.lstLabs.get_children())}"
 
     # ------------------------------------------------------------------ events
     def on_branch_selected(self, _evt=None):
