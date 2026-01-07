@@ -16,6 +16,7 @@ from typing import Tuple, Optional
 
 from monitor import Monitor
 from app_config import MAX_LOGIN_ATTEMPTS
+from i18n import _, set_language
 import views.main as ui
 
 
@@ -47,6 +48,10 @@ class Login(ttk.Frame):
             parent: Parent window (App instance)
         """
         super().__init__()
+
+        # Initialize language from configuration
+        lang = self.nametowidget(".").engine.get_language()
+        set_language(lang)
 
         self.nametowidget(".").engine.dict_instances[self.winfo_name()] = self
         self.parent: tk.Widget = parent
@@ -87,12 +92,12 @@ class Login(ttk.Frame):
 
         r = 0
         c = 1
-        ttk.Label(w, text="Login:",).grid(row=r, sticky=tk.W, **paddings)
-        self.txtNick = ttk.Entry(w, textvariable=self.nick,)
+        ttk.Label(w, text=_("Username:")).grid(row=r, sticky=tk.W, **paddings)
+        self.txtNick = ttk.Entry(w, textvariable=self.nick)
         self.txtNick.grid(row=r, column=c, **paddings)
 
         r += 1
-        ttk.Label(w, text="Password:",).grid(row=r, sticky=tk.W, **paddings)
+        ttk.Label(w, text=_("Password:")).grid(row=r, sticky=tk.W, **paddings)
         ent_password = ttk.Entry(w, show="*", textvariable=self.password)
         ent_password.grid(row=r, column=c, **paddings)
         ent_password.bind("<Return>", self.on_login)
@@ -100,7 +105,7 @@ class Login(ttk.Frame):
 
         r += 1
         c = 0
-        btn_login = ttk.Button(w, style="App.TButton", text="Login", underline=0)
+        btn_login = ttk.Button(w, style="App.TButton", text=_("Login"), underline=0)
         btn_login.bind("<Return>", self.on_login)
         btn_login.bind("<Button-1>", self.on_login)
         btn_login.bind("<Alt-l>", self.on_login)
@@ -108,7 +113,7 @@ class Login(ttk.Frame):
         btn_login.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         c += 1
-        btn_exit = ttk.Button(w, style="App.TButton", text="Cancel", underline=0)
+        btn_exit = ttk.Button(w, style="App.TButton", text=_("Cancel"), underline=0)
         btn_exit.bind("<Button-1>", self.parent.on_exit)
         btn_exit.bind("<Alt-c>", self.parent.on_exit)
         self.parent.bind("<Alt-c>", self.parent.on_exit)
@@ -176,13 +181,13 @@ class Login(ttk.Frame):
             ui.Main(self).on_open()
 
         else:
-            msg = "Login failed."
+            msg = _("Login failed.")
             messagebox.showwarning(self.nametowidget(".").engine.app_title, msg, parent=self)
 
             self.attempts += 1
 
             if self.attempts >= MAX_LOGIN_ATTEMPTS:
-                msg = f"Maximum login attempts ({MAX_LOGIN_ATTEMPTS}) exceeded.\nContact system administrator."
+                msg = _("Maximum login attempts exceeded.")
                 messagebox.showwarning(self.nametowidget(".").engine.app_title, msg, parent=self)
                 self.on_quit()
             else:

@@ -41,6 +41,7 @@ from tkinter import font
 
 from ljcanvas import LeveyJenningsCanvas
 from bias_canvas import BiasCanvas
+from i18n import _, set_language
 
 # project frames
 import views.license
@@ -292,6 +293,24 @@ class Main(tk.Toplevel):
         m_about.add_command(label="License", underline=0, command=self.on_license)
         m_about.add_command(label="Python", underline=0, command=self.on_python_version)
         m_about.add_command(label="Tkinter", underline=0, command=self.on_tkinter_version)
+
+        # Language submenu
+        m_about.add_separator()
+        m_lang = tk.Menu(m_about, tearoff=0)
+        self.lang_var = tk.StringVar(value=self.engine.get_language())
+        m_lang.add_radiobutton(
+            label="English",
+            value="en",
+            variable=self.lang_var,
+            command=self._on_language_change
+        )
+        m_lang.add_radiobutton(
+            label="Italiano",
+            value="it",
+            variable=self.lang_var,
+            command=self._on_language_change
+        )
+        m_about.add_cascade(label=_("Language"), underline=0, menu=m_lang)
 
         for i in (m_main, m_file, ):
             i.config(bg=self.nametowidget(".").engine.get_rgb(240, 240, 237),)
@@ -2178,6 +2197,17 @@ class Main(tk.Toplevel):
         messagebox.showinfo(self.engine.app_title,
                             self.nametowidget(".").info,
                             parent=self)
+
+    def _on_language_change(self) -> None:
+        """Handle language change from menu."""
+        lang = self.lang_var.get()
+        self.engine.set_language(lang)
+        set_language(lang)
+        messagebox.showinfo(
+            self.engine.app_title,
+            _("Restart to apply language change."),
+            parent=self
+        )
 
     def on_change_password(self) -> None:
         views.change_password.UI(self, ).on_open()
