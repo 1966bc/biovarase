@@ -201,6 +201,15 @@ TRANSLATIONS = {
     "Cannot load Test Method:": {"it": "Impossibile caricare Metodo Test:", "en": "Cannot load Test Method:"},
     "Update Analytical Goal for": {"it": "Modifica Obiettivo Analitico per", "en": "Update Analytical Goal for"},
     "Add Analytical Goal for": {"it": "Aggiungi Obiettivo Analitico per", "en": "Add Analytical Goal for"},
+    "Analytical Goals Explained": {"it": "Obiettivi Analitici Spiegati", "en": "Analytical Goals Explained"},
+    "Total Error (TEa):": {"it": "Errore Totale (TEa):", "en": "Total Error (TEa):"},
+
+    # ==========================================================================
+    # Observations
+    # ==========================================================================
+    "Observations": {"it": "Osservazioni", "en": "Observations"},
+    "Set observations": {"it": "Imposta osservazioni", "en": "Set observations"},
+    "Please enter a valid integer.": {"it": "Inserire un numero intero valido.", "en": "Please enter a valid integer."},
 
     # ==========================================================================
     # Equipments / Test Methods

@@ -7,6 +7,7 @@
 #-----------------------------------------------------------------------------
 import tkinter as tk
 
+from i18n import _
 from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -66,7 +67,7 @@ class UI(ParentView):
         frm_main.grid(row=0, column=0, sticky="nsew")
 
         # LabelFrame
-        lf = ttk.Labelframe(frm_main, text="Set observations")
+        lf = ttk.Labelframe(frm_main, text=_("Set observations"))
         lf.grid(row=0, column=0, sticky="nsew", **pad)
         lf.columnconfigure(0, weight=1)
 
@@ -85,9 +86,9 @@ class UI(ParentView):
         frm_btns.grid(row=0, column=1, sticky="ns", **pad)
         frm_btns.columnconfigure(0, weight=1)
 
-        ttk.Button(frm_btns, style="App.TButton", text="Save", underline=0,
+        ttk.Button(frm_btns, style="App.TButton", text=_("Save"), underline=0,
                    command=self._on_save).grid(row=0, column=0, sticky="ew", **pad)
-        ttk.Button(frm_btns, style="App.TButton", text="Cancel", underline=0,
+        ttk.Button(frm_btns, style="App.TButton", text=_("Cancel"), underline=0,
                    command=self._on_close).grid(row=1, column=0, sticky="ew", **pad)
 
         # Keep a reference for optional global validation
@@ -98,7 +99,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     def on_open(self):
         """Populate current value and set focus."""
-        self.title("Observations")
+        self.title(_("Observations"))
         try:
             self.observations.set(self.engine.get_observations())
         except Exception as e:
@@ -124,7 +125,7 @@ class UI(ParentView):
         try:
             value = int(self.observations.get())
         except (TypeError, ValueError) as e:
-            messagebox.showwarning(self.engine.app_title, "Please enter a valid integer.", parent=self)
+            messagebox.showwarning(self.engine.app_title, _("Please enter a valid integer."), parent=self)
             self.tx_observations.focus_set()
             return
 
@@ -133,7 +134,7 @@ class UI(ParentView):
             if hasattr(self.parent, "set_observations"):
                 self.parent.set_observations()
         except Exception as exc:
-            messagebox.showerror(self.engine.app_title, f"Save error:\n{exc}", parent=self)
+            messagebox.showerror(self.engine.app_title, f"{_('Save error:')}\n{exc}", parent=self)
             return
 
         self._on_close()
