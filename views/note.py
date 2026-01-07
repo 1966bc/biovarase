@@ -224,7 +224,7 @@ class UI(ChildView):
         if isinstance(self.selected_result, dict):
             return self.selected_result.get("result_id")
 
-        # legacy tuple support (finché non refattorizziamo anche a monte)
+        # legacy tuple support (until we refactor upstream)
         try:
             return self.selected_result[0]
         except Exception as e:
@@ -263,7 +263,7 @@ class UI(ChildView):
     # ------------------------------------------------------------ Save ------
     def _on_save(self, _evt=None):
         """Validate, confirm and write data to the `notes` table."""
-        # Controllo generico dei campi
+        # Generic field validation
         if not self.engine.on_fields_control(self):
             return
 
@@ -292,13 +292,13 @@ class UI(ChildView):
         ):
             return
 
-        # --- Costruzione SQL con build_sql (DBMS) --------------------------
+        # --- Build SQL with build_sql (DBMS) --------------------------
         try:
-            # Convertiamo in lista per poter usare append anche in UPDATE
+            # Convert to list to allow append for UPDATE
             args = list(values)
 
             if self.index is not None:
-                # UPDATE: build_sql si occupa di ordinare i campi e aggiungere il WHERE sul PK
+                # UPDATE: build_sql handles field ordering and adds WHERE on PK
                 sql = self.engine.build_sql(self.parent.table, op="update")
                 args.append(int(self.index))
             else:

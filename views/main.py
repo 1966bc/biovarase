@@ -145,7 +145,7 @@ class Main(tk.Toplevel):
         self.dict_batches = {}
         self.dict_results = {}
 
-        # mapping Levey–Jennings point index → result_id (solo risultati abilitati)
+        # mapping Levey-Jennings point index -> result_id (enabled results only)
         self.lj_index_to_result_id = []
 
         self.init_ui()
@@ -456,11 +456,11 @@ class Main(tk.Toplevel):
             sticky="nsew",
         )
 
-        # Bias chart sotto, più compatto
+        # Bias chart below, more compact
         self.bias_canvas = BiasCanvas(
             frm_graphs,
             bg="white",
-            height=80,   # solo la riga riassuntiva
+            height=80,   # summary row only
         )
         self.bias_canvas.grid(
             row=1,
@@ -1539,8 +1539,8 @@ class Main(tk.Toplevel):
                 dates=short_dates,
                 x_axis_caption="Date",
                 y_axis_caption=y_axis_caption,
-                show_values=True,        # valori solo sui punti anomali, come abbiamo settato
-                bottom_text=bottom_text,  # 👈 qui passa la stringa
+                show_values=True,        # show values only on anomalous points
+                bottom_text=bottom_text,
             )
 
         except Exception as e:
@@ -1579,7 +1579,7 @@ class Main(tk.Toplevel):
         except Exception as e:
             unit = ""
 
-        # Title: test + (eventuale) controllo/lotto
+        # Title: test + (optional) control/lot
         test_name = (
             self.selected_test.get("description")
             if self.selected_test
@@ -1972,7 +1972,7 @@ class Main(tk.Toplevel):
                 try:
                     cur = self.nametowidget(".").engine.con.cursor()
                     # Begin transaction
-                    cur.execute("START TRANSACTION")  # Usare START TRANSACTION per maggiore compatibilità MariaDB
+                    cur.execute("START TRANSACTION")  # Use START TRANSACTION for better MariaDB compatibility
 
                     sql_delete = "DELETE FROM results WHERE batch_id =? AND workstation_id =?;"
                     args = (self.selected_batch["batch_id"], self.selected_workstation["workstation_id"])
@@ -1999,32 +1999,32 @@ class Main(tk.Toplevel):
                             current_log_time,
                             self.nametowidget(".").engine.log_user["user_id"]
                         ))
-                        # Assicurati che current_log_time sia un oggetto datetime per l'incremento
+                        # Ensure current_log_time is a datetime object for increment
                         if isinstance(current_log_time, str):
                             try:
                                 current_log_time = datetime.datetime.strptime(current_log_time, '%Y-%m-%d %H:%M:%S')
                             except ValueError:
-                                # Gestisci l'errore se il formato della stringa non è corretto
+                                # Handle error if string format is incorrect
                                 self.nametowidget(".").engine.on_log(inspect.stack()[0][3],
-                                                                       "Errore nel formato della data/ora",
+                                                                       "Error in date/time format",
                                                                        ValueError,
                                                                        sys.modules[__name__])
                                 cur.rollback()
-                                return  # Interrompi l'operazione in caso di errore
+                                return  # Stop operation on error
                         current_log_time += datetime.timedelta(days=1)
 
                     cur.executemany(sql_insert, data_to_insert)  # Use executemany()
 
                     self.nametowidget(".").engine.con.commit()  # Commit the transaction
                     self.set_results()
-                except Exception as e:  # Cattura un'eccezione più generica per il rollback
+                except Exception as e:  # Catch generic exception for rollback
                     self.nametowidget(".").engine.con.rollback()  # Rollback on any error
                     self.nametowidget(".").engine.on_log(inspect.stack()[0][3],
                                                            str(e),
                                                            sys.exc_info()[0],
                                                            sys.modules[__name__])
                 finally:
-                    if 'cur' in locals() and cur:  # Verifica se il cursore è stato creato prima di chiuderlo
+                    if 'cur' in locals() and cur:  # Check if cursor was created before closing
                         cur.close()
 
         else:

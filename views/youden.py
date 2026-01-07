@@ -13,7 +13,7 @@ import tkinter as tk
 from views.parent_view import ParentView
 from tkinter import ttk
 
-from youden_canvas import YoudenPlotCanvas   # <<< nuovo import
+from youden_canvas import YoudenPlotCanvas
 
 
 class UI(ParentView):
