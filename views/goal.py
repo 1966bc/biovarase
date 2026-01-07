@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -100,12 +101,12 @@ class UI(ChildView):
         self.txTeaP05 = add_float_row("TEa % p<0.05:",   self.teap005)
         self.txTeaP01 = add_float_row("TEa % p<0.01:",   self.teap001)
 
-        ttk.Label(frm_left, text="To export:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("To export:")).grid(row=r, column=0, sticky=tk.W)
         self.chkExport = ttk.Checkbutton(frm_left, variable=self.to_export, onvalue=1, offvalue=0)
         self.chkExport.grid(row=r, column=c, sticky="w", **pad)
         r += 1
 
-        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
         self.chkStatus = ttk.Checkbutton(frm_left, variable=self.status, onvalue=1, offvalue=0)
         self.chkStatus.grid(row=r, column=c, sticky="w", **pad)
 
@@ -114,12 +115,12 @@ class UI(ChildView):
         frm_buttons.grid(row=0, column=1, sticky=tk.NS, padx=6)
 
         ttk.Button(
-            frm_buttons, style="App.TButton", text="Save",
+            frm_buttons, style="App.TButton", text=_("Save"),
             underline=0, command=self._on_save
         ).grid(row=0, column=0, sticky="ew", padx=4, pady=4)
 
         ttk.Button(
-            frm_buttons, style="App.TButton", text="Cancel",
+            frm_buttons, style="App.TButton", text=_("Cancel"),
             underline=0, command=self.on_cancel
         ).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
 
@@ -146,7 +147,7 @@ class UI(ChildView):
         except Exception as e:
             messagebox.showerror(
                 self.engine.app_title,
-                f"Cannot load Test Method:\n{e}",
+                f"{_('Cannot load Test Method:')}\n{e}",
                 parent=self,
             )
             return
@@ -168,10 +169,10 @@ class UI(ChildView):
 
         # UPDATE vs INSERT
         if self.selected_goal:
-            self.title(f"Update Analytical Goal for {test_descr}")
+            self.title(f"{_('Update Analytical Goal for')} {test_descr}")
             self._set_values()
         else:
-            self.title(f"Insert Analytical Goal for {test_descr}")
+            self.title(f"{_('Add Analytical Goal for')} {test_descr}")
             self._clear_fields()
             self.status.set(1)
 
@@ -286,7 +287,7 @@ class UI(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
-                f"Save error:\n{exc}",
+                f"{_('Save error:')}\n{exc}",
                 parent=self,
             )
 

@@ -184,6 +184,25 @@ TRANSLATIONS = {
     "already exists!": {"it": "già esiste!", "en": "already exists!"},
 
     # ==========================================================================
+    # Samples Management
+    # ==========================================================================
+    "Samples Management": {"it": "Gestione Campioni", "en": "Samples Management"},
+    "Symbol:": {"it": "Simbolo:", "en": "Symbol:"},
+    "Symbol": {"it": "Simbolo", "en": "Symbol"},
+    "Update Sample": {"it": "Modifica Campione", "en": "Update Sample"},
+    "Add Sample": {"it": "Aggiungi Campione", "en": "Add Sample"},
+    "has already been assigned!": {"it": "è già stato assegnato!", "en": "has already been assigned!"},
+    "Description is required.": {"it": "Descrizione obbligatoria.", "en": "Description is required."},
+
+    # ==========================================================================
+    # Analytical Goals
+    # ==========================================================================
+    "To export:": {"it": "Da esportare:", "en": "To export:"},
+    "Cannot load Test Method:": {"it": "Impossibile caricare Metodo Test:", "en": "Cannot load Test Method:"},
+    "Update Analytical Goal for": {"it": "Modifica Obiettivo Analitico per", "en": "Update Analytical Goal for"},
+    "Add Analytical Goal for": {"it": "Aggiungi Obiettivo Analitico per", "en": "Add Analytical Goal for"},
+
+    # ==========================================================================
     # Equipments / Test Methods
     # ==========================================================================
     "Equipments": {"it": "Strumenti", "en": "Equipments"},
