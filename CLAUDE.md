@@ -220,6 +220,49 @@ dict_items[item_id] = row["pk_field"]
 - Date format: Italian `dd-mm-yyyy`
 - Row colors: red (>3SD), orange (>2SD), gray (disabled), yellow (#fff2cc for notes)
 
+## Internationalization (i18n)
+
+Biovarase supports multiple languages (English default, Italian). The i18n system is in `i18n.py`.
+
+### Usage Pattern
+
+```python
+from i18n import _
+
+# Wrap all user-facing strings
+ttk.Label(frm, text=_("Save"))
+ttk.Button(frm, text=_("Cancel"), command=self.on_cancel)
+messagebox.showinfo(title, _("Operation completed."))
+self.title(_("Batch Editor"))
+
+# Dynamic strings with f-strings
+self.title(f"{test_name} — {_('Total Error')}")
+msg = f"{_('Imported rows')}: {count}"
+```
+
+### Adding Translations
+
+Add to `TRANSLATIONS` dictionary in `i18n.py`:
+```python
+TRANSLATIONS = {
+    "Save": {"it": "Salva", "en": "Save"},
+    "Cancel": {"it": "Annulla", "en": "Cancel"},
+    # ... add new translations here
+}
+```
+
+### Language Configuration
+
+- **Config file:** `language` (contains "en" or "it")
+- **Menu:** Help → Language (requires restart)
+- **Engine methods:** `get_language()`, `set_language(lang)`
+
+### Coverage
+
+- **44 views** with i18n support (83% of all views)
+- Base classes (`parent_view.py`, `child_view.py`) have no UI strings
+- Lookup views inherit i18n from `LookupUI` base class
+
 ## Role-Based Access Control
 
 ```python
@@ -307,6 +350,7 @@ biovarase/
 ├── importer.py           # Data import
 ├── launcher.py           # File opening
 ├── security.py           # Encryption (hardware-locked)
+├── i18n.py               # Internationalization (translations)
 ├── views/                # GUI windows
 │   ├── parent_view.py    # Base class (singleton)
 │   ├── child_view.py     # Base class (editor)
