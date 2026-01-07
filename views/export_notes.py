@@ -10,6 +10,8 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+
+from i18n import _
 from calendarium import Calendarium
 from views.parent_view import ParentView
 
@@ -21,7 +23,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.title("Export Notes Data")
+        self.title(_("Export Notes Data"))
         self.resizable(False, False)
         self.bind("<Alt-c>", self.on_cancel)
 
@@ -41,7 +43,7 @@ class UI(ParentView):
         frm_left.grid(row=0, column=0, sticky=tk.NS, **padd)
 
         # Date selector (Calendarium v2.2 API: no get_calendarium())
-        self.start_date = Calendarium(frm_left, "Export from:")
+        self.start_date = Calendarium(frm_left, _("Export from:"))
         self.start_date.grid(
             row=0,
             column=0,
@@ -58,7 +60,7 @@ class UI(ParentView):
         btn_export = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Export",
+            text=_("Export"),
             underline=0,
             command=self._on_export,
         )
@@ -68,7 +70,7 @@ class UI(ParentView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self.on_cancel,
         )
@@ -143,7 +145,7 @@ class UI(ParentView):
 
         if not messagebox.askyesno(
             self.engine.app_title,
-            "Export data?",
+            _("Export data?"),
             parent=self,
         ):
             return
@@ -168,7 +170,7 @@ class UI(ParentView):
 
             messagebox.showerror(
                 self.engine.app_title,
-                f"Export error:\n{exc}",
+                f"{_('Export error:')}\n{exc}",
                 parent=self,
             )
         finally:

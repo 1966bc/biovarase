@@ -7,6 +7,8 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+
+from i18n import _
 from views.parent_view import ParentView
 
 
@@ -18,7 +20,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.title("Analytical Goals")
+        self.title(_("Analytical Goals"))
         self.resizable(False, False)
 
         self.elements = tk.IntVar(value=0)
@@ -38,7 +40,7 @@ class UI(ParentView):
         frm_left = ttk.Frame(self.frm_main, style="App.TFrame")
         frm_left.grid(row=0, column=0, sticky=tk.NS, **padd)
 
-        ttk.Label(frm_left, text="Set elements to export:").grid(
+        ttk.Label(frm_left, text=_("Set elements to export:")).grid(
             row=0, column=0, sticky=tk.W
         )
 
@@ -61,7 +63,7 @@ class UI(ParentView):
         btn_export = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Export",
+            text=_("Export"),
             underline=0,
             command=self.on_export,
         )
@@ -71,7 +73,7 @@ class UI(ParentView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self._on_close,
         )
@@ -93,7 +95,7 @@ class UI(ParentView):
         val = max(1, min(val, 999))
         self.elements.set(val)
 
-        self.title("Analytical Goals")
+        self.title(_("Analytical Goals"))
         self.deiconify()
         self.lift()
         self.after_idle(self._focus_entry)
@@ -163,7 +165,7 @@ class UI(ParentView):
             self.engine.get_analitical_goals(limit, rs)
             self._on_close()
         else:
-            msg = "No record data to compute."
+            msg = _("No record data to compute.")
             title = getattr(self.engine, "app_title", "Biovarase")
             messagebox.showwarning(title, msg, parent=self)
 
