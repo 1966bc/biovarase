@@ -8,6 +8,7 @@
 
 import tkinter as tk
 
+from i18n import _
 from views.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
@@ -127,13 +128,13 @@ class UI(ChildView):
         # If we don't have a valid site_id or workstation_id → nothing to show
         if not site_id or not workstation_id:
             self.lstItems.delete(0, tk.END)
-            self.title("Assign test methods")
+            self.title(_("Assign test methods"))
             return
 
         # Title
-        site_name = self._get_site_name_by_comp_id(comp_id) if comp_id else "Site"
-        target_name = self.workstation.get("description", "workstation")
-        self.title(f"{site_name} — Assign test methods to {target_name}")
+        site_name = self._get_site_name_by_comp_id(comp_id) if comp_id else _("Site")
+        target_name = self.workstation.get("description", _("workstation"))
+        self.title(f"{site_name} — {_('Assign test methods to')} {target_name}")
 
         # Fill list (site + workstation_id so NOT EXISTS always filters correctly)
         self.set_values(site_id, workstation_id)
@@ -362,9 +363,9 @@ class UI(ChildView):
         pretty_label = f"{fields['test']} — {fields['sample']} — {fields['method']} ({fields['unit']})"
 
         msg = (
-            f"Assegnare il metodo di test:\n\n"
+            f"{_('Assign test method:')}\n\n"
             f"   {pretty_label}\n\n"
-            f"alla workstation:\n\n"
+            f"{_('to workstation:')}\n\n"
             f"   {target_name}?"
         )
 
@@ -403,7 +404,7 @@ class UI(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
-                f"Assign error:\n{exc}",
+                f"{_('Assign error:')}\n{exc}",
                 parent=self,
             )
 

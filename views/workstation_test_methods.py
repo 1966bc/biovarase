@@ -30,6 +30,7 @@ Singleton window (per PROJECT_RULES.md section 7.1).
 
 import tkinter as tk
 
+from i18n import _
 from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -103,7 +104,7 @@ class UI(ParentView):
 
         self.btn_edit_external = ttk.Button(
             frm_buttons,
-            text="Edit External Code",
+            text=_("Edit External Code"),
             command=self.on_edit_external_code,
             state=tk.DISABLED
         )
@@ -111,7 +112,7 @@ class UI(ParentView):
 
         self.btn_remove = ttk.Button(
             frm_buttons,
-            text="Remove Mapping",
+            text=_("Remove Mapping"),
             command=self.on_remove_mapping,
             state=tk.DISABLED
         )
@@ -122,22 +123,22 @@ class UI(ParentView):
         self.lstTestsMethods = ttk.Treeview(frm_right, columns=cols_methods, show="headings")
 
         self.lstTestsMethods.column("test", width=200, minwidth=180, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("test", text="Test", anchor=tk.W)
+        self.lstTestsMethods.heading("test", text=_("Test"), anchor=tk.W)
 
         self.lstTestsMethods.column("code", width=80, minwidth=80, anchor=tk.W, stretch=False)
-        self.lstTestsMethods.heading("code", text="Code", anchor=tk.W)
+        self.lstTestsMethods.heading("code", text=_("Code"), anchor=tk.W)
 
         self.lstTestsMethods.column("external_code", width=100, minwidth=80, anchor=tk.W, stretch=False)
-        self.lstTestsMethods.heading("external_code", text="External Code", anchor=tk.W)
+        self.lstTestsMethods.heading("external_code", text=_("External Code"), anchor=tk.W)
 
         self.lstTestsMethods.column("sample", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("sample", text="Sample", anchor=tk.W)
+        self.lstTestsMethods.heading("sample", text=_("Sample"), anchor=tk.W)
 
         self.lstTestsMethods.column("method", width=120, minwidth=120, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("method", text="Method", anchor=tk.W)
+        self.lstTestsMethods.heading("method", text=_("Method"), anchor=tk.W)
 
         self.lstTestsMethods.column("unit", width=80, minwidth=80, anchor=tk.W, stretch=False)
-        self.lstTestsMethods.heading("unit", text="Unit", anchor=tk.W)
+        self.lstTestsMethods.heading("unit", text=_("Unit"), anchor=tk.W)
 
         sb_methods = ttk.Scrollbar(frm_right, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
         self.lstTestsMethods.configure(yscrollcommand=sb_methods.set)
@@ -148,7 +149,7 @@ class UI(ParentView):
         self.lstTestsMethods.bind("<<TreeviewSelect>>", self.on_test_method_selected)
 
     def on_open(self):
-        self.title("Workstations — Test Methods Mapping")
+        self.title(_("Workstations — Test Methods Mapping"))
         self._load_tree()
         
 
@@ -607,7 +608,7 @@ class UI(ParentView):
             ws_name = self.selected_workstation.get("description", "")
 
         # 4) Confirmation dialog
-        msg = f"Remove '{test_descr}' from workstation '{ws_name}'?"
+        msg = f"{_('Remove')} '{test_descr}' {_('from workstation')} '{ws_name}'?"
         if not messagebox.askyesno(self.engine.app_title, msg, parent=self):
             return  # User cancelled → safe exit
 
@@ -723,8 +724,8 @@ class UI(ParentView):
         from tkinter import simpledialog
 
         new_code = simpledialog.askstring(
-            "Edit External Code",
-            f"External code for '{test_descr}':",
+            _("Edit External Code"),
+            f"{_('External code for')} '{test_descr}':",
             initialvalue=current_external_code,
             parent=self
         )

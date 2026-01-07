@@ -17,6 +17,7 @@ import inspect
 import tkinter as tk
 from tkinter import ttk, filedialog as fd, messagebox
 
+from i18n import _
 from calendarium import Calendarium  # adjust import path if needed
 from views.child_view import ChildView
 
@@ -62,17 +63,17 @@ class UI(ChildView):
         frm_left.grid(row=0, column=0, sticky=tk.NS, **paddings)
 
         r = 0
-        ttk.Label(frm_left, text="Received:").grid(row=r, column=0, sticky=tk.NW)
-        self.received = Calendarium(frm_left, "Date")
+        ttk.Label(frm_left, text=_("Received:")).grid(row=r, column=0, sticky=tk.NW)
+        self.received = Calendarium(frm_left, _("Date"))
         self.received.grid(row=r, column=1, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Workstation:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Workstation:")).grid(row=r, column=0, sticky=tk.W)
         self.cbWorkstation = ttk.Combobox(frm_left, state="readonly")
         self.cbWorkstation.grid(row=r, column=1, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Reagent Lot:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Reagent Lot:")).grid(row=r, column=0, sticky=tk.W)
         self.txtReagentLot = ttk.Entry(
             frm_left,
             width=30,
@@ -84,8 +85,8 @@ class UI(ChildView):
         ttk.Label(
             frm_left,
             text=(
-                "Select workstation and optionally enter reagent lot.\n"
-                "File can have any name (no renaming required)."
+                _("Select workstation and optionally enter reagent lot.") + "\n" +
+                _("File can have any name (no renaming required).")
             ),
             justify=tk.LEFT,
         ).grid(row=r, column=0, columnspan=2, sticky=tk.W, **paddings)
@@ -98,7 +99,7 @@ class UI(ChildView):
         btn_import = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Import file…",
+            text=_("Import file…"),
             command=self._on_import_file,
         )
         btn_import.grid(row=r, column=0, sticky=tk.EW, **paddings)
@@ -107,7 +108,7 @@ class UI(ChildView):
         btn_close = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Close",
+            text=_("Close"),
             command=self.on_cancel,
         )
         btn_close.grid(row=r, column=0, sticky=tk.EW, **paddings)
@@ -121,7 +122,7 @@ class UI(ChildView):
 
         It sets default values and focuses the first widget.
         """
-        self.title("Import QC")
+        self.title(_("Import QC"))
         try:
             self.received.set_today()
         except Exception as e:
@@ -186,10 +187,10 @@ class UI(ChildView):
 
         # 2) Ask user to select file
         filepath = fd.askopenfilename(
-            title="Select QC file",
+            title=_("Select QC file"),
             filetypes=(
-                ("QC files", "*.txt *.csv *.tsv"),
-                ("All files", "*"),
+                (_("QC files"), "*.txt *.csv *.tsv"),
+                (_("All files"), "*"),
             ),
             parent=self,
         )
@@ -198,8 +199,8 @@ class UI(ChildView):
 
         if not os.path.isfile(filepath):
             msg = (
-                "Houston we have a problem here.\n"
-                "Something went wrong or you did not select a valid file."
+                _("Houston we have a problem here.") + "\n" +
+                _("Something went wrong or you did not select a valid file.")
             )
             messagebox.showwarning(self.engine.title, msg, parent=self)
             return
@@ -218,7 +219,7 @@ class UI(ChildView):
             if received_ts is None:
                 messagebox.showwarning(
                     self.engine.title,
-                    "Invalid 'Received' date.",
+                    _("Invalid 'Received' date."),
                     parent=self,
                 )
                 return
@@ -228,7 +229,7 @@ class UI(ChildView):
             if selected_index < 0:
                 messagebox.showwarning(
                     self.engine.title,
-                    "Please select a workstation.",
+                    _("Please select a workstation."),
                     parent=self,
                 )
                 return
@@ -247,10 +248,10 @@ class UI(ChildView):
             )
 
             msg = (
-                f"Profile: {profile_name or 'N/A'}\n\n"
-                f"Imported rows: {imported}\n"
-                f"Matched batches: {matched}\n"
-                f"Unmatched rows: {not_matched}"
+                f"{_('Profile')}: {profile_name or 'N/A'}\n\n"
+                f"{_('Imported rows')}: {imported}\n"
+                f"{_('Matched batches')}: {matched}\n"
+                f"{_('Unmatched rows')}: {not_matched}"
             )
             messagebox.showinfo(self.engine.title, msg, parent=self)
 
@@ -263,7 +264,7 @@ class UI(ChildView):
             )
             messagebox.showerror(
                 self.engine.title,
-                "Unexpected error while importing QC file.",
+                _("Unexpected error while importing QC file."),
                 parent=self,
             )
         finally:
