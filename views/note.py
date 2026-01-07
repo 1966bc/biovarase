@@ -16,6 +16,7 @@ linked to a QC result. It is opened by the master window
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from i18n import _
 from calendarium import Calendarium
 from views.child_view import ChildView
 
@@ -74,17 +75,17 @@ class UI(ChildView):
         r = 0
         c = 1
 
-        ttk.Label(frm_left, text="Action:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Action:")).grid(row=r, column=0, sticky=tk.W)
         self.cbActions = ttk.Combobox(frm_left, state="readonly")
         self.cbActions.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(frm_left, text="Description:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Description:")).grid(row=r, column=0, sticky=tk.W)
         self.txDescription = ttk.Entry(frm_left, textvariable=self.description)
         self.txDescription.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(frm_left, text="Modified:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Modified:")).grid(row=r, column=0, sticky=tk.W)
 
         # Safe fallback background for Calendarium
         try:
@@ -99,7 +100,7 @@ class UI(ChildView):
         self.modified.grid(row=r, column=c, sticky=tk.W)
 
         r += 1
-        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
         self.chkStatus = ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -114,7 +115,7 @@ class UI(ChildView):
 
         btn_save = ttk.Button(
             right,
-            text="Save",
+            text=_("Save"),
             style="App.TButton",
             command=self._on_save,
         )
@@ -122,7 +123,7 @@ class UI(ChildView):
 
         btn_cancel = ttk.Button(
             right,
-            text="Cancel",
+            text=_("Cancel"),
             style="App.TButton",
             command=self.on_cancel,
         )
@@ -271,7 +272,7 @@ class UI(ChildView):
         if not self.modified.is_valid:
             messagebox.showwarning(
                 self.engine.app_title,
-                "Invalid date.",
+                _("Invalid date."),
                 parent=self,
             )
             return
@@ -280,7 +281,7 @@ class UI(ChildView):
         if values is None:
             messagebox.showwarning(
                 self.engine.app_title,
-                "Missing or invalid data.",
+                _("Missing or invalid data."),
                 parent=self,
             )
             return
@@ -332,7 +333,7 @@ class UI(ChildView):
             )
             messagebox.showerror(
                 self.engine.app_title,
-                "Error while saving data.\nPlease check log file.",
+                _("Error while saving data.") + "\n" + _("Please check the log file."),
                 parent=self,
             )
 

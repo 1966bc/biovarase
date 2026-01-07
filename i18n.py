@@ -235,6 +235,18 @@ TRANSLATIONS = {
         "it": "La password deve essere di almeno 8 caratteri.",
         "en": "Password must be at least 8 characters."
     },
+    "Surname:": {"it": "Cognome:", "en": "Surname:"},
+    "First Name:": {"it": "Nome:", "en": "First Name:"},
+    "Nick:": {"it": "Nick:", "en": "Nick:"},
+    "Level:": {"it": "Livello:", "en": "Level:"},
+    "Logout time (min):": {"it": "Tempo logout (min):", "en": "Logout time (min):"},
+    "Enable logout:": {"it": "Abilita logout:", "en": "Enable logout:"},
+    "Update User": {"it": "Modifica Utente", "en": "Update User"},
+    "Add User": {"it": "Aggiungi Utente", "en": "Add User"},
+    "Password reset.": {"it": "Password reimpostata.", "en": "Password reset."},
+    "No user selected.": {"it": "Nessun utente selezionato.", "en": "No user selected."},
+    "This nickname is already in use.": {"it": "Questo nickname è già in uso.", "en": "This nickname is already in use."},
+    "Modified": {"it": "Modificato", "en": "Modified"},
 
     # ==========================================================================
     # Westgard Rules
@@ -321,6 +333,23 @@ TRANSLATIONS = {
     "Description": {"it": "Descrizione", "en": "Description"},
     "Expiration": {"it": "Scadenza", "en": "Expiration"},
     "Target": {"it": "Target", "en": "Target"},
+
+    # ==========================================================================
+    # Workstation
+    # ==========================================================================
+    "Equipment:": {"it": "Apparecchiatura:", "en": "Equipment:"},
+    "Device ID:": {"it": "ID Dispositivo:", "en": "Device ID:"},
+    "Serial:": {"it": "Seriale:", "en": "Serial:"},
+    "Section:": {"it": "Sezione:", "en": "Section:"},
+    "Rank:": {"it": "Priorità:", "en": "Rank:"},
+    "UUID": {"it": "UUID", "en": "UUID"},
+    "Update Workstation": {"it": "Modifica Postazione", "en": "Update Workstation"},
+    "Add Workstation": {"it": "Aggiungi Postazione", "en": "Add Workstation"},
+    "This Device ID is already in use.": {
+        "it": "Questo ID Dispositivo è già in uso.",
+        "en": "This Device ID is already in use."
+    },
+    "Users": {"it": "Utenti", "en": "Users"},
 }
 
 
