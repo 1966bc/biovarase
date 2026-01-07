@@ -22,6 +22,7 @@ Features:
 import sys
 import tkinter as tk
 
+from i18n import _
 from views.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -58,7 +59,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.title("Daily QC Validation")
+        self.title(_("Daily QC Validation"))
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.bind("<Escape>", self.on_close)
         self.bind("<F5>", lambda e: self._load_data())
@@ -89,7 +90,7 @@ class UI(ParentView):
         frm_top.pack(side=tk.TOP, fill=tk.X, **paddings)
 
         # Date selector
-        ttk.Label(frm_top, text="Date:").pack(side=tk.LEFT, **paddings)
+        ttk.Label(frm_top, text=_("Date:")).pack(side=tk.LEFT, **paddings)
 
         bg = self.engine.get_rgb(240, 240, 237)
         self.calendarium = Calendarium(frm_top, "", base_bg_color=bg)
@@ -99,7 +100,7 @@ class UI(ParentView):
         # Load button
         ttk.Button(
             frm_top,
-            text="Load",
+            text=_("Load"),
             command=self._load_data
         ).pack(side=tk.LEFT, padx=(10, 0))
 
@@ -178,40 +179,40 @@ class UI(ParentView):
 
         self.btn_approve = ttk.Button(
             frm_buttons,
-            text="Approve Workstation",
+            text=_("Approve"),
             command=self._on_approve_workstation
         )
         self.btn_approve.pack(side=tk.LEFT, **paddings)
 
         self.btn_validate = ttk.Button(
             frm_buttons,
-            text="Validate Result",
+            text=_("Validate"),
             command=self._on_validate_result
         )
         self.btn_validate.pack(side=tk.LEFT, **paddings)
 
         self.btn_invalidate = ttk.Button(
             frm_buttons,
-            text="Invalidate",
+            text=_("Invalidate"),
             command=self._on_invalidate
         )
         self.btn_invalidate.pack(side=tk.LEFT, **paddings)
 
         ttk.Button(
             frm_buttons,
-            text="Export",
+            text=_("Export"),
             command=self._on_export
         ).pack(side=tk.LEFT, **paddings)
 
         ttk.Button(
             frm_buttons,
-            text="History",
+            text=_("History"),
             command=self._on_show_history
         ).pack(side=tk.LEFT, **paddings)
 
         ttk.Button(
             frm_buttons,
-            text="Close",
+            text=_("Close"),
             command=self.on_close
         ).pack(side=tk.RIGHT, **paddings)
 

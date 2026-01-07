@@ -164,11 +164,41 @@ TRANSLATIONS = {
     "Expiration Date": {"it": "Data Scadenza", "en": "Expiration Date"},
     "Expiration Date:": {"it": "Data Scadenza:", "en": "Expiration Date:"},
     "Remember data": {"it": "Ricorda dati", "en": "Remember data"},
+    "Lower:": {"it": "Inferiore:", "en": "Lower:"},
+    "Upper:": {"it": "Superiore:", "en": "Upper:"},
+    "Rank:": {"it": "Ordine:", "en": "Rank:"},
+    "SD mode": {"it": "Modalità DS", "en": "SD mode"},
+    "Manual": {"it": "Manuale", "en": "Manual"},
+    "Computed": {"it": "Calcolato", "en": "Computed"},
+    "Missing context: test method or workstation.": {
+        "it": "Contesto mancante: metodo test o postazione.",
+        "en": "Missing context: test method or workstation."
+    },
+    "Test not found.": {"it": "Test non trovato.", "en": "Test not found."},
+    "Batch not found.": {"it": "Lotto non trovato.", "en": "Batch not found."},
+    "Date format error.": {"it": "Errore formato data.", "en": "Date format error."},
+    "Please check the expiration date.": {
+        "it": "Verificare la data di scadenza.",
+        "en": "Please check the expiration date."
+    },
+    "Save failed.": {"it": "Salvataggio fallito.", "en": "Save failed."},
+    "Lower value exceeds upper value.": {
+        "it": "Il valore inferiore supera il valore superiore.",
+        "en": "Lower value exceeds upper value."
+    },
+    "Cannot compute SD.": {"it": "Impossibile calcolare DS.", "en": "Cannot compute SD."},
 
     # ==========================================================================
     # Result Window
     # ==========================================================================
     "Received:": {"it": "Ricevuto:", "en": "Received:"},
+    "Test:": {"it": "Test:", "en": "Test:"},
+    "Batch:": {"it": "Lotto:", "en": "Batch:"},
+    "Reagent Lot:": {"it": "Lotto Reagente:", "en": "Reagent Lot:"},
+    "Please enter a valid received date.": {
+        "it": "Inserire una data di ricezione valida.",
+        "en": "Please enter a valid received date."
+    },
     "Validated": {"it": "Validato", "en": "Validated"},
     "Not validated": {"it": "Non validato", "en": "Not validated"},
 
@@ -182,6 +212,7 @@ TRANSLATIONS = {
     "Approve": {"it": "Approva", "en": "Approve"},
     "Approved": {"it": "Approvato", "en": "Approved"},
     "Pending": {"it": "In attesa", "en": "Pending"},
+    "History": {"it": "Storico", "en": "History"},
 
     # ==========================================================================
     # User Management
@@ -200,6 +231,10 @@ TRANSLATIONS = {
     "Passwords do not match.": {"it": "Le password non coincidono.", "en": "Passwords do not match."},
     "Password changed successfully.": {"it": "Password cambiata con successo.", "en": "Password changed successfully."},
     "Current password is incorrect.": {"it": "La password attuale non è corretta.", "en": "Current password is incorrect."},
+    "Password must be at least 8 characters.": {
+        "it": "La password deve essere di almeno 8 caratteri.",
+        "en": "Password must be at least 8 characters."
+    },
 
     # ==========================================================================
     # Westgard Rules
@@ -237,6 +272,7 @@ TRANSLATIONS = {
     "Required field.": {"it": "Campo obbligatorio.", "en": "Required field."},
     "Invalid date.": {"it": "Data non valida.", "en": "Invalid date."},
     "Invalid number.": {"it": "Numero non valido.", "en": "Invalid number."},
+    "Validation error:": {"it": "Errore di validazione:", "en": "Validation error:"},
 
     # ==========================================================================
     # Language
@@ -277,6 +313,14 @@ TRANSLATIONS = {
     "Range": {"it": "Range", "en": "Range"},
     "Status": {"it": "Stato", "en": "Status"},
     "Type": {"it": "Tipo", "en": "Type"},
+    "Test": {"it": "Test", "en": "Test"},
+    "Code": {"it": "Codice", "en": "Code"},
+    "Sample": {"it": "Campione", "en": "Sample"},
+    "Method": {"it": "Metodo", "en": "Method"},
+    "Lot": {"it": "Lotto", "en": "Lot"},
+    "Description": {"it": "Descrizione", "en": "Description"},
+    "Expiration": {"it": "Scadenza", "en": "Expiration"},
+    "Target": {"it": "Target", "en": "Target"},
 }
 
 
