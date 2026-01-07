@@ -9,6 +9,8 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+
+from i18n import _
 import views.site as ui
 from views.parent_view import ParentView
 
@@ -79,10 +81,10 @@ class UI(ParentView):
 
         # Configure columns
         self.lstItems.column("company", width=300, minwidth=200, anchor=tk.W)
-        self.lstItems.heading("company", text="Company", anchor=tk.W)
+        self.lstItems.heading("company", text=_("Company:").rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("site", width=300, minwidth=200, anchor=tk.W)
-        self.lstItems.heading("site", text="Site", anchor=tk.W)
+        self.lstItems.heading("site", text=_("Site:").rstrip(":"), anchor=tk.W)
 
         # Tag for inactive sites
         self.lstItems.tag_configure("inactive", background=self.engine.get_rgb(211, 211, 211))
@@ -100,16 +102,16 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5, expand=False)
 
-        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, _("Add"), self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, _("Update"), self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self._on_item_activated)
 
     # ----------------------------------------------------------------- lifecycle
     def on_open(self):
         """Initialize window on open."""
-        self.title("Sites Management")
+        self.title(_("Sites Management"))
         self.set_values()
 
     def set_values(self):
@@ -157,7 +159,7 @@ class UI(ParentView):
 
             self.dict_items[iid] = int(site_id)
 
-        self.items.set(f"Sites: {len(self.dict_items)}")
+        self.items.set(f"{_('Sites')}: {len(self.dict_items)}")
 
     def on_item_selected(self, _evt=None):
         """

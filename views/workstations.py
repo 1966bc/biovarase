@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 import views.workstation as workstation_ui
 from views.parent_view import ParentView
 
@@ -52,7 +53,7 @@ class UI(ParentView):
         # Hierarchical tree: Sites → Labs → Sections
         self.Sites = ttk.Treeview(self.pane_left, show="tree")
         self.Sites.column("#0", width=260, minwidth=220, stretch=True)
-        self.Sites.heading("#0", text="Sites", anchor=tk.W)
+        self.Sites.heading("#0", text=_("Sites"), anchor=tk.W)
 
         sb_sites = ttk.Scrollbar(self.pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
         self.Sites.configure(yscrollcommand=sb_sites.set)
@@ -66,23 +67,23 @@ class UI(ParentView):
         self.pane_right = ttk.Frame(self.pw, style="App.TFrame", padding=6)
         self.pw.add(self.pane_right, minsize=480)
 
-        lf = ttk.LabelFrame(self.pane_right, style="App.TLabelframe", text="Workstations")
+        lf = ttk.LabelFrame(self.pane_right, style="App.TLabelframe", text=_("Workstations"))
         lf.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         cols_ws = ("equipment", "workstation", "serial", "device_id")
         self.lstWorkstations = ttk.Treeview(lf, columns=cols_ws, show="headings")
 
         self.lstWorkstations.column("equipment", width=220, minwidth=220, anchor=tk.W, stretch=True)
-        self.lstWorkstations.heading("equipment", text="Equipment", anchor=tk.W)
+        self.lstWorkstations.heading("equipment", text=_("Equipment:").rstrip(":"), anchor=tk.W)
 
         self.lstWorkstations.column("workstation", width=260, minwidth=260, anchor=tk.W, stretch=True)
-        self.lstWorkstations.heading("workstation", text="Workstation", anchor=tk.W)
+        self.lstWorkstations.heading("workstation", text=_("Workstation:").rstrip(":"), anchor=tk.W)
 
         self.lstWorkstations.column("serial", width=140, minwidth=140, anchor=tk.W, stretch=True)
-        self.lstWorkstations.heading("serial", text="Serial", anchor=tk.W)
+        self.lstWorkstations.heading("serial", text=_("Serial:").rstrip(":"), anchor=tk.W)
 
         self.lstWorkstations.column("device_id", width=200, minwidth=200, anchor=tk.W, stretch=True)
-        self.lstWorkstations.heading("device_id", text="Device ID", anchor=tk.W)
+        self.lstWorkstations.heading("device_id", text=_("Device ID:").rstrip(":"), anchor=tk.W)
 
         sb_ws = ttk.Scrollbar(lf, orient=tk.VERTICAL, command=self.lstWorkstations.yview)
         self.lstWorkstations.configure(yscrollcommand=sb_ws.set)
@@ -122,7 +123,7 @@ class UI(ParentView):
         
     def on_open(self):
 
-        self.title(f"{self.winfo_name().capitalize()} Management")
+        self.title(_("Workstations"))
 
         self._populate_sites_tree()
         
@@ -169,7 +170,7 @@ class UI(ParentView):
         rs_sites = self.engine.read(True, sql, args)
 
         root_iid = "sites_root"
-        self.Sites.insert("", tk.END, iid=root_iid, text="Sites")
+        self.Sites.insert("", tk.END, iid=root_iid, text=_("Sites"))
 
         for site_row in (rs_sites or []):
             site_id = site_row["site_id"]

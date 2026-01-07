@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -61,22 +62,22 @@ class UI(ChildView):
         row = 0
         col = 1
 
-        ttk.Label(left, text="Supplier:").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(left, text=_("Supplier:")).grid(row=row, column=0, sticky=tk.W)
         self.cbSuppliers = ttk.Combobox(left, state="readonly")
         self.cbSuppliers.grid(row=row, column=col, sticky="ew", **pad)
 
         row += 1
-        ttk.Label(left, text="Description:").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(left, text=_("Description:")).grid(row=row, column=0, sticky=tk.W)
         self.txDescription = ttk.Entry(left, textvariable=self.description)
         self.txDescription.grid(row=row, column=col, sticky="ew", **pad)
 
         row += 1
-        ttk.Label(left, text="Reference:").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(left, text=_("Reference:")).grid(row=row, column=0, sticky=tk.W)
         self.txReference = ttk.Entry(left, textvariable=self.reference)
         self.txReference.grid(row=row, column=col, sticky="ew", **pad)
 
         row += 1
-        ttk.Label(left, text="Status:").grid(row=row, column=0, sticky=tk.W)
+        ttk.Label(left, text=_("Status:")).grid(row=row, column=0, sticky=tk.W)
         self.chkStatus = ttk.Checkbutton(
             left,
             onvalue=1,
@@ -89,10 +90,10 @@ class UI(ChildView):
         right = ttk.Frame(self.frm_main, style="App.TFrame")
         right.grid(row=0, column=1, sticky=tk.NS, **pad)
 
-        btn_save = ttk.Button(right, text="Save", style="App.TButton", command=self._on_save)
+        btn_save = ttk.Button(right, text=_("Save"), style="App.TButton", command=self._on_save)
         btn_save.grid(row=0, column=0, sticky="ew", pady=4)
 
-        btn_cancel = ttk.Button(right, text="Cancel", style="App.TButton", command=self.on_cancel)
+        btn_cancel = ttk.Button(right, text=_("Cancel"), style="App.TButton", command=self.on_cancel)
         btn_cancel.grid(row=1, column=0, sticky="ew", pady=4)
 
     def on_open(self):
@@ -100,11 +101,11 @@ class UI(ChildView):
         self._set_suppliers()
 
         if self.index is not None:
-            self.title("Update %s" % self.winfo_name().capitalize())
+            self.title(_("Update Control"))
             self.selected_item = getattr(self.parent, "selected_item", None)
             self._set_values()
         else:
-            self.title("Insert %s" % self.winfo_name().capitalize())
+            self.title(_("Add Control"))
             self.status.set(1)
             if self.cbSuppliers["values"]:
                 self.cbSuppliers.current(0)
@@ -156,7 +157,7 @@ class UI(ChildView):
         if idx < 0:
             messagebox.showwarning(
                 self.engine.app_title,
-                "Select a supplier.",
+                _("Please select a supplier."),
                 parent=self,
             )
             self.cbSuppliers.focus_set()
@@ -166,7 +167,7 @@ class UI(ChildView):
         if not desc:
             messagebox.showwarning(
                 self.engine.app_title,
-                "Description is required.",
+                _("Description is required."),
                 parent=self,
             )
             self.txDescription.focus_set()
@@ -216,7 +217,7 @@ class UI(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
-                "Save error:\n%s" % exc,
+                f"{_('Save failed.')}:\n{exc}",
                 parent=self,
             )
 

@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -48,21 +49,21 @@ class UI(ChildView):
         self.frm_main.columnconfigure(1, weight=1)
 
         r = 0
-        ttk.Label(self.frm_main, text="Company:").grid(
+        ttk.Label(self.frm_main, text=_("Company:")).grid(
             row=r, column=0, sticky=tk.W, **paddings
         )
         self.cbCompanies = ttk.Combobox(self.frm_main, state="readonly")
         self.cbCompanies.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(self.frm_main, text="Site:").grid(
+        ttk.Label(self.frm_main, text=_("Site:")).grid(
             row=r, column=0, sticky=tk.W, **paddings
         )
         self.cbSites = ttk.Combobox(self.frm_main, state="readonly")
         self.cbSites.grid(row=r, column=1, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(self.frm_main, text="Status:").grid(
+        ttk.Label(self.frm_main, text=_("Status:")).grid(
             row=r, column=0, sticky=tk.W, **paddings
         )
         ttk.Checkbutton(
@@ -78,7 +79,7 @@ class UI(ChildView):
 
         btn_save = ttk.Button(
             btns,
-            text="Save",
+            text=_("Save"),
             command=self._on_save,
             underline=0,
             style="App.TButton",
@@ -87,7 +88,7 @@ class UI(ChildView):
 
         btn_cancel = ttk.Button(
             btns,
-            text="Cancel",
+            text=_("Cancel"),
             command=self.on_cancel,
             underline=0,
             style="App.TButton",
@@ -121,12 +122,12 @@ class UI(ChildView):
                 self.selected_site = None
 
             self._set_values()
-            title = "Update Site"
+            title = _("Update Site")
         else:
             # INSERT
             self.status.set(True)
             self.selected_site = None
-            title = "Insert Site"
+            title = _("Add Site")
 
         self.title(title)
         try:
@@ -250,9 +251,9 @@ class UI(ChildView):
     def _get_values(self):
         """Collect current values, validating combobox selections."""
         if self.cbCompanies.current() < 0:
-            raise ValueError("Select a Company.")
+            raise ValueError(_("Select a Company."))
         if self.cbSites.current() < 0:
-            raise ValueError("Select a Site.")
+            raise ValueError(_("Select a Site."))
 
         return [
             self.dict_companies[self.cbCompanies.current()],  # supplier_id (company)
@@ -351,7 +352,7 @@ class UI(ChildView):
             except Exception as e:
                 pass
 
-            messagebox.showerror(title, f"Save error:\n{exc}", parent=self)
+            messagebox.showerror(title, f"{_('Save error:')}\n{exc}", parent=self)
 
 
     def on_cancel(self, evt=None):
