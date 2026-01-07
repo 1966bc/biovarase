@@ -254,6 +254,60 @@ TRANSLATIONS = {
     "Computed": {"it": "Calcolato", "en": "Computed"},
     "on": {"it": "su", "en": "on"},
     "results": {"it": "risultati", "en": "results"},
+    "paired results": {"it": "risultati accoppiati", "en": "paired results"},
+
+    # ==========================================================================
+    # Z-Score, Youden, TEA Windows
+    # ==========================================================================
+    "Z-Score, P-Value, Probability": {"it": "Z-Score, P-Value, Probabilità", "en": "Z-Score, P-Value, Probability"},
+    "Youden Plot": {"it": "Grafico Youden", "en": "Youden Plot"},
+    "Total Error": {"it": "Errore Totale", "en": "Total Error"},
+    "Test:": {"it": "Test:", "en": "Test:"},
+    "Workstation:": {"it": "Postazione:", "en": "Workstation:"},
+    "Serial:": {"it": "Seriale:", "en": "Serial:"},
+
+    # ==========================================================================
+    # Assign Test Methods
+    # ==========================================================================
+    "Assign test methods": {"it": "Assegna metodi test", "en": "Assign test methods"},
+    "Assign test methods to": {"it": "Assegna metodi test a", "en": "Assign test methods to"},
+    "Assign test method:": {"it": "Assegnare metodo test:", "en": "Assign test method:"},
+    "to workstation:": {"it": "alla postazione:", "en": "to workstation:"},
+    "Assign error:": {"it": "Errore assegnazione:", "en": "Assign error:"},
+
+    # ==========================================================================
+    # QC Import
+    # ==========================================================================
+    "Import QC": {"it": "Importa QC", "en": "Import QC"},
+    "Received:": {"it": "Ricevuto:", "en": "Received:"},
+    "Date": {"it": "Data", "en": "Date"},
+    "Reagent Lot:": {"it": "Lotto Reagente:", "en": "Reagent Lot:"},
+    "Select workstation and optionally enter reagent lot.": {"it": "Seleziona postazione e opzionalmente inserisci lotto reagente.", "en": "Select workstation and optionally enter reagent lot."},
+    "File can have any name (no renaming required).": {"it": "Il file può avere qualsiasi nome (nessuna rinomina richiesta).", "en": "File can have any name (no renaming required)."},
+    "Import file…": {"it": "Importa file…", "en": "Import file…"},
+    "Select QC file": {"it": "Seleziona file QC", "en": "Select QC file"},
+    "QC files": {"it": "File QC", "en": "QC files"},
+    "All files": {"it": "Tutti i file", "en": "All files"},
+    "Houston we have a problem here.": {"it": "Houston abbiamo un problema.", "en": "Houston we have a problem here."},
+    "Something went wrong or you did not select a valid file.": {"it": "Qualcosa è andato storto o non hai selezionato un file valido.", "en": "Something went wrong or you did not select a valid file."},
+    "Invalid 'Received' date.": {"it": "Data 'Ricevuto' non valida.", "en": "Invalid 'Received' date."},
+    "Please select a workstation.": {"it": "Selezionare una postazione.", "en": "Please select a workstation."},
+    "Profile": {"it": "Profilo", "en": "Profile"},
+    "Imported rows": {"it": "Righe importate", "en": "Imported rows"},
+    "Matched batches": {"it": "Lotti abbinati", "en": "Matched batches"},
+    "Unmatched rows": {"it": "Righe non abbinate", "en": "Unmatched rows"},
+    "Unexpected error while importing QC file.": {"it": "Errore imprevisto durante importazione file QC.", "en": "Unexpected error while importing QC file."},
+
+    # ==========================================================================
+    # Workstation Test Methods Mapping
+    # ==========================================================================
+    "Workstations — Test Methods Mapping": {"it": "Postazioni — Mappatura Metodi Test", "en": "Workstations — Test Methods Mapping"},
+    "Edit External Code": {"it": "Modifica Codice Esterno", "en": "Edit External Code"},
+    "Remove Mapping": {"it": "Rimuovi Mappatura", "en": "Remove Mapping"},
+    "External Code": {"it": "Codice Esterno", "en": "External Code"},
+    "Remove": {"it": "Rimuovi", "en": "Remove"},
+    "from workstation": {"it": "dalla postazione", "en": "from workstation"},
+    "External code for": {"it": "Codice esterno per", "en": "External code for"},
 
     # ==========================================================================
     # Equipments / Test Methods

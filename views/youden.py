@@ -10,6 +10,7 @@
 
 import tkinter as tk
 
+from i18n import _
 from views.parent_view import ParentView
 from tkinter import ttk
 
@@ -29,7 +30,7 @@ class UI(ParentView):
 
         self.engine = self.nametowidget(".").engine
 
-        self.title("Youden Plot")
+        self.title(_("Youden Plot"))
         
         self.batches = []
         self.um = None
@@ -63,17 +64,17 @@ class UI(ParentView):
         hdr.grid(row=0, column=0, sticky="ew")
         hdr.columnconfigure(1, weight=1)
 
-        ttk.Label(hdr, text="Test:", style="App.TLabel")\
+        ttk.Label(hdr, text=_("Test:"), style="App.TLabel")\
             .grid(row=0, column=0, sticky="w")
         ttk.Label(hdr, textvariable=self.test_name_var)\
             .grid(row=0, column=1, sticky="w")
 
-        ttk.Label(hdr, text="Workstation:", style="App.TLabel")\
+        ttk.Label(hdr, text=_("Workstation:"), style="App.TLabel")\
             .grid(row=0, column=2, sticky="w", padx=(16, 6))
         ttk.Label(hdr, textvariable=self.ws_name_var)\
             .grid(row=0, column=3, sticky="w")
 
-        ttk.Label(hdr, text="Serial:", style="App.TLabel")\
+        ttk.Label(hdr, text=_("Serial:"), style="App.TLabel")\
             .grid(row=0, column=4, sticky="w", padx=(16, 6))
         ttk.Label(hdr, textvariable=self.ws_serial_var)\
             .grid(row=0, column=5, sticky="w")
@@ -111,7 +112,7 @@ class UI(ParentView):
         self.um = self.engine.get_um(selected_test_method[5])
 
         self.batches = list(batches) if batches else []
-        self.title(f"{test_name} — Youden Plot")
+        self.title(f"{test_name} — {_('Youden Plot')}")
 
         self._draw_youden(data)
 
@@ -148,7 +149,7 @@ class UI(ParentView):
         ws_name   = self.ws_name_var.get()
 
         title = f"{test_name} — {ws_name}"
-        bottom_text = f"Computed {n} paired results"
+        bottom_text = f"{_('Computed')} {n} {_('paired results')}"
 
         # Units on axes
         um_txt = self.um.get("description") if self.um else ""
