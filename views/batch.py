@@ -189,7 +189,7 @@ class UI(ChildView):
             frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.on_cancel
         )
         self.bind("<Alt-c>", self.on_cancel)
-        #self.bind("<Escape>", self.on_cancel)  # togli se preferisci solo Alt+F
+        #self.bind("<Escape>", self.on_cancel)  # remove if you prefer Alt+F only
         btn.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1

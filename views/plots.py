@@ -390,7 +390,7 @@ class UI(ParentView):
             return
 
         try:
-            # Se il widget è stato distrutto, non fare nulla
+            # If widget was destroyed, do nothing
             if not canvas.winfo_exists():
                 self._canvas = None
                 return
@@ -404,7 +404,7 @@ class UI(ParentView):
         elif getattr(event, "num", None) == 5:     # Linux scroll down
             delta = 1
         else:
-            # Windows / altri: event.delta è multiplo di 120
+            # Windows / other: event.delta is a multiple of 120
             delta = -1 * (event.delta // 120) if getattr(event, "delta", 0) != 0 else 0
 
         if delta == 0:
@@ -413,7 +413,7 @@ class UI(ParentView):
         try:
             canvas.yview_scroll(delta, "units")
         except tk.TclError:
-            # Il canvas è stato distrutto "nel frattempo"
+            # Canvas was destroyed in the meantime
             self._canvas = None
             return
 
@@ -430,18 +430,18 @@ class UI(ParentView):
         except Exception as e:
             pass
 
-        # Azzeriamo anche il riferimento al canvas
+        # Clear canvas reference
         if hasattr(self, "_canvas"):
             self._canvas = None
 
     def _on_enter_canvas(self, event=None):
-        # Attivo i bind globali SOLO quando il mouse è sul canvas
+        # Enable global bindings ONLY when mouse is over the canvas
         self.bind_all("<MouseWheel>", self._on_mousewheel)
         self.bind_all("<Button-4>", self._on_mousewheel)
         self.bind_all("<Button-5>", self._on_mousewheel)
 
     def _on_leave_canvas(self, event=None):
-        # Li disattivo quando il mouse esce
+        # Disable bindings when mouse leaves
         try:
             self.unbind_all("<MouseWheel>")
             self.unbind_all("<Button-4>")
