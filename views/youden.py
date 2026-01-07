@@ -10,22 +10,23 @@
 
 import tkinter as tk
 
-from views.child_view import ChildView
+from views.parent_view import ParentView
 from tkinter import ttk
 
 from youden_canvas import YoudenPlotCanvas   # <<< nuovo import
 
 
-class UI(ChildView):
+class UI(ParentView):
     """
     Youden plot window.
     Uses YoudenPlotCanvas instead of Matplotlib.
     """
 
     def __init__(self, parent):
-        super().__init__()
-        self._is_init = True
-        self.parent = parent
+        super().__init__(parent, name="youden")
+        if self._reusing:
+            return
+
         self.engine = self.nametowidget(".").engine
 
         self.title("Youden Plot")
@@ -38,18 +39,18 @@ class UI(ChildView):
         self.ws_name_var   = tk.StringVar(value="")
         self.ws_serial_var = tk.StringVar(value="")
 
-        # se in futuro vuoi mostrare indici dei punti:
         self.show_labels_var = tk.BooleanVar(value=False)
 
-        self._build_ui()
+        self._init_ui()
+        # Set initial size BEFORE centering
+        self.geometry("700x500")
+        self.minsize(600, 400)
         self.show()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-
+        
     # ----------------------------------------------------------------------
     # UI builder
     # ----------------------------------------------------------------------
-    def _build_ui(self):
+    def _init_ui(self):
         
 
         self.columnconfigure(0, weight=1)

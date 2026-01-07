@@ -7,13 +7,13 @@
 # -----------------------------------------------------------------------------
 import tkinter as tk
 
-from views.child_view import ChildView
+from views.parent_view import ParentView
 from tkinter import ttk
 
 from ljcanvas import LeveyJenningsCanvas
 
 
-class UI(ChildView):
+class UI(ParentView):
     """
     Levey–Jennings plots window.
 
@@ -21,12 +21,10 @@ class UI(ChildView):
     and workstation, stacked vertically (one above the other), inside a
     scrollable area.
     """
-
     def __init__(self, parent, index=None):
-        super().__init__()
-
-        self.parent = parent
-        self.engine = self.nametowidget(".").engine
+        super().__init__(parent, name="plots")
+        if self._reusing:
+            return
 
         self.selected_workstation = None
         self.selected_test_method = None
@@ -38,7 +36,6 @@ class UI(ChildView):
         self._header_var = tk.StringVar(value="")
 
         self._init_ui()
-        
 
     # -------------------------------------------------------------------------
     # UI SETUP
@@ -123,6 +120,9 @@ class UI(ChildView):
 
         ttk.Sizegrip(self).grid(row=1, column=0, sticky="se")
 
+        # Set initial size BEFORE centering
+        self.geometry("700x500")
+        self.minsize(600, 400)
         # Center and show window
         self.show(on_screen=True)
 

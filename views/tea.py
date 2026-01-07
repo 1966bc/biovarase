@@ -17,17 +17,18 @@ z-score, limits) while presenting them in a compact, readable layout.
 
 import tkinter as tk
 
-from views.child_view import ChildView
+from views.parent_view import ParentView
 from tkinter import ttk
 
 from total_error_canvas import TotalErrorCanvas
 
 
-class UI(ChildView):
+class UI(ParentView):
     def __init__(self, parent, index=None):
-        super().__init__()
+        super().__init__(parent, name="tea")
+        if self._reusing:
+            return
 
-        self.parent = parent
         self.engine = self.nametowidget(".").engine
 
         self.cvw = 0.0
@@ -39,15 +40,17 @@ class UI(ChildView):
         self._batches = []
         self._header_var = tk.StringVar(value="")
 
-        self._build_ui()
+        self._init_ui()
+
+        # Set initial size BEFORE centering
+        self.geometry("700x500")
+        self.minsize(600, 400)
         self.show()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
     # ---------------------------------------------------------------------
     # UI LAYOUT
     # ---------------------------------------------------------------------
-    def _build_ui(self):
+    def _init_ui(self):
         self.title("Total Error")
 
         self.columnconfigure(0, weight=1)
