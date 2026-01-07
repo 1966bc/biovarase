@@ -7,6 +7,7 @@
 #-----------------------------------------------------------------------------
 import tkinter as tk
 
+from i18n import _
 from views.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
@@ -57,17 +58,17 @@ class UI(ChildView):
         frm_left.grid(row=0, column=0, sticky="ns", **paddings)
 
         r = 0
-        ttk.Label(frm_left, text="Symbol:").grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Symbol:")).grid(row=r, sticky=tk.W)
         self.ent_Symbol = ttk.Entry(frm_left, textvariable=self.symbol)
         self.ent_Symbol.grid(row=r, column=1, sticky="ew", **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Description:").grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Description:")).grid(row=r, sticky=tk.W)
         self.txtDescription = ttk.Entry(frm_left, textvariable=self.description)
         self.txtDescription.grid(row=r, column=1, sticky="ew", **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Status:").grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Status:")).grid(row=r, sticky=tk.W)
         chk_status = ttk.Checkbutton(frm_left, onvalue=1, offvalue=0, variable=self.status,)
         chk_status.grid(row=r, column=1, sticky="ew", **paddings)
 
@@ -76,12 +77,12 @@ class UI(ChildView):
         frm_buttons.grid(row=0, column=1, sticky="ns", **paddings)
 
         btn_save = ttk.Button(
-            frm_buttons, style="App.TButton", text="Save", underline=0, command=self._on_save
+            frm_buttons, style="App.TButton", text=_("Save"), underline=0, command=self._on_save
         )
         btn_save.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        
+
         btn_cancel = ttk.Button(
-            frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.on_cancel
+            frm_buttons, style="App.TButton", text=_("Cancel"), underline=0, command=self.on_cancel
         )
         btn_cancel.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
     
@@ -92,13 +93,13 @@ class UI(ChildView):
 
         if self.index is not None:
             # UPDATE mode
-            self.title(f"Update {self.winfo_name().title()}")
+            self.title(_("Update Sample"))
             # Expect parent.selected_item to be set (tuple row)
             self.selected_item = getattr(self.parent, "selected_item", None)
             self._set_values()
         else:
             # INSERT mode
-            self.title(f"Insert {self.winfo_name().title()}")
+            self.title(_("Add Sample"))
             self.status.set(True)
 
         self._focus_entry()
@@ -173,7 +174,7 @@ class UI(ChildView):
             self._reselect_in_parent(last_id if self.index is None else None)
             self.on_cancel()
         except Exception as exc:
-            messagebox.showerror(self.engine.app_title, f"Save error:\n{exc}", parent=self)
+            messagebox.showerror(self.engine.app_title, f"{_('Save error:')}\n{exc}", parent=self)
 
 
     def check_symbol(self) -> int:
@@ -207,10 +208,9 @@ class UI(ChildView):
             if existing_id == current_id:
                 return 1
 
-        msg = f"Symbol {symbol} has already been assigned!"
         messagebox.showwarning(
             self.engine.app_title,
-            msg,
+            f"{_('Symbol')} {symbol} {_('has already been assigned!')}",
             parent=self,
         )
         return 0
@@ -239,7 +239,7 @@ class UI(ChildView):
         if not norm:
             messagebox.showwarning(
                 self.engine.app_title,
-                "Description is required.",
+                _("Description is required."),
                 parent=self,
             )
             return 0
@@ -285,7 +285,7 @@ class UI(ChildView):
             if duplicate:
                 messagebox.showwarning(
                     self.engine.app_title,
-                    f"Description '{norm}' has already been assigned!",
+                    f"{_('Description')} '{norm}' {_('has already been assigned!')}",
                     parent=self,
                 )
                 return 0
