@@ -20,6 +20,7 @@ Expected table schema:
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from i18n import _
 from views.parent_view import ParentView
 from views.editor import Editor
 
@@ -146,9 +147,9 @@ class LookupUI(ParentView):
             padding=8,
         )
 
-        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self.on_item_activated)
 
@@ -194,7 +195,7 @@ class LookupUI(ParentView):
                 self.lstItems.itemconfig(index, {"bg": "light gray"})
             self.dict_items[index] = row["pk"]
 
-        self.items.set("Items: {0}".format(self.lstItems.size()))
+        self.items.set(f"{_('Items')}: {self.lstItems.size()}")
 
     # ------------------------------------------------------------------
     # Listbox handlers
