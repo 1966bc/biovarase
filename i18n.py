@@ -212,6 +212,25 @@ TRANSLATIONS = {
     "Please enter a valid integer.": {"it": "Inserire un numero intero valido.", "en": "Please enter a valid integer."},
 
     # ==========================================================================
+    # Z-score Settings
+    # ==========================================================================
+    "Set z-score": {"it": "Imposta z-score", "en": "Set z-score"},
+    "Set Z-score": {"it": "Imposta Z-score", "en": "Set Z-score"},
+    "Please enter a valid number.": {"it": "Inserire un numero valido.", "en": "Please enter a valid number."},
+
+    # ==========================================================================
+    # Export Counts
+    # ==========================================================================
+    "Export from:": {"it": "Esporta dal:", "en": "Export from:"},
+    "Export Counts": {"it": "Esporta Conteggi", "en": "Export Counts"},
+    "Export data?": {"it": "Esportare i dati?", "en": "Export data?"},
+
+    # ==========================================================================
+    # License
+    # ==========================================================================
+    "License - GNU GPL v3": {"it": "Licenza - GNU GPL v3", "en": "License - GNU GPL v3"},
+
+    # ==========================================================================
     # Equipments / Test Methods
     # ==========================================================================
     "Equipments": {"it": "Strumenti", "en": "Equipments"},
