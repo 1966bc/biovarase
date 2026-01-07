@@ -8,6 +8,7 @@ Version: 4.2 (Professional Edition)
 import tkinter as tk
 from tkinter import ttk
 
+from i18n import _
 from views.parent_view import ParentView
 
 
@@ -54,7 +55,7 @@ class UI(ParentView):
             self.txLicense.insert("1.0", msg)
             self.txLicense.config(state=tk.DISABLED)
 
-        self.title("License - GNU GPL v3")
+        self.title(_("License - GNU GPL v3"))
 
     def on_cancel(self, _evt=None):
         """Close the window."""
