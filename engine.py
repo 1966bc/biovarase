@@ -722,6 +722,47 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         type(e),
                         sys.modules[__name__])
 
+    def get_language(self):
+        """
+        Read language preference from configuration file.
+
+        Returns:
+            str: Language code ('en' or 'it'). Defaults to 'en'.
+        """
+        try:
+            path = self.get_file("language")
+            with open(path, 'r', encoding='utf-8') as f:
+                lang = f.readline().strip().lower()
+            if lang in ("en", "it"):
+                return lang
+            return "en"
+        except FileNotFoundError:
+            return "en"
+        except (IOError, ValueError) as e:
+            self.on_log(inspect.stack()[0][3], e, type(e), sys.modules[__name__])
+            return "en"
+
+    def set_language(self, lang):
+        """
+        Save language preference to configuration file.
+
+        Args:
+            lang: Language code ('en' or 'it')
+
+        Returns:
+            bool: True if successful, False on error
+        """
+        try:
+            if lang not in ("en", "it"):
+                return False
+            path = self.get_file("language")
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(lang)
+            return True
+        except (FileNotFoundError, IOError) as e:
+            self.on_log(inspect.stack()[0][3], e, type(e), sys.modules[__name__])
+            return False
+
     def get_remeber_batch(self):
         """
         Legge il flag 'remember batch' dal file 'remember_batch' e ritorna un bool.
