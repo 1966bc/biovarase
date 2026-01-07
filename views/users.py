@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 
+from i18n import _
 from views.parent_view import ParentView
 import views.user as ui
 
@@ -80,13 +81,13 @@ class UI(ParentView):
 
         # Configure columns
         self.lstItems.column("last_name", width=200, minwidth=150, anchor=tk.W)
-        self.lstItems.heading("last_name", text="Last Name", anchor=tk.W)
+        self.lstItems.heading("last_name", text=_("Surname:").rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("first_name", width=200, minwidth=150, anchor=tk.W)
-        self.lstItems.heading("first_name", text="First Name", anchor=tk.W)
+        self.lstItems.heading("first_name", text=_("First Name:").rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("nickname", width=150, minwidth=100, anchor=tk.W)
-        self.lstItems.heading("nickname", text="Nickname", anchor=tk.W)
+        self.lstItems.heading("nickname", text=_("Nick:").rstrip(":"), anchor=tk.W)
 
         # Tag for inactive users
         self.lstItems.tag_configure("inactive", background=self.engine.get_rgb(211, 211, 211))
@@ -104,14 +105,14 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5, expand=False)
 
-        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
 
     # ------------------------------------------------------------------ OPEN
     def on_open(self):
         """Called once the window is ready: set title and load users."""
-        self.title("Users Management")
+        self.title(_("Users"))
         self._load_items()
 
     # ------------------------------------------------------------------ LOAD DATA
@@ -148,7 +149,7 @@ class UI(ParentView):
 
             self.dict_items[iid] = user_id
 
-        self.items.set(f"Users: {len(self.dict_items)}")
+        self.items.set(f"{_('Users')}: {len(self.dict_items)}")
 
     # ------------------------------------------------------------------ SELECTION
     def on_item_selected(self, _evt=None):

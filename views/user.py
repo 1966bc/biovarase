@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -57,24 +58,24 @@ class UI(ChildView):
         frm_left.grid(row=0, column=0, sticky="ns", **paddings)
 
         r, c = 0, 1
-        ttk.Label(frm_left, text="Surname:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Surname:")).grid(row=r, column=0, sticky=tk.W)
         self.txLastName = ttk.Entry(frm_left, textvariable=self.last_name)
         self.txLastName.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="First Name:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("First Name:")).grid(row=r, column=0, sticky=tk.W)
         ttk.Entry(frm_left, textvariable=self.first_name).grid(
             row=r, column=c, sticky=tk.EW, **paddings
         )
 
         r += 1
-        ttk.Label(frm_left, text="Nick:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Nick:")).grid(row=r, column=0, sticky=tk.W)
         ttk.Entry(frm_left, textvariable=self.nickname).grid(
             row=r, column=c, sticky=tk.EW, **paddings
         )
 
         r += 1
-        ttk.Label(frm_left, text="Level:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Level:")).grid(row=r, column=0, sticky=tk.W)
         tk.Spinbox(
             frm_left,
             from_=0,
@@ -86,7 +87,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Log out time (min):").grid(
+        ttk.Label(frm_left, text=_("Logout time (min):")).grid(
             row=r, column=0, sticky=tk.W
         )
         tk.Spinbox(
@@ -100,7 +101,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Activate log out:").grid(
+        ttk.Label(frm_left, text=_("Enable logout:")).grid(
             row=r, column=0, sticky=tk.W
         )
         ttk.Checkbutton(
@@ -111,7 +112,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
         ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -130,7 +131,7 @@ class UI(ChildView):
         ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Save",
+            text=_("Save"),
             underline=0,
             command=self._on_save,
         ).grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -139,7 +140,7 @@ class UI(ChildView):
             ttk.Button(
                 frm_buttons,
                 style="App.TButton",
-                text="Reset",
+                text=_("Reset"),
                 underline=0,
                 command=self._on_reset,
             ).grid(row=1, column=0, sticky="ew", padx=5, pady=5)
@@ -147,7 +148,7 @@ class UI(ChildView):
         ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self.on_cancel,
         ).grid(row=2, column=0, sticky="ew", padx=5, pady=5)
@@ -166,12 +167,12 @@ class UI(ChildView):
         """
         if self.index is not None:
             # UPDATE mode
-            self.title("Update User")
+            self.title(_("Update User"))
             self.selected_item = self.parent.selected_item
             self._set_values()
         else:
             # INSERT mode
-            self.title("Insert User")
+            self.title(_("Add User"))
             self.status.set(1)
 
         self._focus_entry()
@@ -300,7 +301,7 @@ class UI(ChildView):
             self.on_cancel()
 
         except Exception as exc:
-            messagebox.showerror(title, f"Save error:\n{exc}", parent=self)
+            messagebox.showerror(title, f"{_('Save failed.')}:\n{exc}", parent=self)
 
     def _reselect_in_parent(self, target_pk=None):
         """
@@ -332,7 +333,7 @@ class UI(ChildView):
         if self.index is None or not self.selected_item:
             messagebox.showwarning(
                 self.engine.app_title,
-                "No user loaded for password reset.",
+                _("No user selected."),
                 parent=self,
             )
             return
@@ -345,8 +346,7 @@ class UI(ChildView):
                 int(self.selected_item.get("user_id")),   # <-- FIX: use child copy
             )
             self.engine.write(sql, args)
-            msg = "Password reset."
-            messagebox.showinfo(self.engine.app_title, msg, parent=self)
+            messagebox.showinfo(self.engine.app_title, _("Password reset."), parent=self)
         except Exception as e:
             self.engine.on_log("_on_reset", e, type(e), sys.modules[__name__])
 
@@ -383,7 +383,7 @@ class UI(ChildView):
                 return 1
 
         # Otherwise nickname is taken
-        msg = f"Call sign {nickname} has already been assigned!"
+        msg = _("This nickname is already in use.")
         messagebox.showwarning(self.engine.app_title, msg, parent=self)
         return 0
 
