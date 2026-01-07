@@ -231,6 +231,31 @@ TRANSLATIONS = {
     "License - GNU GPL v3": {"it": "Licenza - GNU GPL v3", "en": "License - GNU GPL v3"},
 
     # ==========================================================================
+    # Analytical Goals Export
+    # ==========================================================================
+    "Analytical Goals": {"it": "Obiettivi Analitici", "en": "Analytical Goals"},
+    "Set elements to export:": {"it": "Imposta elementi da esportare:", "en": "Set elements to export:"},
+    "No record data to compute.": {"it": "Nessun dato da elaborare.", "en": "No record data to compute."},
+
+    # ==========================================================================
+    # Export Notes
+    # ==========================================================================
+    "Export Notes Data": {"it": "Esporta Dati Note", "en": "Export Notes Data"},
+    "Export error:": {"it": "Errore esportazione:", "en": "Export error:"},
+
+    # ==========================================================================
+    # Quality Control Plots
+    # ==========================================================================
+    "Quality Control Plots": {"it": "Grafici Controllo Qualità", "en": "Quality Control Plots"},
+    "Serial": {"it": "Seriale", "en": "Serial"},
+    "No batches available for this test.": {"it": "Nessun lotto disponibile per questo test.", "en": "No batches available for this test."},
+    "No data available": {"it": "Nessun dato disponibile", "en": "No data available"},
+    "No series available": {"it": "Nessuna serie disponibile", "en": "No series available"},
+    "Computed": {"it": "Calcolato", "en": "Computed"},
+    "on": {"it": "su", "en": "on"},
+    "results": {"it": "risultati", "en": "results"},
+
+    # ==========================================================================
     # Equipments / Test Methods
     # ==========================================================================
     "Equipments": {"it": "Strumenti", "en": "Equipments"},
