@@ -184,6 +184,33 @@ TRANSLATIONS = {
     "already exists!": {"it": "già esiste!", "en": "already exists!"},
 
     # ==========================================================================
+    # Equipments / Test Methods
+    # ==========================================================================
+    "Equipments": {"it": "Strumenti", "en": "Equipments"},
+    "Equipments Management": {"it": "Gestione Strumenti", "en": "Equipments Management"},
+    "Items": {"it": "Elementi", "en": "Items"},
+    "is required.": {"it": "è richiesto.", "en": "is required."},
+    "Category:": {"it": "Categoria:", "en": "Category:"},
+    "Code:": {"it": "Codice:", "en": "Code:"},
+    "Sample:": {"it": "Campione:", "en": "Sample:"},
+    "Method:": {"it": "Metodo:", "en": "Method:"},
+    "Unit:": {"it": "Unità:", "en": "Unit:"},
+    "Mandatory:": {"it": "Obbligatorio:", "en": "Mandatory:"},
+    "Methods": {"it": "Metodi", "en": "Methods"},
+    "Test Methods": {"it": "Metodi Test", "en": "Test Methods"},
+    "Tests": {"it": "Test", "en": "Tests"},
+    "Goals": {"it": "Obiettivi", "en": "Goals"},
+    "Update method for": {"it": "Modifica metodo per", "en": "Update method for"},
+    "Add method for": {"it": "Aggiungi metodo per", "en": "Add method for"},
+    "Select a": {"it": "Selezionare", "en": "Select a"},
+    "Code is required.": {"it": "Codice richiesto.", "en": "Code is required."},
+    "Select a Test Method.": {"it": "Selezionare un Metodo Test.", "en": "Select a Test Method."},
+    "Category": {"it": "Categoria", "en": "Category"},
+    "Sample": {"it": "Campione", "en": "Sample"},
+    "Method": {"it": "Metodo", "en": "Method"},
+    "Unit": {"it": "Unità", "en": "Unit"},
+
+    # ==========================================================================
     # Batch Window
     # ==========================================================================
     "Batch": {"it": "Lotto", "en": "Batch"},

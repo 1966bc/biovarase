@@ -7,6 +7,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from i18n import _
 from views.child_view import ChildView
 
 
@@ -105,7 +106,7 @@ class Editor(ChildView):
 
         # Status checkbox
         r += 1
-        ttk.Label(frm_left, text="Status:").grid(
+        ttk.Label(frm_left, text=_("Status:")).grid(
             row=r,
             column=0,
             sticky="w",
@@ -130,7 +131,7 @@ class Editor(ChildView):
         ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Save",
+            text=_("Save"),
             underline=0,
             command=self._on_save,
         ).grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -138,7 +139,7 @@ class Editor(ChildView):
         ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text="Cancel",
+            text=_("Cancel"),
             underline=0,
             command=self.on_cancel,
         ).grid(row=1, column=0, sticky="ew", padx=5, pady=5)
@@ -155,7 +156,7 @@ class Editor(ChildView):
         """
         if self.index is not None:
             # UPDATE mode
-            self.title(f"Update {self.label_text}")
+            self.title(f"{_('Update')} {self.label_text}")
             self.selected_item = getattr(self.parent, "selected_item", None)
             if self.selected_item is None:
                 messagebox.showerror(
@@ -168,7 +169,7 @@ class Editor(ChildView):
             self._set_values()
         else:
             # INSERT mode
-            self.title(f"Insert {self.label_text}")
+            self.title(f"{_('Add')} {self.label_text}")
             self.status.set(True)
 
         self._set_focus()
@@ -277,7 +278,7 @@ class Editor(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
-                f"Save error:\n{exc}",
+                f"{_('Save error:')}\n{exc}",
                 parent=self,
             )
 
@@ -303,7 +304,7 @@ class Editor(ChildView):
         if not norm:
             messagebox.showwarning(
                 self.engine.app_title,
-                f"{self.label_text} is required.",
+                f"{self.label_text} {_('is required.')}",
                 parent=self,
             )
             return 0
@@ -329,7 +330,7 @@ class Editor(ChildView):
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,
-                f"Database error:\n{exc}",
+                f"{_('Database error:')}\n{exc}",
                 parent=self,
             )
             return 0
@@ -346,7 +347,7 @@ class Editor(ChildView):
             if self.index is None or found_id != current_id:
                 messagebox.showwarning(
                     self.engine.app_title,
-                    f"{self.label_text} '{norm}' already exists!",
+                    f"{self.label_text} '{norm}' {_('already exists!')}",
                     parent=self,
                 )
                 return 0
