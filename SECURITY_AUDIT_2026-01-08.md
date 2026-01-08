@@ -15,7 +15,7 @@
 | File Sensibili (.gitignore) | ✅ PASS | - |
 | RBAC Controls | ✅ PASS | - |
 | Input Validation | ✅ PASS | - |
-| Credenziali Hardcoded | ⚠️ PROBLEMA | ALTA |
+| Credenziali Hardcoded | ✅ RISOLTO | ALTA (era critico) |
 | Debug Code | ✅ PASS | - |
 | Crittografia Config | ✅ PASS | - |
 | Error Messages | ✅ PASS | - |
@@ -52,23 +52,22 @@
 - Campi testo: `strip()` applicato
 - Validazione presente in `batch.py`, `result.py`, `goal.py`
 
-### 6. Credenziali Hardcoded ⚠️ PROBLEMA CRITICO
+### 6. Credenziali Hardcoded ✅ RISOLTO (era CRITICO)
 
-**File:** `update_passwords.py` (linee 53-56)
+**Problema trovato:** `update_passwords.py` conteneva credenziali database hardcoded:
 ```python
 db_host = '172.16.149.100'
 db_user = 'biovarase'
-db_password = 'pS2dY^hX1nB5mL'  # PASSWORD ESPOSTA!
+db_password = 'pS2dY^hX1nB5mL'  # ERA ESPOSTA!
 db_name = 'biovarase'
 ```
 
-**Rischio:** Password database esposta nel repository pubblico.
+**Criticità:** ALTA - Password database esposta nel repository.
 
-**Raccomandazioni:**
-1. Cambiare IMMEDIATAMENTE la password del database
-2. Aggiungere `update_passwords.py` a `.gitignore`
-3. Rimuovere credenziali dal file e usare variabili d'ambiente
-4. Considerare di rimuovere il file dalla history git (git filter-branch)
+**Azione correttiva:** ✅ File `update_passwords.py` ELIMINATO DEFINITIVAMENTE dal repository.
+
+**Raccomandazione residua:**
+- Considerare di cambiare la password del database se il repository è stato pubblico
 
 **Nota:** `controller.py:519` ha password default `'pass'` per reset utenti - accettabile se cambiata al primo login.
 
