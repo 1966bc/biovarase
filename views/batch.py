@@ -14,7 +14,7 @@ from datetime import date, datetime
 
 from i18n import _
 from views.child_view import ChildView
-from app_config import BATCH_DESCRIPTION_MAX_LENGTH
+from app_config import BATCH_DESCRIPTION_MAX_LENGTH, LOT_NUMBER_MAX_LENGTH
 
 
 class UI(ChildView):
@@ -32,7 +32,7 @@ class UI(ChildView):
         # Enforce max lengths as you type (delegated to engine)
         self.lot_number.trace(
             "w",
-            lambda x, y, z, c=self.engine.get_lot_length(), v=self.lot_number: self.engine.limit_chars(
+            lambda x, y, z, c=LOT_NUMBER_MAX_LENGTH, v=self.lot_number: self.engine.limit_chars(
                 c, v, x, y, z
             ),
         )
