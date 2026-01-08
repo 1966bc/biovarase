@@ -70,7 +70,6 @@ import inspect
 import traceback
 import datetime
 import socket
-import logging
 from typing import Dict, Any
 
 from tools import Tools
@@ -207,8 +206,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
         # Event system: event_name -> [callbacks]
         self._subscribers = {}
-        self.poller = None
-        self.log_out = None
         self.log_user = {}
         self.no_selected = "Attention!\nNo record selected!"
         self.mandatory = "Attention!\nField %s is mandatory!"
@@ -570,22 +567,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             # il logging non deve mai generare eccezioni
             pass
 
-    def on_log_old(self, function, exc_value, exc_type, module, caller=None):
-
-        now = datetime.datetime.now()
-
-
-        log_text = "{0}\n{1}\n{2}\n{3}\n{4}\n\n".format(now,
-                                                        function,
-                                                        exc_value,
-                                                        exc_type,
-                                                        module,
-                                                        caller)
-
-        path = self.get_file("log.txt")
-        with open(path, "a") as log_file:
-            log_file.write(log_text)
-
     def get_python_version(self,):
         return "Python version: %s" % ".".join(map(str, sys.version_info[:3]))
 
@@ -631,43 +612,12 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             self.log_user[idx] = value          # Backward compatibility
             self.log_user[field_name] = value   # New readable access
 
-    def on_debug(self, module, function, *args):
-
-        now = datetime.datetime.now()
-        s = "\n\n{0}\n{1}\n{2}\n\n".format(now, module, function)
-        with open('debug.txt', 'a') as f:
-            f.write(s)
-            for i in args:
-                s = "{0}\n".format(i)
-                f.write(s)
-
-    def get_time_out(self):
-        try:
-            with open('time_out', 'r') as f:
-                v = f.readline()
-            return v
-        except (FileNotFoundError, IOError, ValueError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
 
     def get_loop(self):
         try:
             with open('loop', 'r') as f:
                 v = f.readline()
             return v
-        except (FileNotFoundError, IOError, ValueError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
-
-    def get_zscore(self):
-        try:
-            with open('zscore', 'r') as f:
-                v = f.readline()
-            return float(v)
         except (FileNotFoundError, IOError, ValueError) as e:
             self.on_log(inspect.stack()[0][3],
                         e,
@@ -763,7 +713,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             self.on_log(inspect.stack()[0][3], e, type(e), sys.modules[__name__])
             return False
 
-    def get_remeber_batch(self):
+    def get_remember_batch(self):
         """
         Legge il flag 'remember batch' dal file 'remember_batch' e ritorna un bool.
         Ritorna False in caso di file mancante, vuoto o qualsiasi errore.
@@ -995,20 +945,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             days_until_expiration = (expiry_date - datetime.date.today()).days
             return days_until_expiration
         except (ValueError, TypeError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
-            return None
-
-    def get_records(self):
-
-        try:
-            path = self.get_file('records')
-            with open(path, 'r') as f:
-                v = f.readline().strip()
-            return v
-        except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
                         e,
                         type(e),

@@ -237,7 +237,7 @@ class UI(ChildView):
 
         # Remember preference
         try:
-            self.remember_batch.set(bool(self.engine.get_remeber_batch()))
+            self.remember_batch.set(bool(self.engine.get_remember_batch()))
         except Exception as e:
             self.remember_batch.set(False)
 
