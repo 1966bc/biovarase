@@ -259,6 +259,7 @@ TRANSLATIONS = {
 ### Coverage
 
 - **44 views** with i18n support (83% of all views)
+- Entry point `biovarase.py` has i18n (exit confirmation dialog)
 - Base classes (`parent_view.py`, `child_view.py`) have no UI strings
 - Lookup views inherit i18n from `LookupUI` base class
 
@@ -354,6 +355,10 @@ biovarase/
 ├── schema.sql            # Database schema
 ├── pytest.ini            # Test configuration
 └── docs/                 # Additional documentation
+
+# Local service folders (gitignored, not in repository):
+# pics/                   # Screenshots for debugging
+# quarantine/             # Old/backup files for reference
 ```
 
 ## Standards Compliance
