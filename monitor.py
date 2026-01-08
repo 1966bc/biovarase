@@ -69,16 +69,26 @@ class Monitor(threading.Thread):
 
             if not self.check:
                 break
-            else:
+
+            # Check if parent window still exists
+            try:
+                if not self.parent.winfo_exists():
+                    self.check = False
+                    break
                 coord = self.parent.winfo_pointerxy()
+            except tk.TclError:
+                # Window was destroyed
+                self.check = False
+                break
 
-                if self.old_coord != coord:
-                    self.old_coord = coord
-                    self.idle = 0
-                else:
-                    self.idle += 1
+            if self.old_coord != coord:
+                self.old_coord = coord
+                self.idle = 0
+            else:
+                self.idle += 1
 
-                # Get timeout in minutes, convert to seconds
+            # Get timeout in minutes, convert to seconds
+            try:
                 timeout_minutes = int(
                     self.parent.nametowidget(".").engine.log_user["elapsing_time"]
                 )
@@ -89,3 +99,7 @@ class Monitor(threading.Thread):
                     self.parent.after(1000, self.parent.on_quit)
                 else:
                     sleep(IDLE_MONITOR_POLL_INTERVAL)
+            except (tk.TclError, KeyError):
+                # Window destroyed or user logged out
+                self.check = False
+                break

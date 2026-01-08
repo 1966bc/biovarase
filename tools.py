@@ -207,6 +207,34 @@ class Tools:
         except Exception:
             pass
 
+    def close_all_windows_except_main(self) -> None:
+        """
+        Close all registered windows except 'main'.
+
+        Used when changing user or section to ensure a clean state.
+        Closes both registered (dict_instances) and unregistered Toplevel windows.
+        """
+        registry = getattr(self, "dict_instances", {})
+
+        # Close all registered windows except main
+        to_close = [name for name in list(registry.keys()) if name != "main"]
+        for name in to_close:
+            window = registry.get(name)
+            if window:
+                self.safe_close(window)
+            registry.pop(name, None)
+
+        # Also close any unregistered Toplevels
+        try:
+            root = list(registry.values())[0].nametowidget(".") if registry else None
+            if root:
+                registered = set(registry.values())
+                for widget in root.winfo_children():
+                    if isinstance(widget, tk.Toplevel) and widget not in registered:
+                        self.safe_close(widget)
+        except Exception:
+            pass
+
     # -------------------------------------------------------------------------
     # Widget Factories (minimal set)
     # -------------------------------------------------------------------------

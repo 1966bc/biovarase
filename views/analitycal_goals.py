@@ -25,11 +25,11 @@ class UI(ParentView):
 
         self.elements = tk.IntVar(value=0)
 
-        self._init_ui()
+        self._build_ui()
         self.show(on_screen=True)
 
     # --- UI builder ----------------------------------------------------------
-    def _init_ui(self):
+    def _build_ui(self):
         padd = {"padx": 5, "pady": 5}
 
         # Main frame

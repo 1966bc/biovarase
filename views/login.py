@@ -64,7 +64,7 @@ class Login(ttk.Frame):
         self.attempts: int = 0
         self.nametowidget(".").engine.thread = None
         self.center_me()
-        self.init_ui()
+        self._build_ui()
 
     def center_me(self) -> None:
         """Center window on the screen."""
@@ -72,7 +72,7 @@ class Login(ttk.Frame):
         y = (self.parent.winfo_screenheight() - self.parent.winfo_reqheight()) / 2
         self.parent.geometry("+%d+%d" % (x, y))
 
-    def init_ui(self) -> None:
+    def _build_ui(self) -> None:
         """
         Create and layout login form widgets.
 
