@@ -107,7 +107,7 @@ class Main(tk.Toplevel):
             return
         super().__init__(name="main")
         self._initialized = True
-        self.engine = self.engine
+        self.engine = self.nametowidget(".").engine
         self.engine.dict_instances[self.winfo_name()] = self
         self.parent = parent
 
