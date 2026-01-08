@@ -29,6 +29,7 @@ from setup_wizard import SetupWizard
 CONFIG_FILENAME = "config.enc"
 MAX_LOGIN_ATTEMPTS = 3
 BATCH_DESCRIPTION_MAX_LENGTH = 15  # Matches DB batches.description VARCHAR(15)
+LOT_NUMBER_MAX_LENGTH = 20  # Matches DB batches.lot_number VARCHAR(30)
 IDLE_MONITOR_POLL_INTERVAL = 1  # seconds
 THREAD_JOIN_TIMEOUT = 2.0  # seconds
 DB_CONNECTION_TIMEOUT = 5  # seconds

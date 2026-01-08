@@ -862,19 +862,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         return datetime.datetime.now().time()
 
 
-    def get_lot_length(self,):
-
-        try:
-            with open('lot_lenght', 'r') as file:
-                lenght = file.readline()
-            return int(lenght)
-        except (FileNotFoundError, IOError, ValueError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
-
-
     def get_observations(self):
         try:
             path = self.get_file('observations')
