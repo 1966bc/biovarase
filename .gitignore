@@ -1,5 +1,7 @@
 # Credentials and local config
 config.enc
+secrets.txt
+.secrets
 
 # Logs
 log.txt
