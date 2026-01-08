@@ -136,9 +136,8 @@ Riepilogo:
 ## Azioni Completate Durante Audit
 
 1. ✅ Aggiunto `.env` a `.gitignore`
-2. ✅ Rimosso `update_passwords.py` (conteneva credenziali)
-3. ✅ Creato SECURITY_AUDIT_2026-01-08.md
-4. ✅ Creato QC_AUDIT_2026-01-08.md
+2. ✅ Creato SECURITY_AUDIT_2026-01-08.md
+3. ✅ Creato QC_AUDIT_2026-01-08.md
 
 ---
 
