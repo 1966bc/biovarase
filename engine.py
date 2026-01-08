@@ -862,17 +862,9 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         return datetime.datetime.now().time()
 
 
-    def get_batch_length(self,):
-
-        try:
-            with open('lot_description_lenght', 'r') as file:
-                lenght = file.readline()
-            return int(lenght)
-        except (FileNotFoundError, IOError, ValueError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
+    def get_batch_length(self):
+        """Return max length for batch description field (matches DB VARCHAR(30))."""
+        return 30
 
     def get_lot_length(self,):
 
