@@ -1145,7 +1145,7 @@ class Main(tk.Toplevel):
 
         index = 0
         for row in rs:
-            base_text = "{0:10}         {1:>12}".format(row["received_str"], row["result_rounded"])
+            base_text = "{0:10}                  {1:>12}".format(row["received_str"], row["result_rounded"])
 
             has_notes = notes_map.get(row["result_id"], 0) > 0
             # Add visual marker if has notes
