@@ -14,6 +14,7 @@ from datetime import date, datetime
 
 from i18n import _
 from views.child_view import ChildView
+from app_config import BATCH_DESCRIPTION_MAX_LENGTH
 
 
 class UI(ChildView):
@@ -37,7 +38,7 @@ class UI(ChildView):
         )
         self.description.trace(
             "w",
-            lambda x, y, z, c=self.engine.get_batch_length(), v=self.description: self.engine.limit_chars(
+            lambda x, y, z, c=BATCH_DESCRIPTION_MAX_LENGTH, v=self.description: self.engine.limit_chars(
                 c, v, x, y, z
             ),
         )
