@@ -18,7 +18,7 @@ class UI(ChildView):
         super().__init__(name="sample")        # References
         self.parent = parent
         self.index = index  # None → INSERT, pk → UPDATE
-        self.engine = self.nametowidget(".").engine
+        self.engine = self.engine
 
         self.selected_item: dict | None = None
         
@@ -30,7 +30,7 @@ class UI(ChildView):
         
     
         self.symbol = tk.StringVar()
-        self.symbol.trace("w", lambda x, y, z, c=1, v=self.symbol: self.nametowidget(".").engine.limit_chars(c, v, x, y, z))
+        self.symbol.trace("w", lambda x, y, z, c=1, v=self.symbol: self.engine.limit_chars(c, v, x, y, z))
         
         self.description = tk.StringVar()
         self.status = tk.BooleanVar()
