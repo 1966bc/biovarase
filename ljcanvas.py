@@ -96,9 +96,6 @@ class LeveyJenningsCanvas(tk.Canvas):
         self.FONT_VALUES = ("TkDefaultFont", 8)
         self._bottom_text: str = ""
 
-        # Redraw on resize
-        self.bind("<Configure>", self._on_resize)
-
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -310,25 +307,21 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def _compute_y_limits(self) -> Tuple[float, float]:
         """
-        Compute Y-axis limits using:
-            - min/max(series)
-            - target ± 3SD
-        plus a small margin.
-        """
-        series_min = min(self._series)
-        series_max = max(self._series)
+        Compute Y-axis limits using target ± 4SD (Westgard recommendation).
 
+        Values beyond ±4SD will be clipped to the edge of the chart
+        and displayed with a triangle marker to indicate "out of range".
+        """
         target = self._target
         sd = self._sd
 
-        band_min = target - 3 * sd
-        band_max = target + 3 * sd
+        # Fixed scale at ±4SD per Westgard best practices
+        y_min = target - 4 * sd
+        y_max = target + 4 * sd
 
-        y_min = min(series_min, band_min)
-        y_max = max(series_max, band_max)
-
+        # Small margin for visual clarity
         span = y_max - y_min if y_max != y_min else 1.0
-        margin = span * 0.10
+        margin = span * 0.05
         return y_min - margin, y_max + margin
 
     @staticmethod
@@ -541,24 +534,52 @@ class LeveyJenningsCanvas(tk.Canvas):
         y_min: float,
         y_max: float,
     ) -> None:
-        """Draw series as line + colored points (respecting enabled/disabled status)."""
+        """Draw series as line + colored points (respecting enabled/disabled status).
+
+        Points beyond ±4SD are clipped to the chart edge and displayed
+        as triangles pointing in the direction of the actual value.
+        """
         n = len(self._series)
         if n == 0:
             return
 
-        # Build points with status info
-        points: List[Tuple[float, float, float, int]] = []  # (x, y, value, status)
+        target = self._target
+        sd = self._sd
+
+        # Clip threshold at ±4SD
+        clip_high = target + 4 * sd
+        clip_low = target - 4 * sd
+
+        # Build points with status and clipping info
+        # (x, y, value, status, is_clipped, clip_direction)
+        # clip_direction: 1 = above, -1 = below, 0 = not clipped
+        points: List[Tuple[float, float, float, int, bool, int]] = []
         for idx, value in enumerate(self._series):
             v = float(value)
             x = self._index_to_x(idx, n, x0, x1)
-            y = self._value_to_y(v, y0, y1, y_min, y_max)
+
+            # Check if value needs clipping
+            is_clipped = False
+            clip_direction = 0
+            display_value = v
+
+            if v > clip_high:
+                is_clipped = True
+                clip_direction = 1  # pointing up (value is above)
+                display_value = clip_high
+            elif v < clip_low:
+                is_clipped = True
+                clip_direction = -1  # pointing down (value is below)
+                display_value = clip_low
+
+            y = self._value_to_y(display_value, y0, y1, y_min, y_max)
 
             # Get status (default to enabled if not provided)
             status = 1
             if self._status is not None and idx < len(self._status):
                 status = self._status[idx]
 
-            points.append((x, y, v, status))
+            points.append((x, y, v, status, is_clipped, clip_direction))
 
             # Save info for hit-test
             label = None
@@ -578,7 +599,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         # Connecting lines ONLY between consecutive enabled points
         if n > 1:
             line_coords: List[float] = []
-            for idx, (x, y, _, status) in enumerate(points):
+            for idx, (x, y, _, status, _, _) in enumerate(points):
                 if status == 1:  # Enabled point
                     line_coords.extend((x, y))
                 else:
@@ -600,7 +621,7 @@ class LeveyJenningsCanvas(tk.Canvas):
                 )
 
         # Points with color based on status
-        for x, y, value, status in points:
+        for x, y, value, status, is_clipped, clip_direction in points:
             if status == 1:
                 # Enabled: normal color (green/yellow/red based on SD)
                 color = self._get_point_color(value)
@@ -609,26 +630,65 @@ class LeveyJenningsCanvas(tk.Canvas):
                 color = "#999999"
 
             r = self.POINT_RADIUS
-            self.create_oval(
-                x - r,
-                y - r,
-                x + r,
-                y + r,
-                fill=color,
-                outline="#000000",
-                width=1,
-            )
+
+            if is_clipped:
+                # Draw triangle for clipped points
+                if clip_direction == 1:
+                    # Triangle pointing UP (value is above chart)
+                    self.create_polygon(
+                        x, y - r - 2,      # top vertex
+                        x - r - 1, y + r,  # bottom left
+                        x + r + 1, y + r,  # bottom right
+                        fill=color,
+                        outline="#000000",
+                        width=1,
+                    )
+                else:
+                    # Triangle pointing DOWN (value is below chart)
+                    self.create_polygon(
+                        x, y + r + 2,      # bottom vertex
+                        x - r - 1, y - r,  # top left
+                        x + r + 1, y - r,  # top right
+                        fill=color,
+                        outline="#000000",
+                        width=1,
+                    )
+            else:
+                # Normal circle for non-clipped points
+                self.create_oval(
+                    x - r,
+                    y - r,
+                    x + r,
+                    y + r,
+                    fill=color,
+                    outline="#000000",
+                    width=1,
+                )
 
         # Etichette opzionali dei valori (se abilitate altrove)
         if getattr(self, "_show_values", False) and len(points) <= 30:
-            for x, y, value, status in points:
+            for x, y, value, status, is_clipped, clip_direction in points:
                 # Only show values for enabled points
                 if status == 1:
+                    # Position label above or below based on clipping
+                    if is_clipped and clip_direction == 1:
+                        # Clipped above: put label below the triangle
+                        label_y = y + 12
+                        anchor = "n"
+                    elif is_clipped and clip_direction == -1:
+                        # Clipped below: put label above the triangle
+                        label_y = y - 12
+                        anchor = "s"
+                    else:
+                        # Normal: label above the point
+                        label_y = y - 8
+                        anchor = "s"
+
                     self.create_text(
                         x,
-                        y - 8,
+                        label_y,
                         text=f"{value:.2f}",
-                        anchor="s",
+                        anchor=anchor,
                         font=self.FONT_LABEL,
                         fill="#333333",
                     )

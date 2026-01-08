@@ -279,6 +279,20 @@ self.engine.is_read_only()         # Autologin
 
 ## QC Domain Knowledge
 
+### Levey-Jennings Chart (`ljcanvas.py`)
+
+The Levey-Jennings chart uses **±4SD scale with clipping** per Westgard recommendation:
+
+- **Y-axis scale:** Fixed at target ±4SD (not auto-scaled to data)
+- **Clipping:** Values beyond ±4SD are clipped to chart edge
+- **Outlier markers:** Clipped points shown as triangles (▲ above, ▼ below) instead of circles
+- **Value labels:** Always show the real value, even for clipped points
+
+Point colors by SD distance:
+- **Green:** |z| < 2SD (normal)
+- **Yellow/Orange:** 2SD ≤ |z| < 3SD (warning)
+- **Red:** |z| ≥ 3SD (violation)
+
 ### Westgard Multirule Evaluation Order
 1. **1:3S** - Single value > 3SD (reject)
 2. **2:2S** - Two consecutive > 2SD same side

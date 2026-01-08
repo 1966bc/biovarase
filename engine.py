@@ -470,14 +470,12 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
     def get_user_role(self) -> int:
         """
         Return numeric role of logged user (0=admin, 1=superuser, 2=user).
-        Supports both old positional indexing and new named key.
+        Returns 99 if role is not available.
         """
         try:
-            if "role" in self.log_user:
-                return int(self.log_user["role"])
             return int(self.log_user["role"])
-        except Exception as e:
-            return 99    # invalid / unknown
+        except (KeyError, TypeError, ValueError):
+            return 99  # invalid / unknown
 
     def is_admin(self) -> bool:
         """
@@ -615,7 +613,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def get_loop(self):
         try:
-            with open('loop', 'r') as f:
+            path = self.get_file('loop')
+            with open(path, 'r') as f:
                 v = f.readline()
             return v
         except (FileNotFoundError, IOError, ValueError) as e:
@@ -626,7 +625,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def set_zscore(self, value):
         try:
-            with open('zscore', 'w') as f:
+            path = self.get_file('zscore')
+            with open(path, 'w') as f:
                 f.write(str(value))
         except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
@@ -635,11 +635,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         sys.modules[__name__])
 
     def set_ddof(self, value):
-
         try:
-            with open('ddof', 'w') as f:
+            path = self.get_file('ddof')
+            with open(path, 'w') as f:
                 f.write(str(value))
-
         except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],
                         e,
@@ -963,7 +962,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         value = currentline[1].strip()
                         dimensions[key] = value
                     else:
-                        self.on_log(inspect.stack()[0][3], None, None, sys.modules[__name__], level='warning', message=f"Skipping invalid line in 'dimensions' file: '{line.strip()}'")
+                        # Skip invalid lines silently (not an error, just malformed data)
+                        pass
             return dimensions
         except (FileNotFoundError, IOError) as e:
             self.on_log(inspect.stack()[0][3],

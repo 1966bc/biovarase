@@ -29,13 +29,11 @@ class BiasCanvas(tk.Canvas):
     LEFT_MARGIN   = 60
     RIGHT_MARGIN  = 6
     TOP_MARGIN    = 30
-    BOTTOM_MARGIN = 40
+    BOTTOM_MARGIN = 50
 
     AXIS_COLOR      = "#000000"
     TARGET_COLOR    = "#0000aa"   # blue
-    MEAN_COLOR_OK   = "#00aa00"   # green
-    MEAN_COLOR_WARN = "#ffcc00"   # yellow
-    MEAN_COLOR_FAIL = "#ff0000"   # red
+    MEAN_COLOR      = "#006400"   # dark green (fixed, like LJ chart)
     BAND_FILL       = "#eeeeff"
 
     FONT_LABEL   = ("TkDefaultFont", 9)
@@ -160,48 +158,23 @@ class BiasCanvas(tk.Canvas):
         # Axis line
         self.create_line(x0, axis_y, x1, axis_y, fill=self.AXIS_COLOR, width=1)
 
-        # Target line
-        self.create_line(
-            xt,
-            axis_y - 12,
-            xt,
-            axis_y + 12,
+        # Target arrow (triangle pointing down)
+        arrow_size = 6
+        self.create_polygon(
+            xt, axis_y - 14,                    # bottom vertex (pointing down)
+            xt - arrow_size, axis_y - 14 - 10,  # top left
+            xt + arrow_size, axis_y - 14 - 10,  # top right
             fill=self.TARGET_COLOR,
-            width=2,
-        )
-        self.create_text(
-            xt,
-            axis_y - 16,
-            text=f"Target {self._target:.2f}",
-            anchor="s",
-            font=self.FONT_LABEL,
-            fill=self.TARGET_COLOR,
+            outline=self.TARGET_COLOR,
         )
 
-        # Mean line, color by bias size
-        bias_abs = abs(self._bias_pct)
-        if bias_abs < 1.0:
-            mean_color = self.MEAN_COLOR_OK
-        elif bias_abs < 3.0:
-            mean_color = self.MEAN_COLOR_WARN
-        else:
-            mean_color = self.MEAN_COLOR_FAIL
-
-        self.create_line(
-            xm,
-            axis_y - 12,
-            xm,
-            axis_y + 12,
-            fill=mean_color,
-            width=2,
-        )
-        self.create_text(
-            xm,
-            axis_y + 16,
-            text=f"Mean {self._mean:.2f}",
-            anchor="n",
-            font=self.FONT_LABEL,
-            fill=mean_color,
+        # Mean arrow (triangle pointing down) - fixed color
+        self.create_polygon(
+            xm, axis_y - 14,                    # bottom vertex (pointing down)
+            xm - arrow_size, axis_y - 14 - 10,  # top left
+            xm + arrow_size, axis_y - 14 - 10,  # top right
+            fill=self.MEAN_COLOR,
+            outline=self.MEAN_COLOR,
         )
 
         # Axis ticks for min / max
