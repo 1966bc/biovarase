@@ -54,15 +54,9 @@
 
 ### 6. Credenziali Hardcoded ✅ RISOLTO (era CRITICO)
 
-**Problema trovato:** `update_passwords.py` conteneva credenziali database hardcoded:
-```python
-db_host = '172.16.149.100'
-db_user = 'biovarase'
-db_password = 'pS2dY^hX1nB5mL'  # ERA ESPOSTA!
-db_name = 'biovarase'
-```
+**Problema trovato:** `update_passwords.py` conteneva credenziali database hardcoded (host, user, password, database name in chiaro nel codice).
 
-**Criticità:** ALTA - Password database esposta nel repository.
+**Criticità:** ALTA - Credenziali database esposte nel repository.
 
 **Azione correttiva:** ✅ File `update_passwords.py` ELIMINATO DEFINITIVAMENTE dal repository.
 
