@@ -235,7 +235,7 @@ class Controller:
                 self.on_log(
                     "import_qc_file_auto",
                     f"Workstation not found: workstation_id={workstation_id}",
-                    "ValueError",
+                    ValueError,
                     sys.modules[__name__],
                 )
                 return 0, 0, 0, ""

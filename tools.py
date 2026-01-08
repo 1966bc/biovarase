@@ -98,13 +98,13 @@ class Tools:
         style.configure("Data.TLabel",
                         font=('Helvetica', 12, 'bold'))
 
-        # QC-specific styles
+        # QC-specific styles (colors match bias chart arrows)
         style.configure("Target.TLabel",
-                        foreground=self.get_rgb(255, 69, 0),
+                        foreground="#0000aa",  # blue (same as bias chart Target arrow)
                         background=self.get_rgb(255, 255, 255))
 
         style.configure("Average.TLabel",
-                        foreground=self.get_rgb(25, 102, 188),
+                        foreground="#006400",  # dark green (same as bias chart Mean arrow)
                         background=self.get_rgb(255, 255, 255))
 
         style.configure("westgard_violation.TLabel",

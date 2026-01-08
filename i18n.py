@@ -64,7 +64,7 @@ TRANSLATIONS = {
     # ==========================================================================
     # Login Window
     # ==========================================================================
-    "Username:": {"it": "Nome utente:", "en": "Username:"},
+    "Username:": {"it": "Utente:", "en": "Username:"},
     "Password:": {"it": "Password:", "en": "Password:"},
     "Remember me": {"it": "Ricordami", "en": "Remember me"},
     "Auto login": {"it": "Accesso automatico", "en": "Auto login"},
@@ -124,14 +124,24 @@ TRANSLATIONS = {
     "Tests": {"it": "Test", "en": "Tests"},
 
     # ==========================================================================
-    # Menu - Plots
+    # Menu - QC (Quality Control)
     # ==========================================================================
+    "QC": {"it": "QC", "en": "QC"},
     "Plots": {"it": "Grafici", "en": "Plots"},
     "Levey-Jennings": {"it": "Levey-Jennings", "en": "Levey-Jennings"},
     "Total Error": {"it": "Errore Totale", "en": "Total Error"},
     "Youden Plot": {"it": "Grafico Youden", "en": "Youden Plot"},
     "Youden": {"it": "Youden", "en": "Youden"},
     "Tea": {"it": "TEa", "en": "Tea"},
+
+    # Youden Selector Dialog
+    "Select Batches for Youden Plot": {"it": "Seleziona Lotti per Grafico Youden", "en": "Select Batches for Youden Plot"},
+    "Level 1:": {"it": "Livello 1:", "en": "Level 1:"},
+    "Level 2:": {"it": "Livello 2:", "en": "Level 2:"},
+    "Plot": {"it": "Grafico", "en": "Plot"},
+    "Please select a workstation.": {"it": "Selezionare una postazione.", "en": "Please select a workstation."},
+    "Please select a test.": {"it": "Selezionare un test.", "en": "Please select a test."},
+    "Please select both Level 1 and Level 2 batches.": {"it": "Selezionare entrambi i lotti Livello 1 e Livello 2.", "en": "Please select both Level 1 and Level 2 batches."},
 
     # ==========================================================================
     # Menu - Documents
@@ -555,7 +565,7 @@ TRANSLATIONS = {
     # ==========================================================================
     # Status Bar and User Messages
     # ==========================================================================
-    "Ready Player {0}": {"it": "Giocatore Pronto {0}", "en": "Ready Player {0}"},
+    "Ready Player {0}": {"it": "Pronto {0}", "en": "Ready {0}"},
     "Access Denied": {"it": "Accesso Negato", "en": "Access Denied"},
 
     # ==========================================================================

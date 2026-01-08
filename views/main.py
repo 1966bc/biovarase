@@ -69,6 +69,7 @@ import views.plots
 import views.set_zscore
 import views.observations
 import views.youden
+import views.youden_selector
 import views.users
 import views.samples
 import views.analitycal_goals
@@ -188,7 +189,7 @@ class Main(tk.Toplevel):
         m_about = tk.Menu(m_main, tearoff=0, bd=1)
 
         m_main.add_cascade(label=_("File"), underline=0, menu=m_file)
-        m_main.add_cascade(label=_("Plots"), underline=0, menu=m_plots)
+        m_main.add_cascade(label=_("QC"), underline=0, menu=m_plots)
         m_main.add_cascade(label=_("Edit"), underline=0, menu=m_edit)
         m_main.add_cascade(label=_("Imports"), underline=1, menu=m_imports)
         m_main.add_cascade(label=_("Exports"), underline=1, menu=m_exports)
@@ -252,15 +253,18 @@ class Main(tk.Toplevel):
         m_file.add_separator()
         m_file.add_command(label=_("Exit"), underline=0, command=self.on_close)
 
-        items = ((_("Plots"), 0, self.on_plots),
+        # Daily Validation first, then charts
+        m_plots.add_command(label=_("Daily Validation"), underline=0, command=self.on_daily_validation)
+        m_plots.add_separator()
+
+        items = ((_("Levey-Jennings"), 0, self.on_plots),
                  (_("Youden"), 0, self.on_youden),
                  (_("Tea"), 0, self.on_tea),)
 
         for i in items:
             m_plots.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = ((_("Daily Validation"), 0, self.on_daily_validation),
-                 (_("Batches"), 0, self.on_batches),
+        items = ((_("Batches"), 0, self.on_batches),
                  (_("Test Methods"), 0, self.on_test_methods),
                  (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
                  (_("Workstations"), 0, self.on_workstations),
@@ -348,7 +352,7 @@ class Main(tk.Toplevel):
 
         frm_lists = ttk.Frame(frm_data, style="App.TFrame")
 
-        ttk.Label(frm_lists, text='Categories').pack(side=tk.TOP, fill=tk.X, expand=0)
+        ttk.Label(frm_lists, text=_('Categories')).pack(side=tk.TOP, fill=tk.X, expand=0)
 
         self.cbCategories = ttk.Combobox(frm_lists, style="App.TCombobox", state="readonly")
         self.cbCategories.bind("<<ComboboxSelected>>", self.on_selected_category)
@@ -1894,83 +1898,36 @@ class Main(tk.Toplevel):
         )
 
 
-    def on_youden(self,):
-        """Open Youden plot window for two selected batches."""
+    def on_youden(self):
+        """Open Youden selector dialog to choose batches for Youden plot."""
+        # Pre-select workstation and test if already selected in main window
+        preselect_ws_id = None
+        preselect_tm_id = None
 
-        engine = self.nametowidget(".").engine
+        if hasattr(self, 'selected_workstation') and self.selected_workstation:
+            preselect_ws_id = self.selected_workstation.get("workstation_id")
 
-        # A test must be selected
-        if self.cbTests.current() == -1:
-            msg = _("Not enough data to plot.\nSelect a test.")
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
+        if hasattr(self, 'selected_test_method') and self.selected_test_method:
+            preselect_tm_id = self.selected_test_method.get("test_method_id")
 
-        # Two batches must be selected
-        items = self.lstBatches.selection()
-        if not items:
-            msg = _(
-                "Not enough data to plot a Youden chart.\n"
-                "You need to select two batches."
-            )
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        if len(items) != 2:
-            msg = _(
-                "Youden plot requires exactly two batches.\n"
-                "Please select only two batches."
-            )
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        # Selected test method
-        index = self.cbTests.current()
-        pk_test_method = self.test_methods[index]
-        selected_test_method = engine.get_selected(
-            "test_methods",
-            "test_method_id",
-            pk_test_method,
+        views.youden_selector.UI(
+            self,
+            self._on_youden_plot,
+            preselect_workstation_id=preselect_ws_id,
+            preselect_test_method_id=preselect_tm_id
         )
 
-        # Resolve selected batches
-        pks = []
-        batches = []
-        for list_index in items:
-            batch_pk = self.dict_batches.get(list_index)
-            if batch_pk is not None:
-                pks.append(batch_pk)
+    def _on_youden_plot(self, test_method, workstation, batches, data):
+        """
+        Callback from Youden selector - open the actual Youden plot.
 
-        for batch_pk in pks:
-            batch = engine.get_selected("batches", "batch_id", batch_pk)
-            batches.append(batch)
-
-        # Get series for each batch
-        data = []
-        observations = int(engine.get_observations())
-        for batch in batches:
-            series = engine.get_series(
-                batch["batch_id"],
-                self.selected_workstation["workstation_id"],
-                observations,
-            )
-            data.append(series)
-
-        # Both batches must have at least one result
-        if not data[0] or not data[1]:
-            msg = _(
-                "Not enough data to plot a Youden chart.\n"
-                "Both selected batches must have at least one result."
-            )
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        # Even if lengths are different, youden.py will use min(len(L1), len(L2))
-        views.youden.UI(self).on_open(
-            selected_test_method,
-            self.selected_workstation,
-            batches,
-            data,
-        )
+        Args:
+            test_method: Selected test method dict
+            workstation: Selected workstation dict
+            batches: List of two batch dicts [level1, level2]
+            data: List of two series [series1, series2]
+        """
+        views.youden.UI(self).on_open(test_method, workstation, batches, data)
 
     def on_export_notes(self) -> None:
         views.export_notes.UI(self).on_open()
