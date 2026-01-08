@@ -2,6 +2,8 @@
 config.enc
 secrets.txt
 .secrets
+.env
+.env.*
 
 # Logs
 log.txt
