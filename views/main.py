@@ -42,6 +42,7 @@ from tkinter import font
 from ljcanvas import LeveyJenningsCanvas
 from bias_canvas import BiasCanvas
 from i18n import _, set_language
+from westgards import WESTGARD_ACCEPT
 
 # project frames
 import views.license
@@ -106,7 +107,7 @@ class Main(tk.Toplevel):
             return
         super().__init__(name="main")
         self._initialized = True
-        self.engine = self.nametowidget(".").engine
+        self.engine = self.engine
         self.engine.dict_instances[self.winfo_name()] = self
         self.parent = parent
 
@@ -165,7 +166,7 @@ class Main(tk.Toplevel):
         screen_height  = self.nametowidget(".").winfo_screenheight()
 
         #get dimension from dimension file
-        d = self.nametowidget(".").engine.get_dimensions()
+        d = self.engine.get_dimensions()
         window_width = int(d['w'])
         window_height = int(d['h'])
         
@@ -197,7 +198,7 @@ class Main(tk.Toplevel):
         m_main.add_cascade(label=_("Admin"), underline=0, menu=m_adm)
         m_main.add_cascade(label="?", underline=0, menu=m_about)
 
-        if self.nametowidget(".").engine.log_user["role"] != 0:
+        if self.engine.log_user["role"] != 0:
             items = ((_("Reset"), 0, self.on_reset),
                      (_("Analytica"), 0, self.on_analitical),
                      (_("Z Score"), 0, self.on_zscore),)
@@ -230,7 +231,7 @@ class Main(tk.Toplevel):
                            command=self.on_log)
 
         # Language submenu (admin only)
-        if self.nametowidget(".").engine.log_user["role"] == 0:
+        if self.engine.log_user["role"] == 0:
             m_file.add_separator()
             m_lang = tk.Menu(m_file, tearoff=0)
             self.lang_var = tk.StringVar(value=self.engine.get_language())
@@ -247,7 +248,7 @@ class Main(tk.Toplevel):
                 command=self._on_language_change
             )
             m_file.add_cascade(label=_("Language"), underline=0, menu=m_lang)
-            m_lang.config(bg=self.nametowidget(".").engine.get_rgb(240, 240, 237),)
+            m_lang.config(bg=self.engine.get_rgb(240, 240, 237),)
             m_lang.config(fg="black")
 
         m_file.add_separator()
@@ -321,7 +322,7 @@ class Main(tk.Toplevel):
                      m_documents, m_adm, m_about]
 
         for m in all_menus:
-            m.config(bg=self.nametowidget(".").engine.get_rgb(240, 240, 237),)
+            m.config(bg=self.engine.get_rgb(240, 240, 237),)
             m.config(fg="black")
 
         self.config(menu=m_main)
@@ -517,7 +518,7 @@ class Main(tk.Toplevel):
 
         self.frm_main.pack(fill=tk.BOTH, expand=1)
 
-        d = self.nametowidget(".").engine.get_dimensions()
+        d = self.engine.get_dimensions()
         window_width = int(d['w'])
         window_height = int(d['h'])
 
@@ -525,9 +526,9 @@ class Main(tk.Toplevel):
 
     def init_status_bar(self) -> None:
 
-        user = "{0} {1} on board {2}".format(self.nametowidget(".").engine.log_user["last_name"],
-                                             self.nametowidget(".").engine.log_user["first_name"],
-                                             self.nametowidget(".").engine.get_log_ip())
+        user = "{0} {1} on board {2}".format(self.engine.log_user["last_name"],
+                                             self.engine.log_user["first_name"],
+                                             self.engine.get_log_ip())
 
         msg = _("Ready Player {0}").format(user)
 
@@ -574,16 +575,16 @@ class Main(tk.Toplevel):
 
 
     def on_open(self) -> None:
-        #print(self.nametowidget(".").engine.current_ids)
-        company = self.nametowidget(".").engine.get_company_data()
+        #print(self.engine.current_ids)
+        company = self.engine.get_company_data()
         if company:
             self.title(f"Biovarase {company['site']}")
         else:
             self.title("Biovarase")
 
         self.status_bar_site_description.set(self.get_status_bar_site_description(company))
-        self.ddof.set(self.nametowidget(".").engine.get_ddof())
-        self.observations.set(self.nametowidget(".").engine.get_observations())
+        self.ddof.set(self.engine.get_ddof())
+        self.observations.set(self.engine.get_observations())
         self.set_categories()
         self.set_zscore()
 
@@ -617,7 +618,7 @@ class Main(tk.Toplevel):
 
     def refresh_context_from_section(self):
         """Re-read section-dependent data and update title, status bar and lists."""
-        company = self.nametowidget(".").engine.get_company_data()
+        company = self.engine.get_company_data()
         if company:
             self.title(f"Biovarase {company['site']}")
             self.status_bar_site_description.set(
@@ -653,10 +654,10 @@ class Main(tk.Toplevel):
         return w
 
     def set_observations(self):
-        self.observations.set(self.nametowidget(".").engine.get_observations())
+        self.observations.set(self.engine.get_observations())
 
     def set_zscore(self):
-        self.zscore.set(self.nametowidget(".").engine.get_zscore())
+        self.zscore.set(self.engine.get_zscore())
 
     def on_reset(self):
 
@@ -745,7 +746,7 @@ class Main(tk.Toplevel):
 
         # --- Total error (percent) as before --------------------------------
         if self.target.get() != 0:
-            et = self.nametowidget(".").engine.get_te(
+            et = self.engine.get_te(
                 self.target.get(),
                 self.average.get(),
                 self.cva.get(),
@@ -767,7 +768,7 @@ class Main(tk.Toplevel):
 
         # Calcolo regola
         try:
-            engine = getattr(self, "engine", None) or self.nametowidget(".").engine
+            engine = getattr(self, "engine", None) or self.engine
             rule = engine.get_westgard_violation_rule(
                 self.selected_batch["target"], self.selected_batch["sd"],
                 [float(x) for x in series],
@@ -789,7 +790,7 @@ class Main(tk.Toplevel):
             self.westgard.set(_("No data"))
             return
 
-        if val == "Accept":
+        if val == WESTGARD_ACCEPT:
             style = "westgard_ok.TLabel"
         else:
             style = "westgard_violation.TLabel"
@@ -805,7 +806,7 @@ class Main(tk.Toplevel):
         index = 0
 
         # user: per section
-        if self.nametowidget(".").engine.log_user["role"] == 2:
+        if self.engine.log_user["role"] == 2:
 
             sql = """
                     SELECT DISTINCT categories.category_id, 
@@ -836,9 +837,9 @@ class Main(tk.Toplevel):
                     ORDER BY categories.description;
                 """
         
-            args = (self.nametowidget(".").engine.get_lab_id(),)
+            args = (self.engine.get_lab_id(),)
             
-        rs = self.nametowidget(".").engine.read(True, sql, args)
+        rs = self.engine.read(True, sql, args)
 
         if rs:
             for row in rs:
@@ -877,9 +878,9 @@ class Main(tk.Toplevel):
               """
 
         args = (category_id,
-                self.nametowidget(".").engine.get_section_id())
+                self.engine.get_section_id())
 
-        rs = self.nametowidget(".").engine.read(True, sql, args)
+        rs = self.engine.read(True, sql, args)
         if rs:
             for row in rs:
                 self.test_methods[index] = row["test_method_id"]
@@ -915,9 +916,9 @@ class Main(tk.Toplevel):
              """
 
         args = (self.selected_test_method["test_method_id"],
-                    self.nametowidget(".").engine.get_section_id())
+                    self.engine.get_section_id())
 
-        rs = self.nametowidget(".").engine.read(True, sql, args)
+        rs = self.engine.read(True, sql, args)
 
         if rs:
             first_item = None
@@ -1120,7 +1121,7 @@ class Main(tk.Toplevel):
             int(self.observations.get())
         )
 
-        rs = self.nametowidget(".").engine.read(True, sql, args)
+        rs = self.engine.read(True, sql, args)
 
         if not rs:
             self.reset_cal_data()
@@ -1721,16 +1722,16 @@ class Main(tk.Toplevel):
         views.samples.UI(self).on_open()
 
     def on_units(self,):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.units.UI(self).on_open()
 
     def on_methods(self,):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
@@ -1747,8 +1748,8 @@ class Main(tk.Toplevel):
 
     def on_equipments(self):
 
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
 
         else:
@@ -1765,31 +1766,31 @@ class Main(tk.Toplevel):
 
     def on_suppliers(self,):
 
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
         else:
             views.suppliers.UI(self).on_open()
 
     def on_labs(self):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         views.labs.UI(self).on_open()
 
     def on_sites(self,):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.sites.UI(self).on_open()
 
     def on_sections(self,):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
@@ -1814,16 +1815,16 @@ class Main(tk.Toplevel):
         views.batches.UI(self).on_open()
 
     def on_actions(self,):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
         views.actions.UI(self).on_open()
 
     def on_users(self,):
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
         
@@ -1840,7 +1841,7 @@ class Main(tk.Toplevel):
 
                 index = self.cbTests.current()
                 pk = self.test_methods[index]
-                selected_test_method = self.nametowidget(".").engine.get_selected("test_methods", "test_method_id", pk)
+                selected_test_method = self.engine.get_selected("test_methods", "test_method_id", pk)
                 views.plots.UI(self,).on_open(selected_test_method,
                                                self.selected_workstation,
                                                int(self.observations.get()))
@@ -1875,7 +1876,7 @@ class Main(tk.Toplevel):
         pk = self.test_methods[index]
 
         # Get full test_method + goals structure
-        selected = self.nametowidget(".").engine.get_test_method_with_goals(pk)
+        selected = self.engine.get_test_method_with_goals(pk)
 
         if not selected:
             messagebox.showwarning(self.engine.app_title,
@@ -1945,11 +1946,11 @@ class Main(tk.Toplevel):
     def on_ddof(self,):
 
         if self.ddof.get() == True:
-            self.nametowidget(".").engine.set_ddof(1)
+            self.engine.set_ddof(1)
         else:
-            self.nametowidget(".").engine.set_ddof(0)
+            self.engine.set_ddof(0)
 
-        self.ddof.set(self.nametowidget(".").engine.get_ddof())
+        self.ddof.set(self.engine.get_ddof())
 
         try:
             self.set_results()
@@ -1960,8 +1961,8 @@ class Main(tk.Toplevel):
 
     def on_insert_demo_result(self, evt: Optional[tk.Event] = None) -> None:
 
-        if not self.nametowidget(".").engine.is_admin():
-            msg = self.nametowidget(".").engine.user_not_enable
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
@@ -1979,7 +1980,7 @@ class Main(tk.Toplevel):
 
 
                 try:
-                    cur = self.nametowidget(".").engine.con.cursor()
+                    cur = self.engine.con.cursor()
                     # Begin transaction
                     cur.execute("START TRANSACTION")  # Use START TRANSACTION for better MariaDB compatibility
 
@@ -1993,7 +1994,7 @@ class Main(tk.Toplevel):
                     max_val = round(target + sd, 2)
                                                                                         
                     sql_insert = "INSERT INTO results(batch_id, workstation_id, result, received, log_time, log_id) VALUES(?,?,?,?,?,?)"
-                    log_time = self.nametowidget(".").engine.get_log_time()
+                    log_time = self.engine.get_log_time()
 
                     # Prepare data for executemany()
                     data_to_insert = []
@@ -2006,7 +2007,7 @@ class Main(tk.Toplevel):
                             round(result, 2),
                             current_log_time,
                             current_log_time,
-                            self.nametowidget(".").engine.log_user["user_id"]
+                            self.engine.log_user["user_id"]
                         ))
                         # Ensure current_log_time is a datetime object for increment
                         if isinstance(current_log_time, str):
@@ -2014,7 +2015,7 @@ class Main(tk.Toplevel):
                                 current_log_time = datetime.datetime.strptime(current_log_time, '%Y-%m-%d %H:%M:%S')
                             except ValueError:
                                 # Handle error if string format is incorrect
-                                self.nametowidget(".").engine.on_log(inspect.stack()[0][3],
+                                self.engine.on_log(inspect.stack()[0][3],
                                                                        "Error in date/time format",
                                                                        ValueError,
                                                                        sys.modules[__name__])
@@ -2024,11 +2025,11 @@ class Main(tk.Toplevel):
 
                     cur.executemany(sql_insert, data_to_insert)  # Use executemany()
 
-                    self.nametowidget(".").engine.con.commit()  # Commit the transaction
+                    self.engine.con.commit()  # Commit the transaction
                     self.set_results()
                 except Exception as e:  # Catch generic exception for rollback
-                    self.nametowidget(".").engine.con.rollback()  # Rollback on any error
-                    self.nametowidget(".").engine.on_log(inspect.stack()[0][3],
+                    self.engine.con.rollback()  # Rollback on any error
+                    self.engine.on_log(inspect.stack()[0][3],
                                                            str(e),
                                                            sys.exc_info()[0],
                                                            sys.modules[__name__])
@@ -2133,7 +2134,7 @@ class Main(tk.Toplevel):
 
     def _open_document(self, key: str, error_msg: str) -> None:
         """Helper to open documents from documents.json."""
-        engine = self.nametowidget(".").engine
+        engine = self.engine
         engine.busy(self)
 
         try:
@@ -2176,7 +2177,7 @@ class Main(tk.Toplevel):
         views.license.UI(self).on_open()
 
     def on_python_version(self) -> None:
-        s = self.nametowidget(".").engine.get_python_version()
+        s = self.engine.get_python_version()
         messagebox.showinfo(self.engine.app_title, s, parent=self)
 
     def on_tkinter_version(self) -> None:
@@ -2203,7 +2204,7 @@ class Main(tk.Toplevel):
         views.change_password.UI(self, ).on_open()
 
     def on_log(self,):
-        self.nametowidget(".").engine.get_log_file()
+        self.engine.get_log_file()
 
     def on_import_results(self) -> None:
         """Open Import Results window (Admin/Superuser only)."""
@@ -2455,5 +2456,5 @@ class Main(tk.Toplevel):
         self.engine.unsubscribe("batch_changed", self._on_batch_changed)
         self.engine.unsubscribe("tests_changed", self._on_tests_changed)
         self.engine.unsubscribe("categories_changed", self._on_categories_changed)
-        self.nametowidget(".").engine.dict_instances.pop(self.winfo_name(), None)
+        self.engine.dict_instances.pop(self.winfo_name(), None)
         self.nametowidget(".").on_exit()

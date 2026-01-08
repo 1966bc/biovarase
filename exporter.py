@@ -14,6 +14,7 @@ import tempfile
 from datetime import date, datetime
 
 import openpyxl
+from westgards import WESTGARD_ACCEPT
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
@@ -608,7 +609,7 @@ class Exporter:
                         worksheet.cell(row=row_num, column=13, value=uncertainty)       # U (absolute)
 
                         wc = worksheet.cell(row=row_num, column=14, value=rule)         # Westgard rule
-                        if rule not in ('Accept', 'No data'):
+                        if rule not in (WESTGARD_ACCEPT, 'No data'):
                             wc.fill = PatternFill(
                                 start_color=self._color("yellow"),
                                 end_color=self._color("yellow"),

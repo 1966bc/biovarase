@@ -20,6 +20,9 @@ WESTGARD_R_4S_WINDOW = 2   # R:4s rule - range of 2 values
 WESTGARD_4_1S_WINDOW = 4   # 4:1s rule - 4 consecutive values
 WESTGARD_10_X_WINDOW = 10  # 10:x rule - 10 consecutive values
 
+# Result codes (internal, not translated)
+WESTGARD_ACCEPT = "Accept"  # QC in control
+
 
 class Westgards:
     """
@@ -120,7 +123,7 @@ class Westgards:
             elif self.get_rule_10X(series, target):
                 return "10:X"  # Persistent bias
             else:
-                return "Accept"  # In control
+                return WESTGARD_ACCEPT  # In control
 
     def _calculate_control_limits(self, target: float, sd: float) -> Dict[str, float]:
         """

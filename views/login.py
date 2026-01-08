@@ -49,11 +49,14 @@ class Login(ttk.Frame):
         """
         super().__init__()
 
+        # Get engine reference once
+        self.engine = self.engine
+
         # Initialize language from configuration
-        lang = self.nametowidget(".").engine.get_language()
+        lang = self.engine.get_language()
         set_language(lang)
 
-        self.nametowidget(".").engine.dict_instances[self.winfo_name()] = self
+        self.engine.dict_instances[self.winfo_name()] = self
         self.parent: tk.Widget = parent
         self.parent.protocol("WM_DELETE_WINDOW",
                              self.nametowidget(".").on_exit)
@@ -62,7 +65,7 @@ class Login(ttk.Frame):
         self.nick: tk.StringVar = tk.StringVar()
         self.password: tk.StringVar = tk.StringVar()
         self.attempts: int = 0
-        self.nametowidget(".").engine.thread = None
+        self.engine.thread = None
         self.center_me()
         self._build_ui()
 
@@ -159,43 +162,43 @@ class Login(ttk.Frame):
             - Shows warning and increments counter on failure
             - Exits after MAX_LOGIN_ATTEMPTS failed attempts
         """
-        if self.nametowidget(".").engine.on_fields_control(
+        if self.engine.on_fields_control(
             self.frm_main,
-            self.nametowidget(".").engine.app_title
+            self.engine.app_title
         ) == False:
             return
 
         nick, password = self.get_values()
 
-        rs = self.nametowidget(".").engine.on_login((nick, password))
+        rs = self.engine.on_login((nick, password))
 
         if rs:
-            self.nametowidget(".").engine.set_log_user(rs)
+            self.engine.set_log_user(rs)
             self.hide()
 
             # Start idle monitor if enabled for this user
-            if self.nametowidget(".").engine.log_user["enable_time"] == True:
-                self.nametowidget(".").engine.thread = Monitor(self)
-                self.nametowidget(".").engine.thread.start()
+            if self.engine.log_user["enable_time"] == True:
+                self.engine.thread = Monitor(self)
+                self.engine.thread.start()
 
             ui.Main(self).on_open()
 
         else:
             msg = _("Login failed.")
-            messagebox.showwarning(self.nametowidget(".").engine.app_title, msg, parent=self)
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
 
             self.attempts += 1
 
             if self.attempts >= MAX_LOGIN_ATTEMPTS:
                 msg = _("Maximum login attempts exceeded.")
-                messagebox.showwarning(self.nametowidget(".").engine.app_title, msg, parent=self)
+                messagebox.showwarning(self.engine.app_title, msg, parent=self)
                 self.on_quit()
             else:
                 self.txtNick.focus()
 
     def on_about(self) -> None:
         """Display application information dialog."""
-        messagebox.showinfo(self.nametowidget(".").engine.app_title,
+        messagebox.showinfo(self.engine.app_title,
                             self.nametowidget(".").info,
                             parent=self)
 
@@ -206,5 +209,5 @@ class Login(ttk.Frame):
         Args:
             evt: Tkinter event (optional)
         """
-        self.nametowidget(".").engine.con.close()
+        self.engine.con.close()
         self.quit()
