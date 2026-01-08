@@ -49,8 +49,8 @@ class Login(ttk.Frame):
         """
         super().__init__()
 
-        # Get engine reference once
-        self.engine = self.engine
+        # Get engine reference once from root window (App)
+        self.engine = self.nametowidget(".").engine
 
         # Initialize language from configuration
         lang = self.engine.get_language()
