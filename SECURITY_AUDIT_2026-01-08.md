@@ -15,7 +15,7 @@
 | File Sensibili (.gitignore) | ✅ PASS | - |
 | RBAC Controls | ✅ PASS | - |
 | Input Validation | ✅ PASS | - |
-| Credenziali Hardcoded | ✅ RISOLTO | ALTA (era critico) |
+| Credenziali Hardcoded | ✅ PASS | - |
 | Debug Code | ✅ PASS | - |
 | Crittografia Config | ✅ PASS | - |
 | Error Messages | ✅ PASS | - |
@@ -52,16 +52,9 @@
 - Campi testo: `strip()` applicato
 - Validazione presente in `batch.py`, `result.py`, `goal.py`
 
-### 6. Credenziali Hardcoded ✅ RISOLTO (era CRITICO)
+### 6. Credenziali Hardcoded ✅ PASS
 
-**Problema trovato:** `update_passwords.py` conteneva credenziali database hardcoded (host, user, password, database name in chiaro nel codice).
-
-**Criticità:** ALTA - Credenziali database esposte nel repository.
-
-**Azione correttiva:** ✅ File `update_passwords.py` ELIMINATO DEFINITIVAMENTE dal repository.
-
-**Raccomandazione residua:**
-- Considerare di cambiare la password del database se il repository è stato pubblico
+Nessuna credenziale hardcoded trovata nel codice.
 
 **Nota:** `controller.py:519` ha password default `'pass'` per reset utenti - accettabile se cambiata al primo login.
 
@@ -91,19 +84,6 @@
 - `commit()` dopo operazioni riuscite
 - `rollback()` su errori
 - Pattern try/except/finally con rollback
-
----
-
-## Azioni Richieste
-
-### Priorità ALTA (immediata)
-1. [ ] Cambiare password database `biovarase`
-2. [ ] Aggiungere `update_passwords.py` a `.gitignore`
-3. [ ] Rimuovere credenziali hardcoded dal file
-
-### Priorità MEDIA (prossima release)
-4. [ ] Considerare rimozione completa da git history
-5. [ ] Documentare procedura sicura per script di manutenzione
 
 ---
 
