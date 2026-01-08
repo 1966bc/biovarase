@@ -42,7 +42,6 @@ pytest --cov=. --cov-report=html --cov-report=term
 
 # Database setup
 mysql -u root -p < schema.sql
-mysql -u biovarase -p biovarase < migrations/001_add_foreign_keys_FIXED.sql
 ```
 
 ## Architecture
@@ -298,19 +297,13 @@ self.engine.is_read_only()         # Autologin
 
 ## Testing
 
-### Test Markers (conftest.py)
+### Test Markers (pytest.ini)
 - `@pytest.mark.critical` - Medical safety tests
 - `@pytest.mark.westgard` - Westgard rule tests
 - `@pytest.mark.qc` - QC statistical tests
 - `@pytest.mark.security` - Security/encryption tests
 - `@pytest.mark.unit` - Fast unit tests
 - `@pytest.mark.integration` - Database/file I/O tests
-
-### Fixtures Available
-- `qc_normal_series`, `qc_target_sd` - Normal QC data
-- `qc_violation_1_3s`, `qc_violation_2_2s`, etc. - Violation series
-- `stats_simple_series` - [10, 20, 30, 40, 50]
-- `temp_log_file`, `temp_config_file` - Temporary files
 
 ### Test Pattern (AAA)
 ```python
@@ -351,19 +344,15 @@ biovarase/
 ├── launcher.py           # File opening
 ├── security.py           # Encryption (hardware-locked)
 ├── i18n.py               # Internationalization (translations)
-├── views/                # GUI windows
-│   ├── parent_view.py    # Base class (singleton)
-│   ├── child_view.py     # Base class (editor)
-│   ├── main.py           # Main window
-│   ├── login.py          # Authentication
-│   └── [50+ windows]
-├── tests/                # pytest test suite
-│   ├── conftest.py       # Fixtures
-│   ├── test_qc.py
-│   ├── test_westgards.py
-│   └── test_security.py
-├── migrations/           # Database migrations
+├── views/                # GUI windows (~50 windows)
+│   ├── parent_view.py    # Base class (singleton master windows)
+│   ├── child_view.py     # Base class (editor dialogs)
+│   ├── main.py           # Main application window
+│   ├── login.py          # Authentication dialog
+│   ├── batches.py        # QC batch management
+│   └── ...               # Domain-specific views
 ├── schema.sql            # Database schema
+├── pytest.ini            # Test configuration
 └── docs/                 # Additional documentation
 ```
 

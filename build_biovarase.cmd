@@ -3,11 +3,12 @@ REM ============================================================================
 REM  Biovarase - build_biovarase.cmd
 REM  Build script for Nuitka compilation (STANDALONE mode)
 REM  
-REM  Updated: 2025-12-03
-REM  Changes: 
+REM  Updated: 2025-01-08
+REM  Changes:
 REM    - Security implementation (config.enc replaces config.txt)
 REM    - File config nella ROOT (syntax: file=file invece di file=.)
-REM    - Icona .exe aggiunta da icons\biovarase.ico
+REM    - Icona .exe aggiunta da biovarase.ico (root)
+REM    - Rimossi riferimenti a directory/file inesistenti
 REM  Target: Windows 10 / 11, Python 3.7+
 REM ============================================================================
 
@@ -67,12 +68,12 @@ IF %ERRORLEVEL% NEQ 0 (
 
 echo.
 echo [5/6] Checking icon file...
-IF NOT EXIST "icons\biovarase.ico" (
-    echo [WARNING] icons\biovarase.ico not found!
+IF NOT EXIST "biovarase.ico" (
+    echo [WARNING] biovarase.ico not found!
     echo .exe will have default Windows icon.
     timeout /t 2 >nul
 ) ELSE (
-    echo [OK] Icon found: icons\biovarase.ico
+    echo [OK] Icon found: biovarase.ico
 )
 
 echo.
@@ -101,7 +102,7 @@ echo ===========================================================================
 echo.
 echo Mode: STANDALONE (creates dist\biovarase.dist\ folder)
 echo Output: dist\biovarase.dist\biovarase.exe
-echo Icon: icons\biovarase.ico (embedded in .exe)
+echo Icon: biovarase.ico (embedded in .exe)
 echo.
 echo This may take 5-15 minutes depending on your system...
 echo (First build will be slower - downloads MinGW64 if needed)
@@ -122,7 +123,7 @@ py -m nuitka biovarase.py ^
     --standalone ^
     --output-dir=dist ^
     --output-filename=biovarase ^
-    --windows-icon-from-ico=icons\biovarase.ico ^
+    --windows-icon-from-ico=biovarase.ico ^
     --enable-plugin=tk-inter ^
     --follow-imports ^
     --mingw64 ^
@@ -131,32 +132,26 @@ py -m nuitka biovarase.py ^
     --include-package=security ^
     --nofollow-import-to=tkinter.test ^
     ^
-    --include-data-dir=frames=frames ^
     --include-data-dir=documents=documents ^
-    --include-data-dir=icons=icons ^
-    --include-data-dir=imports=imports ^
-    --include-data-dir=qc=qc ^
     --include-data-dir=sql=sql ^
     ^
     --include-data-files=autologin=autologin ^
-    --include-data-files=bvv=bvv ^
     --include-data-files=correlation_coefficient=correlation_coefficient ^
     --include-data-files=date_format=date_format ^
     --include-data-files=ddof=ddof ^
     --include-data-files=dimensions=dimensions ^
     --include-data-files=elements=elements ^
-    --include-data-files=guidelines=guidelines ^
     --include-data-files=icon=icon ^
+    --include-data-files=language=language ^
     --include-data-files=LICENSE=LICENSE ^
     --include-data-files=lot_description_lenght=lot_description_lenght ^
     --include-data-files=lot_lenght=lot_lenght ^
-    --include-data-files=manual=manual ^
     --include-data-files=observations=observations ^
-    --include-data-files=qc_thecnical_manual=qc_thecnical_manual ^
     --include-data-files=records=records ^
     --include-data-files=remember_batch=remember_batch ^
     --include-data-files=section_id=section_id ^
-    --include-data-files=zscore=zscore
+    --include-data-files=zscore=zscore ^
+    --include-data-files=documents.json=documents.json
 
 REM Note: NO line continuation after last file
 
@@ -191,7 +186,7 @@ echo ===========================================================================
 echo.
 echo Output folder: dist\biovarase.dist\
 echo Executable:    dist\biovarase.dist\biovarase.exe
-echo Icon:          Embedded in .exe (icons\biovarase.ico)
+echo Icon:          Embedded in .exe (biovarase.ico)
 echo.
 
 REM ============================================================================
@@ -263,22 +258,16 @@ IF EXIST "dist\biovarase.dist\zscore" (
 echo.
 echo Checking directories:
 
-IF EXIST "dist\biovarase.dist\frames" (
-    echo [OK] frames\ directory
+IF EXIST "dist\biovarase.dist\documents" (
+    echo [OK] documents\ directory
 ) ELSE (
-    echo [ERROR] frames\ directory NOT found
+    echo [ERROR] documents\ directory NOT found
 )
 
 IF EXIST "dist\biovarase.dist\cryptography" (
     echo [OK] cryptography\ library
 ) ELSE (
     echo [ERROR] cryptography\ library NOT found
-)
-
-IF EXIST "dist\biovarase.dist\icons" (
-    echo [OK] icons\ directory
-) ELSE (
-    echo [WARNING] icons\ directory NOT found
 )
 
 echo.
@@ -292,7 +281,7 @@ echo  - security.py            (encryption module)
 echo  - setup_wizard.py        (first-time setup GUI)
 echo  - cryptography\          (security library)
 echo  - icon, section_id, dimensions, ddof, etc. (config files in ROOT)
-echo  - frames\, documents\, icons\, qc\, sql\ (application data)
+echo  - documents\, sql\ (application data)
 echo.
 echo SECURITY NOTE: 
 echo  - config.txt is NOT included (replaced by config.enc)
