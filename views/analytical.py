@@ -31,10 +31,10 @@ class UI(ParentView):
         self.transient(parent)
         self.resizable(0, 0)
 
-        self._init_ui()
+        self._build_ui()
         self.show(on_screen=True)
         
-    def _init_ui(self):
+    def _build_ui(self):
         """Builds the user interface"""
         w = ttk.Frame(self, style="App.TFrame")
         w.columnconfigure(0, weight=1)

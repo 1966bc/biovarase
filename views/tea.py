@@ -41,7 +41,7 @@ class UI(ParentView):
         self._batches = []
         self._header_var = tk.StringVar(value="")
 
-        self._init_ui()
+        self._build_ui()
 
         # Set initial size BEFORE centering
         self.geometry("700x500")
@@ -51,7 +51,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     # UI LAYOUT
     # ---------------------------------------------------------------------
-    def _init_ui(self):
+    def _build_ui(self):
         self.title(_("Total Error"))
 
         self.columnconfigure(0, weight=1)

@@ -83,6 +83,11 @@ TRANSLATIONS = {
     "File": {"it": "File", "en": "File"},
     "Exit": {"it": "Esci", "en": "Exit"},
     "Do you want to quit": {"it": "Vuoi uscire da", "en": "Do you want to quit"},
+    "Change User": {"it": "Cambia Utente", "en": "Change User"},
+    "Change Section": {"it": "Cambia Sezione", "en": "Change Section"},
+    "Log": {"it": "Log", "en": "Log"},
+    "Analytica": {"it": "Analitici", "en": "Analytica"},
+    "Insert random results": {"it": "Inserisci risultati casuali", "en": "Insert random results"},
 
     # ==========================================================================
     # Menu - Edit
@@ -90,6 +95,12 @@ TRANSLATIONS = {
     "Edit": {"it": "Modifica", "en": "Edit"},
     "Settings": {"it": "Impostazioni", "en": "Settings"},
     "Preferences": {"it": "Preferenze", "en": "Preferences"},
+    "Daily Validation": {"it": "Validazione Giornaliera", "en": "Daily Validation"},
+    "Batches": {"it": "Lotti", "en": "Batches"},
+    "Test Methods": {"it": "Metodi di Test", "en": "Test Methods"},
+    "Tests Methods Workstations": {"it": "Metodi Test Postazioni", "en": "Tests Methods Workstations"},
+    "Set Observations": {"it": "Imposta Osservazioni", "en": "Set Observations"},
+    "Set Z Score": {"it": "Imposta Z Score", "en": "Set Z Score"},
 
     # ==========================================================================
     # Menu - Admin
@@ -109,6 +120,7 @@ TRANSLATIONS = {
     "Samples": {"it": "Campioni", "en": "Samples"},
     "Actions": {"it": "Azioni", "en": "Actions"},
     "Categories": {"it": "Categorie", "en": "Categories"},
+    "Tests": {"it": "Test", "en": "Tests"},
 
     # ==========================================================================
     # Menu - Plots
@@ -117,6 +129,8 @@ TRANSLATIONS = {
     "Levey-Jennings": {"it": "Levey-Jennings", "en": "Levey-Jennings"},
     "Total Error": {"it": "Errore Totale", "en": "Total Error"},
     "Youden Plot": {"it": "Grafico Youden", "en": "Youden Plot"},
+    "Youden": {"it": "Youden", "en": "Youden"},
+    "Tea": {"it": "TEa", "en": "Tea"},
 
     # ==========================================================================
     # Menu - Documents
@@ -125,6 +139,19 @@ TRANSLATIONS = {
     "Reports": {"it": "Report", "en": "Reports"},
     "Export": {"it": "Esporta", "en": "Export"},
     "Import": {"it": "Importa", "en": "Import"},
+    "User Manual": {"it": "Manuale Utente", "en": "User Manual"},
+    "QC Technical Manual": {"it": "Manuale Tecnico QC", "en": "QC Technical Manual"},
+    "Guidelines": {"it": "Linee Guida", "en": "Guidelines"},
+    "Biological Values": {"it": "Valori Biologici", "en": "Biological Values"},
+
+    # ==========================================================================
+    # Menu - Imports/Exports
+    # ==========================================================================
+    "Imports": {"it": "Importazioni", "en": "Imports"},
+    "Exports": {"it": "Esportazioni", "en": "Exports"},
+    "Notes": {"it": "Note", "en": "Notes"},
+    "Analytical Goals": {"it": "Obiettivi Analitici", "en": "Analytical Goals"},
+    "Counts": {"it": "Conteggi", "en": "Counts"},
 
     # ==========================================================================
     # Menu - Help
@@ -133,6 +160,16 @@ TRANSLATIONS = {
     "About": {"it": "Informazioni", "en": "About"},
     "License": {"it": "Licenza", "en": "License"},
     "Language": {"it": "Lingua", "en": "Language"},
+    "Python": {"it": "Python", "en": "Python"},
+    "Tkinter": {"it": "Tkinter", "en": "Tkinter"},
+
+    # ==========================================================================
+    # Status Bar
+    # ==========================================================================
+    "Site:": {"it": "Sito:", "en": "Site:"},
+    "Observations:": {"it": "Osservazioni:", "en": "Observations:"},
+    "Z Score:": {"it": "Z Score:", "en": "Z Score:"},
+    "Delta Degree of Freedom": {"it": "Delta Gradi di Libertà", "en": "Delta Degree of Freedom"},
 
     # ==========================================================================
     # Main Window
@@ -140,6 +177,16 @@ TRANSLATIONS = {
     "Tests": {"it": "Test", "en": "Tests"},
     "Batches": {"it": "Lotti", "en": "Batches"},
     "Results": {"it": "Risultati", "en": "Results"},
+    "Workstation Data Source": {"it": "Sorgente Dati Postazione", "en": "Workstation Data Source"},
+    "Lv": {"it": "Lv", "en": "Lv"},
+    "SD": {"it": "DS", "en": "SD"},
+    "TE%": {"it": "TE%", "en": "TE%"},
+    "sd": {"it": "ds", "en": "sd"},
+    "CV%": {"it": "CV%", "en": "CV%"},
+    "QC": {"it": "QC", "en": "QC"},
+    "Bias%": {"it": "Bias%", "en": "Bias%"},
+    "U": {"it": "U", "en": "U"},
+    "Westgard": {"it": "Westgard", "en": "Westgard"},
     "Control": {"it": "Controllo", "en": "Control"},
     "Control:": {"it": "Controllo:", "en": "Control:"},
     "Lot": {"it": "Lotto", "en": "Lot"},
@@ -475,6 +522,241 @@ TRANSLATIONS = {
         "en": "Restart to apply language change."
     },
     "Language changed.": {"it": "Lingua cambiata.", "en": "Language changed."},
+
+    # ==========================================================================
+    # Change User / Change Section Dialogs
+    # ==========================================================================
+    "Welcome": {"it": "Benvenuto", "en": "Welcome"},
+    "Logged in as:": {"it": "Connesso come:", "en": "Logged in as:"},
+    "Failed to change user:": {"it": "Cambio utente fallito:", "en": "Failed to change user:"},
+    "Failed to change section:": {"it": "Cambio sezione fallito:", "en": "Failed to change section:"},
+    "Logout and switch to different user?\n\nAll open windows will be closed.": {
+        "it": "Disconnettersi e passare a un altro utente?\n\nTutte le finestre aperte verranno chiuse.",
+        "en": "Logout and switch to different user?\n\nAll open windows will be closed."
+    },
+    "Select new section:": {"it": "Seleziona nuova sezione:", "en": "Select new section:"},
+    "No Selection": {"it": "Nessuna Selezione", "en": "No Selection"},
+    "Section Changed": {"it": "Sezione Cambiata", "en": "Section Changed"},
+    "Now working in:": {"it": "Ora stai lavorando in:", "en": "Now working in:"},
+    "Permission Denied": {"it": "Permesso Negato", "en": "Permission Denied"},
+    "Read-only users cannot change section.": {
+        "it": "Gli utenti in sola lettura non possono cambiare sezione.",
+        "en": "Read-only users cannot change section."
+    },
+    "No Sections": {"it": "Nessuna Sezione", "en": "No Sections"},
+    "No sections available for selection.": {
+        "it": "Nessuna sezione disponibile per la selezione.",
+        "en": "No sections available for selection."
+    },
+    "Same Section": {"it": "Stessa Sezione", "en": "Same Section"},
+    "Already in this section.": {"it": "Già in questa sezione.", "en": "Already in this section."},
+
+    # ==========================================================================
+    # Status Bar and User Messages
+    # ==========================================================================
+    "Ready Player {0}": {"it": "Giocatore Pronto {0}", "en": "Ready Player {0}"},
+    "Access Denied": {"it": "Accesso Negato", "en": "Access Denied"},
+
+    # ==========================================================================
+    # Result/Batch Error Messages
+    # ==========================================================================
+    "Result not found. Cannot edit.": {
+        "it": "Risultato non trovato. Impossibile modificare.",
+        "en": "Result not found. Cannot edit."
+    },
+    "Batch not found. Cannot edit result.": {
+        "it": "Lotto non trovato. Impossibile modificare il risultato.",
+        "en": "Batch not found. Cannot edit result."
+    },
+    "Test method not found. Cannot edit result.": {
+        "it": "Metodo test non trovato. Impossibile modificare il risultato.",
+        "en": "Test method not found. Cannot edit result."
+    },
+    "Result not found in list. Cannot edit.": {
+        "it": "Risultato non trovato nella lista. Impossibile modificare.",
+        "en": "Result not found in list. Cannot edit."
+    },
+    "Batch not found. Cannot add result.": {
+        "it": "Lotto non trovato. Impossibile aggiungere il risultato.",
+        "en": "Batch not found. Cannot add result."
+    },
+    "Test method not found.": {
+        "it": "Metodo test non trovato.",
+        "en": "Test method not found."
+    },
+
+    # ==========================================================================
+    # Plot Error Messages
+    # ==========================================================================
+    "Not enough data to plot.\nSelect an instrument and a batch.": {
+        "it": "Dati insufficienti per il grafico.\nSeleziona uno strumento e un lotto.",
+        "en": "Not enough data to plot.\nSelect an instrument and a batch."
+    },
+    "Not enough data to plot.\nSelect a test.": {
+        "it": "Dati insufficienti per il grafico.\nSeleziona un test.",
+        "en": "Not enough data to plot.\nSelect a test."
+    },
+    "Not enough data to plot.\nSelect a batch.": {
+        "it": "Dati insufficienti per il grafico.\nSeleziona un lotto.",
+        "en": "Not enough data to plot.\nSelect a batch."
+    },
+    "Selected test is not enabled for this plot type.": {
+        "it": "Il test selezionato non è abilitato per questo tipo di grafico.",
+        "en": "Selected test is not enabled for this plot type."
+    },
+    "Not enough data to plot a Youden chart.\nYou need to select two batches.": {
+        "it": "Dati insufficienti per il grafico Youden.\nDevi selezionare due lotti.",
+        "en": "Not enough data to plot a Youden chart.\nYou need to select two batches."
+    },
+    "Youden plot requires exactly two batches.\nPlease select only two batches.": {
+        "it": "Il grafico Youden richiede esattamente due lotti.\nSeleziona solo due lotti.",
+        "en": "Youden plot requires exactly two batches.\nPlease select only two batches."
+    },
+    "Not enough data to plot a Youden chart.\nBoth selected batches must have at least one result.": {
+        "it": "Dati insufficienti per il grafico Youden.\nEntrambi i lotti selezionati devono avere almeno un risultato.",
+        "en": "Not enough data to plot a Youden chart.\nBoth selected batches must have at least one result."
+    },
+
+    # ==========================================================================
+    # Attention Messages
+    # ==========================================================================
+    "Attention please.\nNo batch selected.": {
+        "it": "Attenzione.\nNessun lotto selezionato.",
+        "en": "Attention please.\nNo batch selected."
+    },
+    "Attention please.\nSelect a batch.": {
+        "it": "Attenzione.\nSeleziona un lotto.",
+        "en": "Attention please.\nSelect a batch."
+    },
+    "Attention please.\nBefore adding a result you must select a batch.": {
+        "it": "Attenzione.\nPrima di aggiungere un risultato devi selezionare un lotto.",
+        "en": "Attention please.\nBefore adding a result you must select a batch."
+    },
+    "Attention please.\nSelect a result.": {
+        "it": "Attenzione.\nSeleziona un risultato.",
+        "en": "Attention please.\nSelect a result."
+    },
+    "Insert 30 random results for:\n{0}\nbatch {1} {2}?": {
+        "it": "Inserire 30 risultati casuali per:\n{0}\nlotto {1} {2}?",
+        "en": "Insert 30 random results for:\n{0}\nbatch {1} {2}?"
+    },
+
+    # ==========================================================================
+    # Read-only Mode Messages
+    # ==========================================================================
+    "Read-only mode.\nCannot add results.": {
+        "it": "Modalità sola lettura.\nImpossibile aggiungere risultati.",
+        "en": "Read-only mode.\nCannot add results."
+    },
+    "Read-only mode.\nCannot edit notes.": {
+        "it": "Modalità sola lettura.\nImpossibile modificare le note.",
+        "en": "Read-only mode.\nCannot edit notes."
+    },
+
+    # ==========================================================================
+    # Document Error Messages
+    # ==========================================================================
+    "The file Biological Variation Values does not exist or cannot be opened.": {
+        "it": "Il file Valori di Variazione Biologica non esiste o non può essere aperto.",
+        "en": "The file Biological Variation Values does not exist or cannot be opened."
+    },
+    "The Biovarase User Manual does not exist or cannot be opened.": {
+        "it": "Il Manuale Utente Biovarase non esiste o non può essere aperto.",
+        "en": "The Biovarase User Manual does not exist or cannot be opened."
+    },
+    "The QC Technical Manual does not exist or cannot be opened.": {
+        "it": "Il Manuale Tecnico QC non esiste o non può essere aperto.",
+        "en": "The QC Technical Manual does not exist or cannot be opened."
+    },
+    "The Biovarase Guidelines file does not exist or cannot be opened.": {
+        "it": "Il file Linee Guida Biovarase non esiste o non può essere aperto.",
+        "en": "The Biovarase Guidelines file does not exist or cannot be opened."
+    },
+
+    # ==========================================================================
+    # Daily Validation
+    # ==========================================================================
+    "Workstation / Test": {"it": "Postazione / Test", "en": "Workstation / Test"},
+    "Equipment / Batch": {"it": "Strumento / Lotto", "en": "Equipment / Batch"},
+    "Counts / Result": {"it": "Conteggi / Risultato", "en": "Counts / Result"},
+    "Problems / Z-Score": {"it": "Problemi / Z-Score", "en": "Problems / Z-Score"},
+    "Validation enabled": {"it": "Validazione abilitata", "en": "Validation enabled"},
+    "View-only mode": {"it": "Modalità sola lettura", "en": "View-only mode"},
+    "Please select a valid date.": {"it": "Seleziona una data valida.", "en": "Please select a valid date."},
+    "Failed to load data:": {"it": "Caricamento dati fallito:", "en": "Failed to load data:"},
+    "Problems": {"it": "Problemi", "en": "Problems"},
+    "All validated": {"it": "Tutto validato", "en": "All validated"},
+    "This result is already validated.": {
+        "it": "Questo risultato è già validato.",
+        "en": "This result is already validated."
+    },
+    "You don't have permission to approve.": {
+        "it": "Non hai i permessi per approvare.",
+        "en": "You don't have permission to approve."
+    },
+    "Please select a workstation.": {
+        "it": "Seleziona una postazione.",
+        "en": "Please select a workstation."
+    },
+    "This workstation is already approved for today.": {
+        "it": "Questa postazione è già approvata per oggi.",
+        "en": "This workstation is already approved for today."
+    },
+    "This workstation has {0} result(s) beyond ±3SD.\n\nAre you sure you want to approve it anyway?": {
+        "it": "Questa postazione ha {0} risultato/i oltre ±3DS.\n\nSei sicuro di voler approvare comunque?",
+        "en": "This workstation has {0} result(s) beyond ±3SD.\n\nAre you sure you want to approve it anyway?"
+    },
+    "Approve workstation '{0}'?": {"it": "Approvare la postazione '{0}'?", "en": "Approve workstation '{0}'?"},
+    "\n\nThis will also validate {0} pending result(s).": {
+        "it": "\n\nQuesto validerà anche {0} risultato/i in sospeso.",
+        "en": "\n\nThis will also validate {0} pending result(s)."
+    },
+    "Confirm Approval": {"it": "Conferma Approvazione", "en": "Confirm Approval"},
+    "Workstation '{0}' approved.": {"it": "Postazione '{0}' approvata.", "en": "Workstation '{0}' approved."},
+    "Failed to approve:": {"it": "Approvazione fallita:", "en": "Failed to approve:"},
+    "You don't have permission to validate.": {
+        "it": "Non hai i permessi per validare.",
+        "en": "You don't have permission to validate."
+    },
+    "Please select a result.": {"it": "Seleziona un risultato.", "en": "Please select a result."},
+    "Failed to validate:": {"it": "Validazione fallita:", "en": "Failed to validate:"},
+    "All Validated": {"it": "Tutto Validato", "en": "All Validated"},
+    "All results for this workstation are now validated.\n\nApprove the workstation?": {
+        "it": "Tutti i risultati per questa postazione sono ora validati.\n\nApprovare la postazione?",
+        "en": "All results for this workstation are now validated.\n\nApprove the workstation?"
+    },
+    "You don't have permission to invalidate.": {
+        "it": "Non hai i permessi per invalidare.",
+        "en": "You don't have permission to invalidate."
+    },
+    "This result is not validated.": {
+        "it": "Questo risultato non è validato.",
+        "en": "This result is not validated."
+    },
+    "Invalidate result {0}?\n\nThis workstation is approved.\nThe approval will be revoked.": {
+        "it": "Invalidare il risultato {0}?\n\nQuesta postazione è approvata.\nL'approvazione sarà revocata.",
+        "en": "Invalidate result {0}?\n\nThis workstation is approved.\nThe approval will be revoked."
+    },
+    "Invalidate result {0}?": {"it": "Invalidare il risultato {0}?", "en": "Invalidate result {0}?"},
+    "Result invalidated. Workstation approval revoked.": {
+        "it": "Risultato invalidato. Approvazione postazione revocata.",
+        "en": "Result invalidated. Workstation approval revoked."
+    },
+    "Result invalidated.": {"it": "Risultato invalidato.", "en": "Result invalidated."},
+    "Failed to invalidate:": {"it": "Invalidazione fallita:", "en": "Failed to invalidate:"},
+    "Please load data first.": {"it": "Carica prima i dati.", "en": "Please load data first."},
+    "No data to export.": {"it": "Nessun dato da esportare.", "en": "No data to export."},
+    "History exported to:\n{0}": {"it": "Storico esportato in:\n{0}", "en": "History exported to:\n{0}"},
+    "Mandatory Tests": {"it": "Test Obbligatori", "en": "Mandatory Tests"},
+    "All mandatory tests have been executed.": {
+        "it": "Tutti i test obbligatori sono stati eseguiti.",
+        "en": "All mandatory tests have been executed."
+    },
+    "Missing Mandatory Tests": {"it": "Test Obbligatori Mancanti", "en": "Missing Mandatory Tests"},
+    "The following mandatory tests have not been executed:\n\n{0}": {
+        "it": "I seguenti test obbligatori non sono stati eseguiti:\n\n{0}",
+        "en": "The following mandatory tests have not been executed:\n\n{0}"
+    },
 
     # ==========================================================================
     # Notes

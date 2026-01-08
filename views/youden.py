@@ -42,7 +42,7 @@ class UI(ParentView):
 
         self.show_labels_var = tk.BooleanVar(value=False)
 
-        self._init_ui()
+        self._build_ui()
         # Set initial size BEFORE centering
         self.geometry("700x500")
         self.minsize(600, 400)
@@ -51,7 +51,7 @@ class UI(ParentView):
     # ----------------------------------------------------------------------
     # UI builder
     # ----------------------------------------------------------------------
-    def _init_ui(self):
+    def _build_ui(self):
         
 
         self.columnconfigure(0, weight=1)

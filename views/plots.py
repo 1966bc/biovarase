@@ -36,12 +36,12 @@ class UI(ParentView):
 
         self._header_var = tk.StringVar(value="")
 
-        self._init_ui()
+        self._build_ui()
 
     # -------------------------------------------------------------------------
     # UI SETUP
     # -------------------------------------------------------------------------
-    def _init_ui(self):
+    def _build_ui(self):
         """Create the main frame and scrollable container for stacked charts."""
 
         self.title(_("Quality Control Plots"))

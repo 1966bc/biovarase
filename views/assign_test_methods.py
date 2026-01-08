@@ -68,13 +68,13 @@ class UI(ChildView):
         # (site_id, comp_id, lab_id, section_id, ...)
         self.site_context = {}
 
-        self._init_ui()
+        self._build_ui()
         self.show()
 
     # ------------------------------------------------------------------
     # UI
     # ------------------------------------------------------------------
-    def _init_ui(self):
+    def _build_ui(self):
         frame = ttk.Frame(self, style="App.TFrame", padding=8)
         frame.pack(fill=tk.BOTH, expand=1)
 

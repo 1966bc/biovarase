@@ -74,10 +74,10 @@ class UI(ParentView):
         self.loaded_ws = set()       # workstation_ids already loaded
 
         # Build UI
-        self._init_ui()
+        self._build_ui()
         self.show(on_screen=True)
 
-    def _init_ui(self):
+    def _build_ui(self):
         """Build the complete UI."""
         paddings = {"padx": 5, "pady": 5}
 
@@ -129,12 +129,12 @@ class UI(ParentView):
         sb_horiz.config(command=self.tree.xview)
 
         # Column headers
-        self.tree.heading("#0", text="Workstation / Test", anchor=tk.W)
-        self.tree.heading("equipment_batch", text="Equipment / Batch", anchor=tk.W)
-        self.tree.heading("time", text="Time", anchor=tk.CENTER)
-        self.tree.heading("counts_result", text="Counts / Result", anchor=tk.CENTER)
-        self.tree.heading("problems_sd", text="Problems / Z-Score", anchor=tk.CENTER)
-        self.tree.heading("status", text="Status", anchor=tk.CENTER)
+        self.tree.heading("#0", text=_("Workstation / Test"), anchor=tk.W)
+        self.tree.heading("equipment_batch", text=_("Equipment / Batch"), anchor=tk.W)
+        self.tree.heading("time", text=_("Time"), anchor=tk.CENTER)
+        self.tree.heading("counts_result", text=_("Counts / Result"), anchor=tk.CENTER)
+        self.tree.heading("problems_sd", text=_("Problems / Z-Score"), anchor=tk.CENTER)
+        self.tree.heading("status", text=_("Status"), anchor=tk.CENTER)
 
         # Column widths
         self.tree.column("#0", width=200, anchor=tk.W)
@@ -231,15 +231,15 @@ class UI(ParentView):
             self.can_validate = user_role in (ROLE_ADMIN, ROLE_SUPERUSER)
 
             if self.can_validate:
-                self.lbl_role.config(text="✓ Validation enabled", foreground="green")
+                self.lbl_role.config(text=_("Validation enabled"), foreground="green")
             else:
-                self.lbl_role.config(text="👁 View-only mode", foreground="orange")
+                self.lbl_role.config(text=_("View-only mode"), foreground="orange")
 
             self._update_button_states()
 
         except Exception as e:
             self.can_validate = False
-            self.lbl_role.config(text="⚠ View-only mode", foreground="red")
+            self.lbl_role.config(text=_("View-only mode"), foreground="red")
             self.engine.on_log(
                 "_check_user_permissions",
                 e, type(e), sys.modules[__name__]
@@ -318,7 +318,7 @@ class UI(ParentView):
         """Load workstation summary for selected date."""
         selected_date = self._get_selected_date()
         if selected_date is None:
-            messagebox.showwarning("Validation", "Please select a valid date.")
+            messagebox.showwarning(_("Validation"), _("Please select a valid date."))
             return
 
         # Save expanded state if requested
@@ -402,7 +402,7 @@ class UI(ParentView):
                 "_load_data",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror("Error", f"Failed to load data:\n{e}")
+            messagebox.showerror(_("Error"), f"{_('Failed to load data:')}\n{e}")
 
     def _insert_workstation_node(self, row):
         """Insert a workstation as parent node."""
@@ -421,13 +421,13 @@ class UI(ParentView):
             status_text = f"✓ {approved_by}"
             color = self.engine.get_rgb(200, 255, 200)  # Green
         elif problems > 0:
-            status_text = "⚠ Problems"
+            status_text = _("Problems")
             color = self.engine.get_rgb(255, 160, 160)  # Red
         elif pending > 0:
-            status_text = "Pending"
+            status_text = _("Pending")
             color = self.engine.get_rgb(255, 255, 180)  # Yellow
         else:
-            status_text = "All validated"
+            status_text = _("All validated")
             color = self.engine.get_rgb(200, 255, 200)  # Green
 
         counts_text = f"{total} tot / {pending} pend"
@@ -606,7 +606,7 @@ class UI(ParentView):
             return
 
         if row["validated"] == 1:
-            messagebox.showinfo("Validation", "This result is already validated.")
+            messagebox.showinfo(_("Validation"), _("This result is already validated."))
             return
 
         self._validate_result(row["result_id"], item_id)
@@ -614,37 +614,37 @@ class UI(ParentView):
     def _on_approve_workstation(self):
         """Approve selected workstation."""
         if not self.can_validate:
-            messagebox.showinfo("Validation", "You don't have permission to approve.")
+            messagebox.showinfo(_("Validation"), _("You don't have permission to approve."))
             return
 
         item_id, item_type, row = self._get_selected_item()
 
         if item_type != TAG_WORKSTATION:
-            messagebox.showinfo("Approve", "Please select a workstation.")
+            messagebox.showinfo(_("Approve"), _("Please select a workstation."))
             return
 
         # Check if already approved
         if row["approval_id"]:
-            messagebox.showinfo("Approve", "This workstation is already approved for today.")
+            messagebox.showinfo(_("Approve"), _("This workstation is already approved for today."))
             return
 
         # Check for problems
         if (row["problem_count"] or 0) > 0:
             if not messagebox.askyesno(
-                "Warning",
-                f"This workstation has {row['problem_count']} result(s) beyond ±3SD.\n\n"
-                "Are you sure you want to approve it anyway?"
+                _("Warning"),
+                _("This workstation has {0} result(s) beyond ±3SD.\n\n"
+                "Are you sure you want to approve it anyway?").format(row['problem_count'])
             ):
                 return
 
         ws_name = row["workstation_name"]
         pending = row["pending_count"] or 0
 
-        msg = f"Approve workstation '{ws_name}'?"
+        msg = _("Approve workstation '{0}'?").format(ws_name)
         if pending > 0:
-            msg += f"\n\nThis will also validate {pending} pending result(s)."
+            msg += _("\n\nThis will also validate {0} pending result(s).").format(pending)
 
-        if not messagebox.askyesno("Confirm Approval", msg):
+        if not messagebox.askyesno(_("Confirm Approval"), msg):
             return
 
         try:
@@ -676,7 +676,7 @@ class UI(ParentView):
             """
             self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
 
-            messagebox.showinfo("Success", f"Workstation '{ws_name}' approved.")
+            messagebox.showinfo(_("Success"), _("Workstation '{0}' approved.").format(ws_name))
             self._load_data(preserve_expansion=True)
 
         except Exception as e:
@@ -684,22 +684,22 @@ class UI(ParentView):
                 "_on_approve_workstation",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror("Error", f"Failed to approve:\n{e}")
+            messagebox.showerror(_("Error"), f"{_('Failed to approve:')}\n{e}")
 
     def _on_validate_result(self):
         """Validate selected result."""
         if not self.can_validate:
-            messagebox.showinfo("Validation", "You don't have permission to validate.")
+            messagebox.showinfo(_("Validation"), _("You don't have permission to validate."))
             return
 
         item_id, item_type, row = self._get_selected_item()
 
         if item_type != TAG_RESULT:
-            messagebox.showinfo("Validate", "Please select a result.")
+            messagebox.showinfo(_("Validate"), _("Please select a result."))
             return
 
         if row["validated"] == 1:
-            messagebox.showinfo("Validation", "This result is already validated.")
+            messagebox.showinfo(_("Validation"), _("This result is already validated."))
             return
 
         self._validate_result(row["result_id"], item_id)
@@ -740,7 +740,7 @@ class UI(ParentView):
                 "_validate_result",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror("Error", f"Failed to validate:\n{e}")
+            messagebox.showerror(_("Error"), f"{_('Failed to validate:')}\n{e}")
 
     def _check_auto_approve_workstation(self, ws_id, user_id):
         """Check if all results are validated and offer to approve workstation."""
@@ -776,9 +776,9 @@ class UI(ParentView):
 
             # All validated! Offer to approve workstation
             if messagebox.askyesno(
-                "All Validated",
-                "All results for this workstation are now validated.\n\n"
-                "Approve the workstation?"
+                _("All Validated"),
+                _("All results for this workstation are now validated.\n\n"
+                "Approve the workstation?")
             ):
                 sql_approve = """
                     INSERT INTO daily_approvals (approval_date, workstation_id, approved_by)
@@ -795,17 +795,17 @@ class UI(ParentView):
     def _on_invalidate(self):
         """Invalidate a validated result."""
         if not self.can_validate:
-            messagebox.showinfo("Validation", "You don't have permission to invalidate.")
+            messagebox.showinfo(_("Validation"), _("You don't have permission to invalidate."))
             return
 
         item_id, item_type, row = self._get_selected_item()
 
         if item_type != TAG_RESULT:
-            messagebox.showinfo("Invalidate", "Please select a result.")
+            messagebox.showinfo(_("Invalidate"), _("Please select a result."))
             return
 
         if row["validated"] == 0:
-            messagebox.showinfo("Invalidate", "This result is not validated.")
+            messagebox.showinfo(_("Invalidate"), _("This result is not validated."))
             return
 
         ws_id = row["workstation_id"]
@@ -814,15 +814,15 @@ class UI(ParentView):
         ws_approved = self._is_workstation_approved(ws_id)
 
         if ws_approved:
-            msg = (
-                f"Invalidate result {row['result_id']}?\n\n"
-                "⚠ This workstation is approved.\n"
+            msg = _(
+                "Invalidate result {0}?\n\n"
+                "This workstation is approved.\n"
                 "The approval will be revoked."
-            )
+            ).format(row['result_id'])
         else:
-            msg = f"Invalidate result {row['result_id']}?"
+            msg = _("Invalidate result {0}?").format(row['result_id'])
 
-        if not messagebox.askyesno("Confirm", msg):
+        if not messagebox.askyesno(_("Confirm"), msg):
             return
 
         try:
@@ -843,9 +843,9 @@ class UI(ParentView):
                     WHERE workstation_id = ? AND approval_date = ?
                 """
                 self.engine.write(sql_revoke, (ws_id, self.selected_date.isoformat()))
-                messagebox.showinfo("Success", "Result invalidated. Workstation approval revoked.")
+                messagebox.showinfo(_("Success"), _("Result invalidated. Workstation approval revoked."))
             else:
-                messagebox.showinfo("Success", "Result invalidated.")
+                messagebox.showinfo(_("Success"), _("Result invalidated."))
 
             self._load_data(preserve_expansion=True)
 
@@ -854,7 +854,7 @@ class UI(ParentView):
                 "_on_invalidate",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror("Error", f"Failed to invalidate:\n{e}")
+            messagebox.showerror(_("Error"), f"{_('Failed to invalidate:')}\n{e}")
 
     def _is_workstation_approved(self, ws_id):
         """Check if workstation is approved for selected date."""
@@ -871,7 +871,7 @@ class UI(ParentView):
     def _on_export(self):
         """Export daily validation data to Excel."""
         if not self.selected_date:
-            messagebox.showinfo("Export", "Please load data first.")
+            messagebox.showinfo(_("Export"), _("Please load data first."))
             return
 
         try:
@@ -881,7 +881,7 @@ class UI(ParentView):
                 "_on_export",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror("Error", f"Failed to export:\n{e}")
+            messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
 
     # =========================================================================
     # VALIDATION HISTORY
@@ -890,7 +890,7 @@ class UI(ParentView):
     def _on_show_history(self):
         """Show validation history for selected date."""
         if not self.selected_date:
-            messagebox.showinfo("History", "Please load data first.")
+            messagebox.showinfo(_("History"), _("Please load data first."))
             return
 
         history = self._get_validation_history()
@@ -1049,7 +1049,7 @@ class UI(ParentView):
     def _export_history(self, history):
         """Export validation history to Excel."""
         if not history:
-            messagebox.showinfo("Export", "No data to export.")
+            messagebox.showinfo(_("Export"), _("No data to export."))
             return
 
         try:
@@ -1092,7 +1092,7 @@ class UI(ParentView):
             filepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), filename)
             wb.save(filepath)
 
-            messagebox.showinfo("Export", f"History exported to:\n{filename}")
+            messagebox.showinfo(_("Export"), _("History exported to:\n{0}").format(filename))
 
             # Open file
             if sys.platform == "win32":
@@ -1106,7 +1106,7 @@ class UI(ParentView):
                 "_export_history",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror("Error", f"Failed to export:\n{e}")
+            messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
 
     # =========================================================================
     # MANDATORY TESTS
@@ -1172,13 +1172,13 @@ class UI(ParentView):
     def _on_show_missing_mandatory(self, evt=None):
         """Show popup with list of missing mandatory tests."""
         if not hasattr(self, 'missing_mandatory') or not self.missing_mandatory:
-            messagebox.showinfo("Mandatory Tests", "All mandatory tests have been executed.")
+            messagebox.showinfo(_("Mandatory Tests"), _("All mandatory tests have been executed."))
             return
 
         missing_list = "\n".join(f"  • {t}" for t in self.missing_mandatory)
         messagebox.showwarning(
-            "Missing Mandatory Tests",
-            f"The following mandatory tests have not been executed:\n\n{missing_list}"
+            _("Missing Mandatory Tests"),
+            _("The following mandatory tests have not been executed:\n\n{0}").format(missing_list)
         )
 
     def on_close(self, evt=None):

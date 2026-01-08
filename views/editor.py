@@ -269,9 +269,8 @@ class Editor(ChildView):
                 # UPDATE: reselect same item
                 self._reselect_in_parent()
 
-            # Cross-window refresh via Engine/Controller dispatcher
-            if hasattr(self.engine, "refresh_windows_for_table"):
-                self.engine.refresh_windows_for_table(self.table)
+            # Notify observers for cross-window refresh
+            self.engine.notify(f"{self.table}_changed")
 
             self.on_cancel()  # Close window
 

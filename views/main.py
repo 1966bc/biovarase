@@ -109,8 +109,10 @@ class Main(tk.Toplevel):
         self.engine.dict_instances[self.winfo_name()] = self
         self.parent = parent
 
-        # Subscribe to batch changes (Observer pattern)
+        # Subscribe to changes (Observer pattern)
         self.engine.subscribe("batch_changed", self._on_batch_changed)
+        self.engine.subscribe("tests_changed", self._on_tests_changed)
+        self.engine.subscribe("categories_changed", self._on_categories_changed)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -149,7 +151,7 @@ class Main(tk.Toplevel):
         # mapping Levey-Jennings point index -> result_id (enabled results only)
         self.lj_index_to_result_id = []
 
-        self.init_ui()
+        self._build_ui()
         self.init_menu()
         self.init_status_bar()
         self.center_ui()
@@ -177,35 +179,32 @@ class Main(tk.Toplevel):
         m_main = tk.Menu(self, bd=1)
 
         m_file = tk.Menu(m_main, tearoff=0, bd=1)
-        m_exports = tk.Menu(m_file)
-        m_imports = tk.Menu(m_file)
+        m_exports = tk.Menu(m_main, tearoff=0, bd=1)
+        m_imports = tk.Menu(m_main, tearoff=0, bd=1)
         m_plots = tk.Menu(m_main, tearoff=0, bd=1)
         m_edit = tk.Menu(m_main, tearoff=0, bd=1)
         m_documents = tk.Menu(m_main, tearoff=0, bd=1)
         m_adm = tk.Menu(m_main, tearoff=0, bd=1)
         m_about = tk.Menu(m_main, tearoff=0, bd=1)
 
-        m_main.add_cascade(label="File", underline=0, menu=m_file)
-        m_main.add_cascade(label="Plots", underline=0, menu=m_plots)
-        m_main.add_cascade(label="Edit", underline=0, menu=m_edit)
-        m_main.add_cascade(label='Imports', underline=1, menu=m_imports)
-        m_main.add_cascade(label='Exports', underline=1, menu=m_exports)
-        m_main.add_cascade(label="Documents", underline=0, menu=m_documents)
-        m_main.add_cascade(label="Admin", underline=0, menu=m_adm)
+        m_main.add_cascade(label=_("File"), underline=0, menu=m_file)
+        m_main.add_cascade(label=_("Plots"), underline=0, menu=m_plots)
+        m_main.add_cascade(label=_("Edit"), underline=0, menu=m_edit)
+        m_main.add_cascade(label=_("Imports"), underline=1, menu=m_imports)
+        m_main.add_cascade(label=_("Exports"), underline=1, menu=m_exports)
+        m_main.add_cascade(label=_("Documents"), underline=0, menu=m_documents)
+        m_main.add_cascade(label=_("Admin"), underline=0, menu=m_adm)
         m_main.add_cascade(label="?", underline=0, menu=m_about)
 
         if self.nametowidget(".").engine.log_user["role"] != 0:
-
-            items = (("Reset", 0, self.on_reset),
-                     ("Analytica", 0, self.on_analitical),
-                     ("Z Score", 0, self.on_zscore),)
+            items = ((_("Reset"), 0, self.on_reset),
+                     (_("Analytica"), 0, self.on_analitical),
+                     (_("Z Score"), 0, self.on_zscore),)
         else:
-
-            items = (("Reset", 0, self.on_reset),
-                     ("Insert random results", 0, self.on_insert_demo_result),
-                     ("Analytica", 0, self.on_analitical),
-                     ("Z Score", 0, self.on_zscore),)
-            
+            items = ((_("Reset"), 0, self.on_reset),
+                     (_("Insert random results"), 0, self.on_insert_demo_result),
+                     (_("Analytica"), 0, self.on_analitical),
+                     (_("Z Score"), 0, self.on_zscore),)
 
         for i in items:
             m_file.add_command(label=i[0], underline=i[1], command=i[2])
@@ -213,108 +212,113 @@ class Main(tk.Toplevel):
         
         m_file.add_separator()
 
-        m_file.add_command(label="Change User",
-                           underline=7,
+        m_file.add_command(label=_("Change User"),
+                           underline=0,
                            accelerator="Ctrl+U",
                            command=self.on_change_user)
-        m_file.add_command(label="Change Section",
-                           underline=7,
+        m_file.add_command(label=_("Change Section"),
+                           underline=0,
                            accelerator="Ctrl+E",
                            command=self.on_change_section)
         m_file.add_separator()
-        m_file.add_command(label="Change Password",
-                           underline=7,
+        m_file.add_command(label=_("Change Password"),
+                           underline=0,
                            command=self.on_change_password)
-        m_file.add_command(label="Log",
+        m_file.add_command(label=_("Log"),
                            underline=0,
                            command=self.on_log)
 
-        m_file.add_command(label="Exit", underline=0, command=self.on_close)
+        # Language submenu (admin only)
+        if self.nametowidget(".").engine.log_user["role"] == 0:
+            m_file.add_separator()
+            m_lang = tk.Menu(m_file, tearoff=0)
+            self.lang_var = tk.StringVar(value=self.engine.get_language())
+            m_lang.add_radiobutton(
+                label="English",
+                value="en",
+                variable=self.lang_var,
+                command=self._on_language_change
+            )
+            m_lang.add_radiobutton(
+                label="Italiano",
+                value="it",
+                variable=self.lang_var,
+                command=self._on_language_change
+            )
+            m_file.add_cascade(label=_("Language"), underline=0, menu=m_lang)
+            m_lang.config(bg=self.nametowidget(".").engine.get_rgb(240, 240, 237),)
+            m_lang.config(fg="black")
 
-        items = (("Plots", 0, self.on_plots),
-                 ("Youden", 0, self.on_youden),
-                 ("Tea", 0, self.on_tea),)
+        m_file.add_separator()
+        m_file.add_command(label=_("Exit"), underline=0, command=self.on_close)
+
+        items = ((_("Plots"), 0, self.on_plots),
+                 (_("Youden"), 0, self.on_youden),
+                 (_("Tea"), 0, self.on_tea),)
 
         for i in items:
             m_plots.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = (("Daily Validation", 0, self.on_daily_validation),
-                 ("Batches", 0, self.on_batches),
-                 ("Test Methods", 9, self.on_test_methods),
-                 ("Tests Methods Workstations", 0, self.on_workstation_test_methods),
-                 ("Workstations", 0, self.on_workstations),
-                 ("Controls", 0, self.on_controls),
-                 ("Set Observations", 4, self.on_observations),
-                 ("Set Z Score", 4, self.on_set_zscore),)
-        
+        items = ((_("Daily Validation"), 0, self.on_daily_validation),
+                 (_("Batches"), 0, self.on_batches),
+                 (_("Test Methods"), 0, self.on_test_methods),
+                 (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
+                 (_("Workstations"), 0, self.on_workstations),
+                 (_("Controls"), 0, self.on_controls),
+                 (_("Set Observations"), 0, self.on_observations),
+                 (_("Set Z Score"), 0, self.on_set_zscore),)
 
         for i in sorted(items, key=operator.itemgetter(0)):
             m_edit.add_command(label=i[0], underline=i[1], command=i[2])
 
 
-        items = (("Notes", 0, self.on_export_notes),
-                 ("Analytical Goals", 0, self.on_analitycal_goals),
-                 ("Counts", 0, self.on_export_counts),)
+        items = ((_("Notes"), 0, self.on_export_notes),
+                 (_("Analytical Goals"), 0, self.on_analitycal_goals),
+                 (_("Counts"), 0, self.on_export_counts),)
 
         for i in items:
             m_exports.add_command(label=i[0], underline=i[1], command=i[2])
 
-
-        items = (("Import", 4, self.on_import_results),)
+        items = ((_("Import"), 0, self.on_import_results),)
 
         for i in items:
             m_imports.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = (("User Manual", 0, self.on_user_manual),
-                 ("QC Technical Manual", 0, self.on_qc_thecnical_manual),
-                 ("Guidelines", 0, self.on_get_guidelines),
-                 ("Biological Values", 0, self.on_bvv),)
+        items = ((_("User Manual"), 0, self.on_user_manual),
+                 (_("QC Technical Manual"), 0, self.on_qc_thecnical_manual),
+                 (_("Guidelines"), 0, self.on_get_guidelines),
+                 (_("Biological Values"), 0, self.on_bvv),)
 
         for i in items:
             m_documents.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = (("Suppliers", 1, self.on_suppliers),
-                 ("Sites", 1, self.on_sites),
-                 ("Labs", 1, self.on_labs),
-                 ("Sections", 1, self.on_sections),
-                 ("Users", 0, self.on_users),
-                 ("Tests", 0, self.on_tests),
-                 ("Equipments", 0, self.on_equipments),
-                 ("Categories", 1, self.on_categories),
-                 ("Samples", 0, self.on_samples),
-                 ("Units", 0, self.on_units),
-                 ("Methods", 0, self.on_methods),
-                ("Actions", 0, self.on_actions),)
+        items = ((_("Suppliers"), 0, self.on_suppliers),
+                 (_("Sites"), 0, self.on_sites),
+                 (_("Labs"), 0, self.on_labs),
+                 (_("Sections"), 0, self.on_sections),
+                 (_("Users"), 0, self.on_users),
+                 (_("Tests"), 0, self.on_tests),
+                 (_("Equipments"), 0, self.on_equipments),
+                 (_("Categories"), 0, self.on_categories),
+                 (_("Samples"), 0, self.on_samples),
+                 (_("Units"), 0, self.on_units),
+                 (_("Methods"), 0, self.on_methods),
+                 (_("Actions"), 0, self.on_actions),)
 
         for i in sorted(items, key=operator.itemgetter(0)):
             m_adm.add_command(label=i[0], underline=i[1], command=i[2])
 
-        m_about.add_command(label="About", underline=0, command=self.on_about)
-        m_about.add_command(label="License", underline=0, command=self.on_license)
-        m_about.add_command(label="Python", underline=0, command=self.on_python_version)
-        m_about.add_command(label="Tkinter", underline=0, command=self.on_tkinter_version)
+        m_about.add_command(label=_("About"), underline=0, command=self.on_about)
+        m_about.add_command(label=_("License"), underline=0, command=self.on_license)
+        m_about.add_command(label=_("Python"), underline=0, command=self.on_python_version)
+        m_about.add_command(label=_("Tkinter"), underline=0, command=self.on_tkinter_version)
 
-        # Language submenu
-        m_about.add_separator()
-        m_lang = tk.Menu(m_about, tearoff=0)
-        self.lang_var = tk.StringVar(value=self.engine.get_language())
-        m_lang.add_radiobutton(
-            label="English",
-            value="en",
-            variable=self.lang_var,
-            command=self._on_language_change
-        )
-        m_lang.add_radiobutton(
-            label="Italiano",
-            value="it",
-            variable=self.lang_var,
-            command=self._on_language_change
-        )
-        m_about.add_cascade(label=_("Language"), underline=0, menu=m_lang)
+        all_menus = [m_main, m_file, m_plots, m_edit, m_imports, m_exports,
+                     m_documents, m_adm, m_about]
 
-        for i in (m_main, m_file, ):
-            i.config(bg=self.nametowidget(".").engine.get_rgb(240, 240, 237),)
-            i.config(fg="black")
+        for m in all_menus:
+            m.config(bg=self.nametowidget(".").engine.get_rgb(240, 240, 237),)
+            m.config(fg="black")
 
         self.config(menu=m_main)
 
@@ -322,7 +326,21 @@ class Main(tk.Toplevel):
         self.bind("<Control-u>", self.on_change_user)
         self.bind("<Control-e>", self.on_change_section)
 
-    def init_ui(self) -> None:
+    def _rebuild_menu(self) -> None:
+        """Rebuild menu after user change (menu items depend on user role)."""
+        # Destroy existing menu
+        current_menu = self["menu"]
+        if current_menu:
+            try:
+                self.nametowidget(current_menu).destroy()
+            except Exception:
+                pass
+        self.config(menu="")
+
+        # Rebuild menu with new role
+        self.init_menu()
+
+    def _build_ui(self) -> None:
 
         self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
 
@@ -341,13 +359,13 @@ class Main(tk.Toplevel):
         self.cbTests.bind("<<ComboboxSelected>>", self.on_selected_test)
         self.cbTests.pack(side=tk.TOP, fill=tk.X, pady=5, expand=0)
 
-        w = ttk.LabelFrame(frm_lists, text='Workstation Data Source')
+        w = ttk.LabelFrame(frm_lists, text=_('Workstation Data Source'))
         cols_ws = ("description", "serial")
         self.lstWorkstations = ttk.Treeview(w, columns=cols_ws, show="headings", height=4)
         self.lstWorkstations.column("description", width=100, minwidth=80, anchor=tk.W)
         self.lstWorkstations.column("serial", width=80, minwidth=60, anchor=tk.W)
-        self.lstWorkstations.heading("description", text="Workstation", anchor=tk.W)
-        self.lstWorkstations.heading("serial", text="Serial", anchor=tk.W)
+        self.lstWorkstations.heading("description", text=_("Workstation"), anchor=tk.W)
+        self.lstWorkstations.heading("serial", text=_("Serial"), anchor=tk.W)
         sb_ws = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstWorkstations.yview)
         self.lstWorkstations.configure(yscrollcommand=sb_ws.set)
         self.lstWorkstations.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
@@ -355,15 +373,15 @@ class Main(tk.Toplevel):
         self.lstWorkstations.bind("<<TreeviewSelect>>", self.on_selected_workstation)
         w.pack(side=tk.TOP, fill=tk.BOTH, expand=0)
 
-        w = ttk.LabelFrame(frm_lists, text="Batches")
+        w = ttk.LabelFrame(frm_lists, text=_("Batches"))
         cols_batch = ("level", "lot", "expiration")
         self.lstBatches = ttk.Treeview(w, columns=cols_batch, show="headings", height=4)
         self.lstBatches.column("level", width=30, minwidth=25, anchor=tk.W)
         self.lstBatches.column("lot", width=70, minwidth=60, anchor=tk.W)
         self.lstBatches.column("expiration", width=80, minwidth=70, anchor=tk.W)
-        self.lstBatches.heading("level", text="Lv", anchor=tk.W)
-        self.lstBatches.heading("lot", text="Lot", anchor=tk.W)
-        self.lstBatches.heading("expiration", text="Expiration", anchor=tk.W)
+        self.lstBatches.heading("level", text=_("Lv"), anchor=tk.W)
+        self.lstBatches.heading("lot", text=_("Lot"), anchor=tk.W)
+        self.lstBatches.heading("expiration", text=_("Expiration"), anchor=tk.W)
         self.lstBatches.tag_configure("expired", background="red")
         self.lstBatches.tag_configure("expiring", background="yellow")
         sb_batch = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstBatches.yview)
@@ -377,60 +395,60 @@ class Main(tk.Toplevel):
         frm_stats = ttk.Frame(frm_lists, style="App.TFrame")
 
         # --- Column 1: Batch data (from lot) ---
-        frm_batch = ttk.LabelFrame(frm_stats, text="Batch", labelanchor="n")
+        frm_batch = ttk.LabelFrame(frm_stats, text=_("Batch"), labelanchor="n")
         frm_batch.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(0, 2))
 
-        ttk.Label(frm_batch, text="Target", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch, text=_("Target"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_batch,
                   style="Target.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.target).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_batch, text="SD", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch, text=_("SD"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_batch,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.sd).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_batch, text="TE%", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch, text=_("TE%"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_batch,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.te).pack(fill=tk.X, padx=4, pady=1)
 
         # --- Column 2: Computed statistics ---
-        frm_calc = ttk.LabelFrame(frm_stats, text="Computed", labelanchor="n")
+        frm_calc = ttk.LabelFrame(frm_stats, text=_("Computed"), labelanchor="n")
         frm_calc.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=2)
 
-        ttk.Label(frm_calc, text="Mean", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc, text=_("Mean"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_calc,
                   style="Average.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.average).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_calc, text="sd", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc, text=_("sd"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_calc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.calculated_sd).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_calc, text="CV%", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc, text=_("CV%"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_calc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.cva).pack(fill=tk.X, padx=4, pady=1)
 
         # --- Column 3: QC evaluation ---
-        frm_qc = ttk.LabelFrame(frm_stats, text="QC", labelanchor="n")
+        frm_qc = ttk.LabelFrame(frm_stats, text=_("QC"), labelanchor="n")
         frm_qc.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(2, 0))
 
-        ttk.Label(frm_qc, text="Bias%", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc, text=_("Bias%"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_qc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.bias).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_qc, text="U", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc, text=_("U"), anchor=tk.CENTER).pack(fill=tk.X)
         ttk.Label(frm_qc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
                   textvariable=self.uncertainty).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_qc, text="Westgard", anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc, text=_("Westgard"), anchor=tk.CENTER).pack(fill=tk.X)
         self.lblWestgard = ttk.Label(
             frm_qc,
             style="black_and_white.TLabel",
@@ -439,7 +457,7 @@ class Main(tk.Toplevel):
         )
         self.lblWestgard.pack(fill=tk.X, padx=4, pady=1)
 
-        w = ttk.LabelFrame(frm_lists, text="Results")
+        w = ttk.LabelFrame(frm_lists, text=_("Results"))
         self.lstResults = tk.Listbox(w, height=8)
         sb_results = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstResults.yview)
         self.lstResults.configure(yscrollcommand=sb_results.set)
@@ -507,7 +525,7 @@ class Main(tk.Toplevel):
                                              self.nametowidget(".").engine.log_user["first_name"],
                                              self.nametowidget(".").engine.get_log_ip())
 
-        msg = "Ready Player {0}".format(user)
+        msg = _("Ready Player {0}").format(user)
 
         self.status_bar_text.set(msg)
 
@@ -524,24 +542,22 @@ class Main(tk.Toplevel):
                   textvariable=self.status_bar_site_description,
                   relief=tk.FLAT,
                   anchor=tk.W).pack(side=tk.RIGHT, fill=tk.X)
-        ttk.Label(frm_status_bar, text="Site:").pack(side=tk.RIGHT, fill=tk.X)
-
+        ttk.Label(frm_status_bar, text=_("Site:")).pack(side=tk.RIGHT, fill=tk.X)
 
         ttk.Label(frm_status_bar, font=f,
                   textvariable=self.observations,
                   relief=tk.FLAT,
                   anchor=tk.W).pack(side=tk.RIGHT, fill=tk.X)
-        ttk.Label(frm_status_bar, text="Observations").pack(side=tk.RIGHT, fill=tk.X)
-
+        ttk.Label(frm_status_bar, text=_("Observations:")).pack(side=tk.RIGHT, fill=tk.X)
 
         ttk.Label(frm_status_bar, font=f,
                   textvariable=self.zscore,
                   relief=tk.FLAT,
                   anchor=tk.W).pack(side=tk.RIGHT, fill=tk.X)
-        ttk.Label(frm_status_bar, text="Z Score").pack(side=tk.RIGHT, fill=tk.X)
+        ttk.Label(frm_status_bar, text=_("Z Score:")).pack(side=tk.RIGHT, fill=tk.X)
 
         ttk.Checkbutton(frm_status_bar,
-                        text='Delta Degree of Freedom',
+                        text=_("Delta Degree of Freedom"),
                         onvalue=1,
                         offvalue=0,
                         variable=self.ddof,
@@ -607,40 +623,11 @@ class Main(tk.Toplevel):
             self.title("Biovarase")
             self.status_bar_site_description.set("")
 
-        # 1) Close all untracked Toplevels
-        self._close_untracked_windows()
+        # Close all windows except main (clean state for new section)
+        self.engine.close_all_windows_except_main()
 
-        # 2) Notify tracked child windows that depend on section/lab
-        tm = self.engine.dict_instances.get("test_methods")
-        if tm and hasattr(tm, "refresh_context_from_section"):
-            tm.refresh_context_from_section()
-
-        # 3) Reset main's own section-dependent lists/filters
+        # Reset main's own section-dependent lists/filters
         self.on_reset()
-
-    def _close_untracked_windows(self):
-        """
-        Close every Toplevel window that is not registered
-        in engine.dict_instances.
-
-        Assumption:
-            dict_instances contains only windows that should survive
-            context changes (e.g. login, main, test_methods, ...).
-        """
-        root = self.nametowidget(".")
-        tracked = set(self.engine.dict_instances.values())
-
-        for w in root.winfo_children():
-            # Skip the root itself
-            if not isinstance(w, tk.Toplevel):
-                continue
-
-            # If this Toplevel is not tracked, destroy it
-            if w not in tracked:
-                try:
-                    w.destroy()
-                except Exception as e:
-                    pass
 
     def _create_listbox(self, container, height=None, width=None, color=None):
         """Create a listbox with vertical scrollbar."""
@@ -795,7 +782,7 @@ class Main(tk.Toplevel):
 
         if len(val) == 0:
             self.lblWestgard.configure(style="black_and_white.TLabel")
-            self.westgard.set("No data")
+            self.westgard.set(_("No data"))
             return
 
         if val == "Accept":
@@ -974,6 +961,52 @@ class Main(tk.Toplevel):
         if children:
             self.lstBatches.selection_set(children[0])
             self.lstBatches.event_generate("<<TreeviewSelect>>")
+
+    def _on_tests_changed(self, data=None) -> None:
+        """Observer callback for test changes - refresh tests combobox."""
+        # Save current selection
+        current_index = self.cbTests.current()
+        current_test_id = (
+            self.selected_test.get("test_id") if self.selected_test else None
+        )
+
+        # Refresh tests list
+        self.set_tests()
+
+        # Try to restore selection by test_id
+        if current_test_id:
+            for idx, test_id in self.test_methods.items():
+                if test_id == current_test_id:
+                    self.cbTests.current(idx)
+                    return
+
+        # Fallback: restore by index if valid
+        if current_index >= 0 and current_index < len(self.cbTests["values"]):
+            self.cbTests.current(current_index)
+
+    def _on_categories_changed(self, data=None) -> None:
+        """Observer callback for category changes - refresh categories combobox."""
+        # Save current selection
+        current_index = self.cbCategories.current()
+        current_category_id = (
+            self.selected_category.get("category_id") if self.selected_category else None
+        )
+
+        # Refresh categories list
+        self.set_categories()
+
+        # Try to restore selection by category_id
+        if current_category_id:
+            for idx, cat_id in self.dict_categories.items():
+                if cat_id == current_category_id:
+                    self.cbCategories.current(idx)
+                    self.cbCategories.event_generate("<<ComboboxSelected>>")
+                    return
+
+        # Fallback: restore by index if valid
+        if current_index >= 0 and current_index < len(self.cbCategories["values"]):
+            self.cbCategories.current(current_index)
+            self.cbCategories.event_generate("<<ComboboxSelected>>")
 
     def _populate_batches(self) -> None:
         """Core logic to populate batch treeview (no early-return checks)."""
@@ -1350,7 +1383,7 @@ class Main(tk.Toplevel):
             if result_id is None:
                 messagebox.showerror(
                     self.engine.app_title,
-                    "Result not found. Cannot edit.",
+                    _("Result not found. Cannot edit."),
                     parent=self,
                 )
                 return
@@ -1360,7 +1393,7 @@ class Main(tk.Toplevel):
             if not self.selected_result:
                 messagebox.showerror(
                     self.engine.app_title,
-                    "Result not found. Cannot edit.",
+                    _("Result not found. Cannot edit."),
                     parent=self,
                 )
                 return
@@ -1372,7 +1405,7 @@ class Main(tk.Toplevel):
             if not self.selected_batch:
                 messagebox.showerror(
                     self.engine.app_title,
-                    "Batch not found. Cannot edit result.",
+                    _("Batch not found. Cannot edit result."),
                     parent=self,
                 )
                 return
@@ -1386,7 +1419,7 @@ class Main(tk.Toplevel):
             if not self.selected_test_method:
                 messagebox.showerror(
                     self.engine.app_title,
-                    "Test method not found. Cannot edit result.",
+                    _("Test method not found. Cannot edit result."),
                     parent=self,
                 )
                 return
@@ -1461,7 +1494,7 @@ class Main(tk.Toplevel):
             if list_idx is None:
                 messagebox.showerror(
                     self.engine.app_title,
-                    "Result not found in list. Cannot edit.",
+                    _("Result not found in list. Cannot edit."),
                     parent=self,
                 )
                 return
@@ -1635,7 +1668,7 @@ class Main(tk.Toplevel):
         """Open Daily QC Validation window."""
         if not self.engine.can_validate_qc():
             messagebox.showwarning(
-                "Access Denied",
+                _("Access Denied"),
                 self.engine.user_not_enable
             )
             return
@@ -1808,10 +1841,10 @@ class Main(tk.Toplevel):
                                                self.selected_workstation,
                                                int(self.observations.get()))
             else:
-                msg = "Not enough data to plot.\nSelect an instrument and a batch."
+                msg = _("Not enough data to plot.\nSelect an instrument and a batch.")
                 messagebox.showwarning(self.engine.app_title, msg, parent=self)
         else:
-            msg = "Not enough data to plot.\nSelect a test."
+            msg = _("Not enough data to plot.\nSelect a test.")
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             
     def on_tea(self):
@@ -1824,13 +1857,13 @@ class Main(tk.Toplevel):
 
         if self.cbTests.current() == -1:
             messagebox.showwarning(self.engine.app_title,
-                                   "Not enough data to plot.\nSelect a test.",
+                                   _("Not enough data to plot.\nSelect a test."),
                                    parent=self)
             return
 
         if not self.lstBatches.selection():
             messagebox.showwarning(self.engine.app_title,
-                                   "Not enough data to plot.\nSelect a batch.",
+                                   _("Not enough data to plot.\nSelect a batch."),
                                    parent=self)
             return
 
@@ -1842,14 +1875,14 @@ class Main(tk.Toplevel):
 
         if not selected:
             messagebox.showwarning(self.engine.app_title,
-                                   "Test method not found.",
+                                   _("Test method not found."),
                                    parent=self)
             return
 
         # Check if TEA is enabled (to_export == 1)
         if selected.get("to_export", 0) != 1:
             messagebox.showwarning(self.engine.app_title,
-                                   "Selected test is not enabled for this plot type.",
+                                   _("Selected test is not enabled for this plot type."),
                                    parent=self)
             return
 
@@ -1868,14 +1901,14 @@ class Main(tk.Toplevel):
 
         # A test must be selected
         if self.cbTests.current() == -1:
-            msg = "Not enough data to plot.\nSelect a test."
+            msg = _("Not enough data to plot.\nSelect a test.")
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         # Two batches must be selected
         items = self.lstBatches.selection()
         if not items:
-            msg = (
+            msg = _(
                 "Not enough data to plot a Youden chart.\n"
                 "You need to select two batches."
             )
@@ -1883,7 +1916,7 @@ class Main(tk.Toplevel):
             return
 
         if len(items) != 2:
-            msg = (
+            msg = _(
                 "Youden plot requires exactly two batches.\n"
                 "Please select only two batches."
             )
@@ -1924,7 +1957,7 @@ class Main(tk.Toplevel):
 
         # Both batches must have at least one result
         if not data[0] or not data[1]:
-            msg = (
+            msg = _(
                 "Not enough data to plot a Youden chart.\n"
                 "Both selected batches must have at least one result."
             )
@@ -1964,7 +1997,7 @@ class Main(tk.Toplevel):
         try:
             self.set_results()
         except AttributeError:
-            msg = "Attention please.\nNo batch selected."
+            msg = _("Attention please.\nNo batch selected.")
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
 
@@ -1977,7 +2010,7 @@ class Main(tk.Toplevel):
 
         if self.lstBatches.selection():
 
-            msg = "Insert 30 random results for:\n{0}\nbatch {1} {2}?".format(
+            msg = _("Insert 30 random results for:\n{0}\nbatch {1} {2}?").format(
                 self.selected_test["description"],
                 self.selected_batch["lot_number"],
                 self.selected_batch["description"]
@@ -2056,7 +2089,7 @@ class Main(tk.Toplevel):
         if self.lstBatches.selection():
             self.on_add_result()
         else:
-            msg = "Attention please.\nSelect a batch."
+            msg = _("Attention please.\nSelect a batch.")
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
 
@@ -2064,12 +2097,12 @@ class Main(tk.Toplevel):
         """Open result editor in insert mode for current batch and workstation."""
         # Check read-only mode (block autologin users)
         if self.engine.is_read_only():
-            msg = "Read-only mode.\nCannot add results."
+            msg = _("Read-only mode.\nCannot add results.")
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
 
         if not self.lstBatches.selection():
-            msg = (
+            msg = _(
                 "Attention please.\nBefore adding a result you must select a batch."
             )
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
@@ -2082,7 +2115,7 @@ class Main(tk.Toplevel):
         if not self.selected_batch:
             messagebox.showerror(
                 self.engine.app_title,
-                "Batch not found. Cannot add result.",
+                _("Batch not found. Cannot add result."),
                 parent=self,
             )
             return
@@ -2096,7 +2129,7 @@ class Main(tk.Toplevel):
         if not self.selected_test_method:
             messagebox.showerror(
                 self.engine.app_title,
-                "Test method not found. Cannot edit result.",
+                _("Test method not found. Cannot edit result."),
                 parent=self,
             )
             return
@@ -2115,13 +2148,13 @@ class Main(tk.Toplevel):
         try:
             # Check read-only mode (block autologin users)
             if self.engine.is_read_only():
-                msg = "Read-only mode.\nCannot edit notes."
+                msg = _("Read-only mode.\nCannot edit notes.")
                 messagebox.showwarning(self.engine.app_title, msg, parent=self)
                 return
 
             selection = self.lstResults.curselection()
             if not selection:
-                msg = "Attention please.\nSelect a result."
+                msg = _("Attention please.\nSelect a result.")
                 messagebox.showinfo(self.engine.app_title, msg, parent=self)
                 return
 
@@ -2161,25 +2194,25 @@ class Main(tk.Toplevel):
     def on_bvv(self) -> None:
         self._open_document(
             "biological_values",
-            "The file Biological Variation Values does not exist or cannot be opened."
+            _("The file Biological Variation Values does not exist or cannot be opened.")
         )
 
     def on_user_manual(self) -> None:
         self._open_document(
             "user_manual",
-            "The Biovarase User Manual does not exist or cannot be opened."
+            _("The Biovarase User Manual does not exist or cannot be opened.")
         )
 
     def on_qc_thecnical_manual(self) -> None:
         self._open_document(
             "qc_technical",
-            "The QC Technical Manual does not exist or cannot be opened."
+            _("The QC Technical Manual does not exist or cannot be opened.")
         )
 
     def on_get_guidelines(self) -> None:
         self._open_document(
             "guidelines",
-            "The Biovarase Guidelines file does not exist or cannot be opened."
+            _("The Biovarase Guidelines file does not exist or cannot be opened.")
         )
 
     def on_license(self) -> None:
@@ -2241,8 +2274,8 @@ class Main(tk.Toplevel):
             _evt: Optional Tkinter event (for keyboard shortcut)
         """
         # Confirm action
-        msg = "Logout and switch to different user?\n\nAll open windows will be closed."
-        if not messagebox.askyesno("Change User", msg, parent=self, icon="question"):
+        msg = _("Logout and switch to different user?\n\nAll open windows will be closed.")
+        if not messagebox.askyesno(_("Change User"), msg, parent=self, icon="question"):
             return
         
         try:
@@ -2260,16 +2293,17 @@ class Main(tk.Toplevel):
             
             # Check if login was successful
             if self.engine.log_user.get("user_id"):
-                # Login successful - reload main window
+                # Login successful - rebuild menu (role-dependent) and reload
+                self._rebuild_menu()
                 self.on_open()
-                
+
                 # Welcome message
                 first = self.engine.log_user.get("first_name", "")
                 last = self.engine.log_user.get("last_name", "")
                 user_name = f"{first} {last}".strip()
                 messagebox.showinfo(
-                    "Welcome",
-                    f"Logged in as: {user_name}",
+                    _("Welcome"),
+                    f"{_('Logged in as:')} {user_name}",
                     parent=self
                 )
             else:
@@ -2285,7 +2319,7 @@ class Main(tk.Toplevel):
                 sys.modules[__name__],
                 inspect.currentframe()
             )
-            messagebox.showerror("Error", f"Failed to change user: {exc}", parent=self)
+            messagebox.showerror(_("Error"), f"{_('Failed to change user:')} {exc}", parent=self)
 
     def _fetch_available_sections(self, role):
         """Fetch sections available to user based on role.
@@ -2329,7 +2363,7 @@ class Main(tk.Toplevel):
             Selected section_id or None if canceled.
         """
         dialog = tk.Toplevel(self)
-        dialog.title("Change Section")
+        dialog.title(_("Change Section"))
         dialog.geometry("400x300")
         dialog.resizable(False, False)
         dialog.transient(self)
@@ -2344,7 +2378,7 @@ class Main(tk.Toplevel):
         # Label
         tk.Label(
             dialog,
-            text="Select new section:",
+            text=_("Select new section:"),
             font=("TkDefaultFont", 10, "bold")
         ).pack(padx=10, pady=10, anchor=tk.W)
 
@@ -2380,7 +2414,7 @@ class Main(tk.Toplevel):
         def on_select():
             selection = listbox.curselection()
             if not selection:
-                messagebox.showwarning("No Selection", "Please select a section.", parent=dialog)
+                messagebox.showwarning(_("No Selection"), _("Please select a section."), parent=dialog)
                 return
             selected_section_id[0] = dict_sections[selection[0]]
             dialog.destroy()
@@ -2392,8 +2426,8 @@ class Main(tk.Toplevel):
         btn_frame = tk.Frame(dialog)
         btn_frame.pack(pady=10)
 
-        tk.Button(btn_frame, text="OK", width=10, command=on_select).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Cancel", width=10, command=on_cancel).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text=_("OK"), width=10, command=on_select).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text=_("Cancel"), width=10, command=on_cancel).pack(side=tk.LEFT, padx=5)
 
         listbox.bind("<Double-Button-1>", lambda e: on_select())
 
@@ -2418,23 +2452,23 @@ class Main(tk.Toplevel):
 
         section_name = next(
             (s["description"] for s in sections if s["section_id"] == new_section_id),
-            f"Section {new_section_id}"
+            f"{_('Section')} {new_section_id}"
         )
-        messagebox.showinfo("Section Changed", f"Now working in: {section_name}", parent=self)
+        messagebox.showinfo(_("Section Changed"), f"{_('Now working in:')} {section_name}", parent=self)
 
     def on_change_section(self, _evt=None):
         """Change Section - Switch to different section without logout."""
         role = self.engine.get_user_role()
 
         if role == 3:
-            messagebox.showwarning("Permission Denied", "Read-only users cannot change section.", parent=self)
+            messagebox.showwarning(_("Permission Denied"), _("Read-only users cannot change section."), parent=self)
             return
 
         try:
             sections = self._fetch_available_sections(role)
 
             if not sections:
-                messagebox.showwarning("No Sections", "No sections available for selection.", parent=self)
+                messagebox.showwarning(_("No Sections"), _("No sections available for selection."), parent=self)
                 return
 
             current_section_id = self.engine.get_section_id()
@@ -2444,7 +2478,7 @@ class Main(tk.Toplevel):
                 return
 
             if new_section_id == current_section_id:
-                messagebox.showinfo("Same Section", "Already in this section.", parent=self)
+                messagebox.showinfo(_("Same Section"), _("Already in this section."), parent=self)
                 return
 
             self._apply_section_change(new_section_id, sections)
@@ -2457,10 +2491,12 @@ class Main(tk.Toplevel):
                 sys.modules[__name__],
                 inspect.currentframe()
             )
-            messagebox.showerror("Error", f"Failed to change section: {exc}", parent=self)
+            messagebox.showerror(_("Error"), f"{_('Failed to change section:')} {exc}", parent=self)
 
     def on_close(self) -> None:
         # Unsubscribe from events (Observer pattern)
         self.engine.unsubscribe("batch_changed", self._on_batch_changed)
+        self.engine.unsubscribe("tests_changed", self._on_tests_changed)
+        self.engine.unsubscribe("categories_changed", self._on_categories_changed)
         self.nametowidget(".").engine.dict_instances.pop(self.winfo_name(), None)
         self.nametowidget(".").on_exit()
