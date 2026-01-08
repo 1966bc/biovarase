@@ -309,6 +309,17 @@ Point colors by SD distance:
 | `section_id` | `get_section_id()` | Current working section |
 | `ddof` | `get_ddof()` | Degrees of freedom (0 or 1) |
 | `zscore` | `get_zscore()` | Coverage factor (1.96 = 95% CI) |
+| `language` | `get_language()` | UI language (en, it) |
+| `observations` | `get_observations()` | Minimum QC observations |
+| `date_format` | `get_date_format()` | Date display format |
+| `remember_batch` | `get_remember_batch()` | Remember last batch selection |
+
+### Constants (app_config.py)
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `BATCH_DESCRIPTION_MAX_LENGTH` | 15 | Max chars for batch level (L1, Normal, etc.) |
+| `LOT_NUMBER_MAX_LENGTH` | 20 | Max chars for lot number |
+| `MAX_LOGIN_ATTEMPTS` | 3 | Failed login attempts before lockout |
 
 ## Testing
 
@@ -349,6 +360,7 @@ def test_calculate_mean_returns_correct_value():
 biovarase/
 ├── biovarase.py          # Entry point
 ├── engine.py             # Main orchestrator (Singleton)
+├── app_config.py         # Application constants and config utilities
 ├── dbms.py               # Database layer
 ├── controller.py         # SQL builder + domain logic
 ├── qc.py                 # QC computations
@@ -366,6 +378,7 @@ biovarase/
 │   ├── login.py          # Authentication dialog
 │   ├── batches.py        # QC batch management
 │   └── ...               # Domain-specific views
+├── migrations/           # Database migrations (SQL)
 ├── schema.sql            # Database schema
 ├── pytest.ini            # Test configuration
 └── docs/                 # Additional documentation
