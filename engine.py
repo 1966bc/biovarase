@@ -52,7 +52,7 @@ Window Registry (dict_instances):
 
 Configuration Management:
     Engine provides helper methods to read config files:
-    - get_section_id(), get_ddof(), get_zscore(), get_loop()
+    - get_section_id(), get_ddof(), get_zscore()
     - get_observations(), get_remember_batch()
     - get_file(filename) for path resolution
 
@@ -176,7 +176,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         - get_section_id() -> int: Current section ID
         - get_ddof() -> int: Degrees of freedom for statistics
         - get_zscore() -> float: Z-score threshold
-        - get_loop() -> int: Polling interval (seconds)
         - get_observations() -> int: Observation window size
         - get_file(filename) -> str: Resolve config file path
 
@@ -610,18 +609,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             self.log_user[idx] = value          # Backward compatibility
             self.log_user[field_name] = value   # New readable access
 
-
-    def get_loop(self):
-        try:
-            path = self.get_file('loop')
-            with open(path, 'r') as f:
-                v = f.readline()
-            return v
-        except (FileNotFoundError, IOError, ValueError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
 
     def set_zscore(self, value):
         try:
