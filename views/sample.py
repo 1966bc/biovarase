@@ -15,10 +15,8 @@ from tkinter import messagebox
 
 class UI(ChildView):
     def __init__(self, parent, index=None):
-        super().__init__(name="sample")        # References
-        self.parent = parent
+        super().__init__(parent, name="sample")
         self.index = index  # None → INSERT, pk → UPDATE
-        self.engine = self.engine
 
         self.selected_item: dict | None = None
         
