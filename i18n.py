@@ -83,6 +83,7 @@ TRANSLATIONS = {
     "File": {"it": "File", "en": "File"},
     "Exit": {"it": "Esci", "en": "Exit"},
     "Do you want to quit": {"it": "Vuoi uscire da", "en": "Do you want to quit"},
+    "Do you want to quit {app_name}?": {"it": "Vuoi uscire da {app_name}?", "en": "Do you want to quit {app_name}?"},
     "Change User": {"it": "Cambia Utente", "en": "Change User"},
     "Change Section": {"it": "Cambia Sezione", "en": "Change Section"},
     "Log": {"it": "Log", "en": "Log"},

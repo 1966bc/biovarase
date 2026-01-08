@@ -24,6 +24,7 @@ from typing import Dict, Any, Optional
 
 from engine import Engine
 from monitor import Monitor
+from i18n import _
 from app_config import (
     CONFIG_FILENAME,
     THREAD_JOIN_TIMEOUT,
@@ -211,7 +212,7 @@ class App(tk.Tk):
             pass
 
         # Confirmation dialog
-        msg = f"Do you want to quit {root.title()}?"
+        msg = _("Do you want to quit {app_name}?").format(app_name=root.title())
         answer = messagebox.askokcancel(root.title(), msg, parent=root)
 
         if answer:
