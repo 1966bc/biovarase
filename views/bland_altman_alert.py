@@ -15,6 +15,7 @@ and calculates Bland-Altman statistics to detect discrepancies.
 import tkinter as tk
 from tkinter import ttk, messagebox
 import statistics
+import threading
 
 from i18n import _
 from views.parent_view import ParentView
@@ -125,11 +126,10 @@ class UI(ParentView):
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         sb_y.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Pre-configure tag colors (like main.py)
-        self.tree.tag_configure("alert", background="red")
-        self.tree.tag_configure("warning", background="yellow")
-        self.tree.tag_configure("ok", background="green")
-        self.tree.tag_configure("insufficient", background="gray")
+        # Pre-configure tag colors (foreground works better on GTK/Debian)
+        self.tree.tag_configure("alert", foreground="red")
+        self.tree.tag_configure("warning", foreground="orange")
+        self.tree.tag_configure("insufficient", foreground="gray")
 
         # Bind double-click
         self.tree.bind("<Double-1>", self._on_view_plot)
@@ -155,11 +155,33 @@ class UI(ParentView):
             bias_threshold = 10.0
             out_threshold = 5.0
 
+        # Run scan in background thread to avoid UI freeze
+        self._scan_thread = threading.Thread(
+            target=self._do_scan,
+            args=(bias_threshold, out_threshold),
+            daemon=True
+        )
+        self._scan_thread.start()
+
+        # Check progress periodically
+        self._check_scan_progress()
+
+    def _check_scan_progress(self):
+        """Check if scan thread is still running."""
+        if hasattr(self, '_scan_thread') and self._scan_thread.is_alive():
+            self.after(100, self._check_scan_progress)
+        else:
+            # Scan complete, update UI
+            self._update_tree_from_results()
+
+    def _do_scan(self, bias_threshold, out_threshold):
+        """Background scan thread."""
+        self._scan_results = []
+        self._scan_count = 0
+        self._scan_alerts = 0
+
         # Find all test/level combinations with 2+ workstations
         combinations = self._find_combinations()
-
-        count = 0
-        alerts = 0
 
         for combo in combinations:
             test_id = combo["test_id"]
@@ -183,34 +205,47 @@ class UI(ParentView):
                     if result:
                         result["test_name"] = test_name
                         result["test_id"] = test_id
-                        self.comparisons.append(result)
+                        result["ws1_desc"] = ws1["description"]
+                        result["ws2_desc"] = ws2["description"]
+                        self._scan_results.append(result)
+                        self._scan_count += 1
 
-                        # Add to treeview with pre-configured tag (like main.py)
-                        tag = result["tag"]
-                        iid = self.tree.insert(
-                            "", tk.END,
-                            values=(
-                                test_name,
-                                level,
-                                ws1["description"],
-                                ws2["description"],
-                                result["pairs"],
-                                f"{result['bias']:.2f}",
-                                f"{result['sd']:.2f}",
-                                f"{result['pct_out']:.1f}%",
-                                result["alert_text"]
-                            ),
-                            tags=(tag,)
-                        )
-                        
-                        self.dict_items[iid] = result
-                        count += 1
+                        if result["tag"] == "alert":
+                            self._scan_alerts += 1
 
-                        if tag == "alert":
-                            alerts += 1
+    def _update_tree_from_results(self):
+        """Update treeview from scan results (main thread)."""
+        displayed = 0
+        for result in getattr(self, '_scan_results', []):
+            tag = result["tag"]
 
+            # Show only alerts and warnings (skip OK and insufficient)
+            if tag not in ("alert", "warning"):
+                continue
+
+            iid = self.tree.insert(
+                "", tk.END,
+                values=(
+                    result["test_name"],
+                    result["level"],
+                    result["ws1_desc"],
+                    result["ws2_desc"],
+                    result["pairs"],
+                    f"{result['bias']:.2f}",
+                    f"{result['sd']:.2f}",
+                    f"{result['pct_out']:.1f}%",
+                    result["alert_text"]
+                ),
+                tags=(tag,)
+            )
+            self.dict_items[iid] = result
+            self.comparisons.append(result)
+            displayed += 1
+
+        count = getattr(self, '_scan_count', 0)
+        alerts = getattr(self, '_scan_alerts', 0)
         self.lblStatus.config(
-            text=f"{_('Comparisons')}: {count} | {_('Alerts')}: {alerts}"
+            text=f"{_('Scanned')}: {count} | {_('Displayed')}: {displayed} | {_('Alerts')}: {alerts}"
         )
 
     def _find_combinations(self):
@@ -270,30 +305,46 @@ class UI(ParentView):
     def _compare_workstations(self, test_id, level, ws1_id, ws1_name, ws2_id, ws2_name,
                                bias_threshold, out_threshold):
         """Compare two workstations and return statistics."""
-        # Get paired results by date
+        lab_id = self.engine.get_lab_id()
+
+        # Get results for each workstation separately (faster than self-join)
         sql = """
-            SELECT
-                DATE(r1.received) AS result_date,
-                r1.result AS result1,
-                r2.result AS result2
-            FROM results r1
-            JOIN batches b1 ON b1.batch_id = r1.batch_id
-            JOIN test_methods tm1 ON tm1.test_method_id = b1.test_method_id
-            JOIN results r2 ON DATE(r2.received) = DATE(r1.received)
-            JOIN batches b2 ON b2.batch_id = r2.batch_id
-            JOIN test_methods tm2 ON tm2.test_method_id = b2.test_method_id
-            WHERE tm1.test_id = ?
-              AND tm2.test_id = ?
-              AND b1.description = ?
-              AND b2.description = ?
-              AND r1.workstation_id = ?
-              AND r2.workstation_id = ?
+            SELECT DATE(r.received) AS result_date, r.result
+            FROM results r
+            JOIN batches b ON b.batch_id = r.batch_id
+            JOIN test_methods tm ON tm.test_method_id = b.test_method_id
+            WHERE tm.test_id = ?
+              AND b.description = ?
+              AND b.lab_id = ?
+              AND r.workstation_id = ?
             ORDER BY result_date
         """
-        rows = self.engine.read(
-            True, sql,
-            (test_id, test_id, level, level, ws1_id, ws2_id)
-        ) or []
+        rows1 = self.engine.read(True, sql, (test_id, level, lab_id, ws1_id)) or []
+        rows2 = self.engine.read(True, sql, (test_id, level, lab_id, ws2_id)) or []
+
+        # Group by date and match pairs in Python (much faster)
+        data1 = {}
+        for row in rows1:
+            dt = row["result_date"]
+            if dt not in data1:
+                data1[dt] = []
+            data1[dt].append(float(row["result"]))
+
+        data2 = {}
+        for row in rows2:
+            dt = row["result_date"]
+            if dt not in data2:
+                data2[dt] = []
+            data2[dt].append(float(row["result"]))
+
+        # Match pairs by date
+        rows = []
+        for dt in data1:
+            if dt in data2:
+                # Take first result from each workstation for that date
+                for r1 in data1[dt]:
+                    for r2 in data2[dt]:
+                        rows.append({"result1": r1, "result2": r2})
 
         if len(rows) < 10:
             return {
