@@ -539,9 +539,12 @@ Creates `abbott_imported_files` table to track processed files.
 ### Cron Setup
 
 ```bash
+# Crontab entry (every 5 minutes)
+*/5 * * * * /home/gcostanzi@intraosa.net/Documents/projects/biovarase/run_abbott_import.sh
+
 # Wrapper script: run_abbott_import.sh
 cd /home/gcostanzi@intraosa.net/Documents/projects/biovarase
-python3 abbott_import.py >> abbott_import.log 2>&1
+python3 abbott_import_v2.py >> abbott_import.log 2>&1
 ```
 
 ## Key Files
