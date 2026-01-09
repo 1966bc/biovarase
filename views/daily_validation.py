@@ -68,6 +68,7 @@ class UI(ParentView):
         # Internal state
         self.selected_date = None
         self.can_validate = False
+        self._refresh_job = None  # Auto-refresh timer
 
         # Data dictionaries
         self.dict_workstations = {}  # item_id -> workstation data
@@ -98,13 +99,15 @@ class UI(ParentView):
         self.calendarium.pack(side=tk.LEFT, **paddings)
         self.calendarium.set_today()
 
-        # Load button
+        # Load button (Alt-C)
         self.btn_load = ttk.Button(
             frm_top,
             text=_("Load"),
-            command=self._load_data
+            command=self._load_data,
+            underline=0
         )
         self.btn_load.pack(side=tk.LEFT, padx=(10, 0))
+        self.bind("<Alt-c>", lambda e: self._load_data())
 
         # Role indicator
         self.lbl_role = ttk.Label(frm_top, text="", foreground="blue")
@@ -222,9 +225,20 @@ class UI(ParentView):
         """Entry point when opening the window."""
         self._check_user_permissions()
         self.calendarium.set_today()
-        self._load_data()
+        self._start_auto_refresh()
         self.deiconify()
         self.lift()
+
+    def _start_auto_refresh(self):
+        """Start auto-refresh every 30 seconds."""
+        self._load_data()
+        self._refresh_job = self.after(30000, self._start_auto_refresh)
+
+    def _stop_auto_refresh(self):
+        """Stop auto-refresh timer."""
+        if self._refresh_job:
+            self.after_cancel(self._refresh_job)
+            self._refresh_job = None
 
     def _check_user_permissions(self):
         """Check user role and enable/disable validation controls."""
@@ -1209,5 +1223,6 @@ class UI(ParentView):
 
     def on_close(self, evt=None):
         """Close the window."""
+        self._stop_auto_refresh()
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.destroy()
