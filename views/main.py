@@ -81,6 +81,8 @@ import views.sites
 import views.importer
 import views.zscore
 import views.daily_validation
+import views.bland_altman
+import views.bland_altman_alert
 
 
 NO_DATA = "No data"
@@ -260,12 +262,15 @@ class Main(tk.Toplevel):
 
         items = ((_("Levey-Jennings"), 0, self.on_plots),
                  (_("Youden"), 0, self.on_youden),
-                 (_("Tea"), 0, self.on_tea),)
+                 (_("Tea"), 0, self.on_tea),
+                 (_("Bland-Altman"), 0, self.on_bland_altman),
+                 (_("Bland-Altman Scanner"), 0, self.on_bland_altman_alert),)
 
         for i in items:
             m_plots.add_command(label=i[0], underline=i[1], command=i[2])
 
         items = ((_("Batches"), 0, self.on_batches),
+                 (_("Categories"), 0, self.on_categories),
                  (_("Test Methods"), 0, self.on_test_methods),
                  (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
                  (_("Workstations"), 0, self.on_workstations),
@@ -304,7 +309,6 @@ class Main(tk.Toplevel):
                  (_("Users"), 0, self.on_users),
                  (_("Tests"), 0, self.on_tests),
                  (_("Equipments"), 0, self.on_equipments),
-                 (_("Categories"), 0, self.on_categories),
                  (_("Samples"), 0, self.on_samples),
                  (_("Units"), 0, self.on_units),
                  (_("Methods"), 0, self.on_methods),
@@ -805,39 +809,54 @@ class Main(tk.Toplevel):
         voices = []
         index = 0
 
-        # user: per section
-        if self.engine.log_user["role"] == 2:
+        role = self.engine.log_user["role"]
 
+        if role == 0:
+            # Admin: categories belonging to labs in this site
             sql = """
-                    SELECT DISTINCT categories.category_id, 
-                                    categories.description 
-                    FROM test_methods 
-                    INNER JOIN sections ON sections.section_id = test_methods.section_id 
+                    SELECT DISTINCT categories.category_id,
+                                    categories.description
+                    FROM test_methods
+                    INNER JOIN sections ON sections.section_id = test_methods.section_id
+                    INNER JOIN labs ON labs.lab_id = sections.lab_id
                     INNER JOIN categories ON categories.category_id = test_methods.category_id
-                    WHERE sections.section_id =? 
-                    AND test_methods.status =1 
-                    AND categories.status =1 
+                                          AND categories.lab_id = labs.lab_id
+                    WHERE labs.site_id = ?
+                    AND test_methods.status = 1
+                    AND categories.status = 1
                     ORDER BY categories.description;
                 """
-            
-            args = (self.nametowidget('.').engine.get_section_id(),)
-            
-        else:
-            # admin/superuser: per lab
-
+            args = (self.engine.current_ids.get("site_id"),)
+        elif role == 1:
+            # Superuser: categories belonging to their lab
             sql = """
-                    SELECT DISTINCT categories.category_id, 
-                                    categories.description 
-                    FROM test_methods 
-                    INNER JOIN sections ON sections.section_id = test_methods.section_id 
-                    INNER JOIN categories ON categories.category_id = test_methods.category_id 
-                    WHERE sections.lab_id =? 
-                    AND test_methods.status =1 
-                    AND categories.status =1 
+                    SELECT DISTINCT categories.category_id,
+                                    categories.description
+                    FROM test_methods
+                    INNER JOIN sections ON sections.section_id = test_methods.section_id
+                    INNER JOIN categories ON categories.category_id = test_methods.category_id
+                                          AND categories.lab_id = sections.lab_id
+                    WHERE sections.lab_id = ?
+                    AND test_methods.status = 1
+                    AND categories.status = 1
                     ORDER BY categories.description;
                 """
-        
             args = (self.engine.get_lab_id(),)
+        else:
+            # Technician/Autologin: categories belonging to their lab
+            sql = """
+                    SELECT DISTINCT categories.category_id,
+                                    categories.description
+                    FROM test_methods
+                    INNER JOIN sections ON sections.section_id = test_methods.section_id
+                    INNER JOIN categories ON categories.category_id = test_methods.category_id
+                                          AND categories.lab_id = sections.lab_id
+                    WHERE sections.section_id = ?
+                    AND test_methods.status = 1
+                    AND categories.status = 1
+                    ORDER BY categories.description;
+                """
+            args = (self.engine.get_section_id(),)
             
         rs = self.engine.read(True, sql, args)
 
@@ -854,7 +873,7 @@ class Main(tk.Toplevel):
         """Fill tests combobox for selected category."""
         if self.cbCategories.current() == -1:
             return
-        
+
         self.selected_test = None
         self.test_methods = {}
         voices = []
@@ -864,21 +883,43 @@ class Main(tk.Toplevel):
         category_id = self.dict_categories.get(cat_index)
         if category_id is None:
             return
-        
-        sql = """
-              SELECT test_methods.test_method_id,
-                     tests.description
-              FROM test_methods
-              JOIN tests ON tests.test_id = test_methods.test_id
-              WHERE test_methods.category_id = ?
-              AND test_methods.section_id = ?
-              AND tests.status = 1
-              AND test_methods.status = 1
-              ORDER BY tests.description;
-              """
 
-        args = (category_id,
-                self.engine.get_section_id())
+        # Get lab_id from selected category
+        category_lab_id = None
+        if self.selected_category:
+            category_lab_id = self.selected_category.get("lab_id")
+
+        role = self.engine.log_user["role"]
+
+        if role == 0 or role == 1:
+            # Admin/Superuser: filter by category's lab_id
+            sql = """
+                  SELECT test_methods.test_method_id,
+                         tests.description
+                  FROM test_methods
+                  JOIN tests ON tests.test_id = test_methods.test_id
+                  JOIN sections ON sections.section_id = test_methods.section_id
+                  WHERE test_methods.category_id = ?
+                  AND sections.lab_id = ?
+                  AND tests.status = 1
+                  AND test_methods.status = 1
+                  ORDER BY tests.description;
+                  """
+            args = (category_id, category_lab_id)
+        else:
+            # Technician/Autologin: only their section
+            sql = """
+                  SELECT test_methods.test_method_id,
+                         tests.description
+                  FROM test_methods
+                  JOIN tests ON tests.test_id = test_methods.test_id
+                  WHERE test_methods.category_id = ?
+                  AND test_methods.section_id = ?
+                  AND tests.status = 1
+                  AND test_methods.status = 1
+                  ORDER BY tests.description;
+                  """
+            args = (category_id, self.engine.get_section_id())
 
         rs = self.engine.read(True, sql, args)
         if rs:
@@ -902,21 +943,52 @@ class Main(tk.Toplevel):
         if not self.selected_test_method:
             return
 
-        sql = """
-                SELECT workstations.workstation_id,
-                       workstations.description,
-                       workstations.serial
-                FROM workstation_test_methods
-                JOIN workstations
-                  ON workstation_test_methods.workstation_id = workstations.workstation_id
-                WHERE workstation_test_methods.test_method_id = ?
-                  AND workstations.section_id = ?
-                  AND workstations.status = 1
-                ORDER BY workstations.rank ASC;
-             """
+        # Get lab_id from selected category
+        category_lab_id = None
+        if self.selected_category:
+            category_lab_id = self.selected_category.get("lab_id")
 
-        args = (self.selected_test_method["test_method_id"],
-                    self.engine.get_section_id())
+        role = self.engine.log_user["role"]
+        test_method_id = self.selected_test_method["test_method_id"]
+
+        if role == 0 or role == 1:
+            # Admin/Superuser: filter by category's lab_id
+            sql = """
+                    SELECT workstations.workstation_id,
+                           workstations.description,
+                           workstations.serial
+                    FROM workstation_test_methods
+                    JOIN workstations
+                      ON workstation_test_methods.workstation_id = workstations.workstation_id
+                    JOIN sections
+                      ON sections.section_id = workstations.section_id
+                    JOIN equipments
+                      ON equipments.equipment_id = workstations.equipment_id
+                    WHERE workstation_test_methods.test_method_id = ?
+                      AND sections.lab_id = ?
+                      AND workstations.status = 1
+                      AND equipments.status = 1
+                    ORDER BY workstations.rank ASC;
+                 """
+            args = (test_method_id, category_lab_id)
+        else:
+            # Technician/Autologin: only their section
+            sql = """
+                    SELECT workstations.workstation_id,
+                           workstations.description,
+                           workstations.serial
+                    FROM workstation_test_methods
+                    JOIN workstations
+                      ON workstation_test_methods.workstation_id = workstations.workstation_id
+                    JOIN equipments
+                      ON equipments.equipment_id = workstations.equipment_id
+                    WHERE workstation_test_methods.test_method_id = ?
+                      AND workstations.section_id = ?
+                      AND workstations.status = 1
+                      AND equipments.status = 1
+                    ORDER BY workstations.rank ASC;
+                 """
+            args = (test_method_id, self.engine.get_section_id())
 
         rs = self.engine.read(True, sql, args)
 
@@ -1150,7 +1222,7 @@ class Main(tk.Toplevel):
 
         index = 0
         for row in rs:
-            base_text = "{0:10}                  {1:>12}".format(row["received_str"], row["result_rounded"])
+            base_text = "{0:10}  {1:>10}".format(row["received_str"], row["result_rounded"])
 
             has_notes = notes_map.get(row["result_id"], 0) > 0
             # Add visual marker if has notes
@@ -1705,8 +1777,10 @@ class Main(tk.Toplevel):
         
         views.workstation_test_methods.UI(self).on_open()
 
-    def on_categories(self,):
-        if not self.engine.is_admin():
+    def on_categories(self):
+        # Admin and Superuser can manage categories
+        role = self.engine.log_user.get("role", 99)
+        if role > 1:
             msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
@@ -1930,6 +2004,14 @@ class Main(tk.Toplevel):
         """
         views.youden.UI(self).on_open(test_method, workstation, batches, data)
 
+    def on_bland_altman(self):
+        """Open Bland-Altman comparison view."""
+        views.bland_altman.UI(self).on_open()
+
+    def on_bland_altman_alert(self):
+        """Open Bland-Altman alert scanner view."""
+        views.bland_altman_alert.UI(self).on_open()
+
     def on_export_notes(self) -> None:
         views.export_notes.UI(self).on_open()
 
@@ -1996,34 +2078,25 @@ class Main(tk.Toplevel):
                     sql_insert = "INSERT INTO results(batch_id, workstation_id, result, received, log_time, log_id) VALUES(?,?,?,?,?,?)"
                     log_time = self.engine.get_log_time()
 
-                    # Prepare data for executemany()
-                    data_to_insert = []
-                    current_log_time = log_time  # Initialize outside the loop
-                    for _ in range(0, 30):
-                        result = random.uniform(min_val, max_val)
-                        data_to_insert.append((
+                    # Convert log_time to datetime if string
+                    if isinstance(log_time, str):
+                        current_log_time = datetime.datetime.strptime(log_time, '%Y-%m-%d %H:%M:%S')
+                    else:
+                        current_log_time = log_time
+
+                    # Insert 30 results
+                    for _i in range(30):
+                        result = round(random.uniform(min_val, max_val), 2)
+                        args = (
                             self.selected_batch["batch_id"],
                             self.selected_workstation["workstation_id"],
-                            round(result, 2),
+                            result,
                             current_log_time,
                             current_log_time,
                             self.engine.log_user["user_id"]
-                        ))
-                        # Ensure current_log_time is a datetime object for increment
-                        if isinstance(current_log_time, str):
-                            try:
-                                current_log_time = datetime.datetime.strptime(current_log_time, '%Y-%m-%d %H:%M:%S')
-                            except ValueError:
-                                # Handle error if string format is incorrect
-                                self.engine.on_log(inspect.stack()[0][3],
-                                                                       "Error in date/time format",
-                                                                       ValueError,
-                                                                       sys.modules[__name__])
-                                cur.rollback()
-                                return  # Stop operation on error
+                        )
+                        cur.execute(sql_insert, args)
                         current_log_time += datetime.timedelta(days=1)
-
-                    cur.executemany(sql_insert, data_to_insert)  # Use executemany()
 
                     self.engine.con.commit()  # Commit the transaction
                     self.set_results()
@@ -2286,25 +2359,33 @@ class Main(tk.Toplevel):
             role: User role (0=Admin, 1=Superuser, 2=Technician)
 
         Returns:
-            List of section dicts with section_id and description, or None on error.
+            List of section dicts with section_id, description, and lab_name, or None on error.
         """
         if role == 0:
-            # Admin: all active sections
+            # Admin: all active sections with lab name
             sql = """
-                SELECT section_id, description
+                SELECT
+                    sections.section_id,
+                    sections.description,
+                    labs.description AS lab_name
                 FROM sections
-                WHERE status = 1
-                ORDER BY description
+                JOIN labs ON labs.lab_id = sections.lab_id
+                WHERE sections.status = 1
+                ORDER BY labs.description, sections.description
             """
             args = ()
         else:
             # Superuser/Technician: only sections in their lab
             lab_id = self.engine.current_ids.get("lab_id")
             sql = """
-                SELECT section_id, description
+                SELECT
+                    sections.section_id,
+                    sections.description,
+                    labs.description AS lab_name
                 FROM sections
-                WHERE lab_id = ? AND status = 1
-                ORDER BY description
+                JOIN labs ON labs.lab_id = sections.lab_id
+                WHERE sections.lab_id = ? AND sections.status = 1
+                ORDER BY labs.description, sections.description
             """
             args = (lab_id,)
 
@@ -2355,12 +2436,15 @@ class Main(tk.Toplevel):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Populate listbox
+        # Populate listbox with "Lab - Section" format
         dict_sections = {}
         for idx, section in enumerate(sections):
             section_id = section["section_id"]
             dict_sections[idx] = section_id
-            listbox.insert(tk.END, section["description"])
+            lab_name = section.get("lab_name", "")
+            section_name = section["description"]
+            display_text = f"{lab_name} — {section_name}" if lab_name else section_name
+            listbox.insert(tk.END, display_text)
 
             if section_id == current_section_id:
                 listbox.selection_set(idx)
@@ -2408,11 +2492,19 @@ class Main(tk.Toplevel):
 
         self.refresh_context_from_section()
 
-        section_name = next(
-            (s["description"] for s in sections if s["section_id"] == new_section_id),
-            f"{_('Section')} {new_section_id}"
+        # Build display name with lab
+        section_data = next(
+            (s for s in sections if s["section_id"] == new_section_id),
+            None
         )
-        messagebox.showinfo(_("Section Changed"), f"{_('Now working in:')} {section_name}", parent=self)
+        if section_data:
+            lab_name = section_data.get("lab_name", "")
+            section_name = section_data["description"]
+            display_name = f"{lab_name} — {section_name}" if lab_name else section_name
+        else:
+            display_name = f"{_('Section')} {new_section_id}"
+
+        messagebox.showinfo(_("Section Changed"), f"{_('Now working in:')} {display_name}", parent=self)
 
     def on_change_section(self, _evt=None):
         """Change Section - Switch to different section without logout."""
