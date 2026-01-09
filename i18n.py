@@ -39,6 +39,7 @@ TRANSLATIONS = {
     "No": {"it": "No", "en": "No"},
     "Login": {"it": "Accedi", "en": "Login"},
     "Logout": {"it": "Esci", "en": "Logout"},
+    "Unassigned": {"it": "Non assegnato", "en": "Unassigned"},
 
     # ==========================================================================
     # Common Labels
@@ -93,7 +94,6 @@ TRANSLATIONS = {
     # ==========================================================================
     # Menu - Edit
     # ==========================================================================
-    "Edit": {"it": "Modifica", "en": "Edit"},
     "Settings": {"it": "Impostazioni", "en": "Settings"},
     "Preferences": {"it": "Preferenze", "en": "Preferences"},
     "Daily Validation": {"it": "Validazione Giornaliera", "en": "Daily Validation"},
@@ -363,7 +363,6 @@ TRANSLATIONS = {
     "Edit External Code": {"it": "Modifica Codice Esterno", "en": "Edit External Code"},
     "Remove Mapping": {"it": "Rimuovi Mappatura", "en": "Remove Mapping"},
     "External Code": {"it": "Codice Esterno", "en": "External Code"},
-    "Remove": {"it": "Rimuovi", "en": "Remove"},
     "from workstation": {"it": "dalla postazione", "en": "from workstation"},
     "External code for": {"it": "Codice esterno per", "en": "External code for"},
 
@@ -375,10 +374,8 @@ TRANSLATIONS = {
     "Items": {"it": "Elementi", "en": "Items"},
     "is required.": {"it": "è richiesto.", "en": "is required."},
     "Category:": {"it": "Categoria:", "en": "Category:"},
-    "Code:": {"it": "Codice:", "en": "Code:"},
     "Sample:": {"it": "Campione:", "en": "Sample:"},
     "Method:": {"it": "Metodo:", "en": "Method:"},
-    "Unit:": {"it": "Unità:", "en": "Unit:"},
     "Mandatory:": {"it": "Obbligatorio:", "en": "Mandatory:"},
     "Methods": {"it": "Metodi", "en": "Methods"},
     "Test Methods": {"it": "Metodi Test", "en": "Test Methods"},
@@ -477,7 +474,6 @@ TRANSLATIONS = {
     "Surname:": {"it": "Cognome:", "en": "Surname:"},
     "First Name:": {"it": "Nome:", "en": "First Name:"},
     "Nick:": {"it": "Nick:", "en": "Nick:"},
-    "Level:": {"it": "Livello:", "en": "Level:"},
     "Logout time (min):": {"it": "Tempo logout (min):", "en": "Logout time (min):"},
     "Enable logout:": {"it": "Abilita logout:", "en": "Enable logout:"},
     "Update User": {"it": "Modifica Utente", "en": "Update User"},
@@ -824,6 +820,68 @@ TRANSLATIONS = {
         "en": "This Device ID is already in use."
     },
     "Users": {"it": "Utenti", "en": "Users"},
+
+    # ==========================================================================
+    # Bland-Altman
+    # ==========================================================================
+    "Bland-Altman": {"it": "Bland-Altman", "en": "Bland-Altman"},
+    "Bland-Altman Comparison": {"it": "Confronto Bland-Altman", "en": "Bland-Altman Comparison"},
+    "Bland-Altman Plot": {"it": "Grafico Bland-Altman", "en": "Bland-Altman Plot"},
+    "Workstation 1:": {"it": "Postazione 1:", "en": "Workstation 1:"},
+    "Workstation 2:": {"it": "Postazione 2:", "en": "Workstation 2:"},
+    "Calculate": {"it": "Calcola", "en": "Calculate"},
+    "Clear": {"it": "Pulisci", "en": "Clear"},
+    "Statistics": {"it": "Statistiche", "en": "Statistics"},
+    "Pairs:": {"it": "Coppie:", "en": "Pairs:"},
+    "Bias:": {"it": "Bias:", "en": "Bias:"},
+    "+1.96 SD:": {"it": "+1.96 DS:", "en": "+1.96 SD:"},
+    "-1.96 SD:": {"it": "-1.96 DS:", "en": "-1.96 SD:"},
+    "Please select two workstations.": {
+        "it": "Seleziona due postazioni.",
+        "en": "Please select two workstations."
+    },
+    "Please select two different workstations.": {
+        "it": "Seleziona due postazioni diverse.",
+        "en": "Please select two different workstations."
+    },
+    "Please select test and level.": {
+        "it": "Seleziona test e livello.",
+        "en": "Please select test and level."
+    },
+    "Not enough paired data. Minimum 10 pairs required.": {
+        "it": "Dati accoppiati insufficienti. Minimo 10 coppie richieste.",
+        "en": "Not enough paired data. Minimum 10 pairs required."
+    },
+    "Found": {"it": "Trovate", "en": "Found"},
+    "Mean of measurements": {"it": "Media delle misure", "en": "Mean of measurements"},
+    "Difference": {"it": "Differenza", "en": "Difference"},
+
+    # Bland-Altman Scanner
+    "Bland-Altman Scanner": {"it": "Scanner Bland-Altman", "en": "Bland-Altman Scanner"},
+    "Bland-Altman Alert Scanner": {"it": "Scanner Alert Bland-Altman", "en": "Bland-Altman Alert Scanner"},
+    "Scan": {"it": "Scansiona", "en": "Scan"},
+    "View Plot": {"it": "Visualizza Grafico", "en": "View Plot"},
+    "Bias threshold:": {"it": "Soglia Bias:", "en": "Bias threshold:"},
+    "% out threshold:": {"it": "Soglia % fuori:", "en": "% out threshold:"},
+    "Workstation 1": {"it": "Postazione 1", "en": "Workstation 1"},
+    "Workstation 2": {"it": "Postazione 2", "en": "Workstation 2"},
+    "Pairs": {"it": "Coppie", "en": "Pairs"},
+    "Bias": {"it": "Bias", "en": "Bias"},
+    "% Out": {"it": "% Fuori", "en": "% Out"},
+    "Alert": {"it": "Allerta", "en": "Alert"},
+    "Comparisons": {"it": "Confronti", "en": "Comparisons"},
+    "Alerts": {"it": "Allerte", "en": "Alerts"},
+    "Scanning...": {"it": "Scansione...", "en": "Scanning..."},
+    "Insufficient": {"it": "Insufficiente", "en": "Insufficient"},
+    "Please select a comparison.": {
+        "it": "Seleziona un confronto.",
+        "en": "Please select a comparison."
+    },
+    "Selected comparison": {"it": "Confronto selezionato", "en": "Selected comparison"},
+    "Please select these values in the Bland-Altman view.": {
+        "it": "Seleziona questi valori nella vista Bland-Altman.",
+        "en": "Please select these values in the Bland-Altman view."
+    },
 }
 
 

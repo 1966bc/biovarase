@@ -184,15 +184,18 @@ class UI(ParentView):
         self.status.set(1)
 
     def _set_categories(self):
+        """Load categories filtered by current lab."""
         self.dict_categories = {}
         values = []
         sql = """
             SELECT category_id, description
             FROM categories
-            WHERE status = 1
+            WHERE lab_id = ?
+            AND status = 1
             ORDER BY description
         """
-        rows = self.engine.read(True, sql, ()) or []
+        lab_id = self.engine.get_lab_id()
+        rows = self.engine.read(True, sql, (lab_id,)) or []
         for idx, row in enumerate(rows):
             self.dict_categories[idx] = row["category_id"]
             values.append(row["description"])
