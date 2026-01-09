@@ -109,6 +109,10 @@ class UI(ParentView):
         self.btn_load.pack(side=tk.LEFT, padx=(10, 0))
         self.bind("<Alt-c>", lambda e: self._load_data())
 
+        # Next refresh indicator
+        self.lbl_refresh = ttk.Label(frm_top, text="", foreground="gray")
+        self.lbl_refresh.pack(side=tk.RIGHT, **paddings)
+
         # Role indicator
         self.lbl_role = ttk.Label(frm_top, text="", foreground="blue")
         self.lbl_role.pack(side=tk.RIGHT, **paddings)
@@ -232,6 +236,12 @@ class UI(ParentView):
     def _start_auto_refresh(self):
         """Start auto-refresh every 30 seconds."""
         self._load_data()
+        # Calculate and display next refresh time
+        from datetime import timedelta
+        next_refresh = datetime.now() + timedelta(seconds=30)
+        self.lbl_refresh.config(
+            text=f"{_('Next update')}: {next_refresh.strftime('%H:%M:%S')}"
+        )
         self._refresh_job = self.after(30000, self._start_auto_refresh)
 
     def _stop_auto_refresh(self):
@@ -239,6 +249,7 @@ class UI(ParentView):
         if self._refresh_job:
             self.after_cancel(self._refresh_job)
             self._refresh_job = None
+        self.lbl_refresh.config(text="")
 
     def _check_user_permissions(self):
         """Check user role and enable/disable validation controls."""

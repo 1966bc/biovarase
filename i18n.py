@@ -32,6 +32,8 @@ TRANSLATIONS = {
     "Add": {"it": "Aggiungi", "en": "Add"},
     "Remove": {"it": "Rimuovi", "en": "Remove"},
     "Load": {"it": "Carica", "en": "Load"},
+    "Loading...": {"it": "Caricamento...", "en": "Loading..."},
+    "Next update": {"it": "Prossimo aggiornamento", "en": "Next update"},
     "Reset": {"it": "Reimposta", "en": "Reset"},
     "Apply": {"it": "Applica", "en": "Apply"},
     "OK": {"it": "OK", "en": "OK"},
