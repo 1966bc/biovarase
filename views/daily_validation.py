@@ -20,6 +20,7 @@ Features:
 """
 
 import sys
+import threading
 import tkinter as tk
 
 from i18n import _
@@ -98,11 +99,12 @@ class UI(ParentView):
         self.calendarium.set_today()
 
         # Load button
-        ttk.Button(
+        self.btn_load = ttk.Button(
             frm_top,
             text=_("Load"),
             command=self._load_data
-        ).pack(side=tk.LEFT, padx=(10, 0))
+        )
+        self.btn_load.pack(side=tk.LEFT, padx=(10, 0))
 
         # Role indicator
         self.lbl_role = ttk.Label(frm_top, text="", foreground="blue")
@@ -315,7 +317,7 @@ class UI(ParentView):
         self.loaded_ws.add(ws_id)
 
     def _load_data(self, preserve_expansion=False):
-        """Load workstation summary for selected date."""
+        """Load workstation summary for selected date (threaded)."""
         selected_date = self._get_selected_date()
         if selected_date is None:
             messagebox.showwarning(_("Validation"), _("Please select a valid date."))
@@ -330,50 +332,72 @@ class UI(ParentView):
         self.dict_results.clear()
         self.loaded_ws.clear()
 
+        # Show loading state
+        self.lbl_stats.config(text=_("Loading..."))
+        self.btn_load.config(state=tk.DISABLED)
+
+        # Run query in background thread
+        def fetch_data():
+            try:
+                sql = """
+                    SELECT
+                        w.workstation_id,
+                        w.description AS workstation_name,
+                        e.description AS equipment_name,
+                        COUNT(r.result_id) AS total_results,
+                        SUM(CASE WHEN r.validated = 1 THEN 1 ELSE 0 END) AS validated_count,
+                        SUM(CASE WHEN r.validated = 0 THEN 1 ELSE 0 END) AS pending_count,
+                        SUM(CASE
+                            WHEN r.validated = 0 AND b.sd > 0
+                                 AND ABS(r.result - b.target) > (b.sd * 3)
+                            THEN 1 ELSE 0
+                        END) AS problem_count,
+                        da.approval_id,
+                        da.approved_by,
+                        da.approved_at,
+                        u.first_name,
+                        u.last_name
+                    FROM workstations w
+                    INNER JOIN equipments e ON w.equipment_id = e.equipment_id
+                    INNER JOIN sections s ON w.section_id = s.section_id
+                    LEFT JOIN results r ON r.workstation_id = w.workstation_id
+                        AND DATE(r.received) = ?
+                        AND r.status = 1
+                        AND r.is_delete = 0
+                    LEFT JOIN batches b ON r.batch_id = b.batch_id
+                        AND b.lab_id = ?
+                    LEFT JOIN daily_approvals da ON da.workstation_id = w.workstation_id
+                        AND da.approval_date = ?
+                    LEFT JOIN users u ON da.approved_by = u.user_id
+                    WHERE w.status = 1
+                        AND s.lab_id = ?
+                    GROUP BY w.workstation_id, w.description, e.description,
+                             da.approval_id, da.approved_by, da.approved_at,
+                             u.first_name, u.last_name
+                    HAVING total_results > 0
+                    ORDER BY w.description
+                """
+
+                lab_id = self.engine.current_ids.get("lab_id")
+                args = (selected_date.isoformat(), lab_id, selected_date.isoformat(), lab_id)
+                rows = self.engine.read(True, sql, args)
+
+                # Update UI from main thread
+                self.after(0, lambda: self._populate_tree(rows, expanded_ws_ids))
+
+            except Exception as e:
+                self.engine.on_log(
+                    "_load_data",
+                    e, type(e), sys.modules[__name__]
+                )
+                self.after(0, lambda: self._on_load_error(e))
+
+        thread = threading.Thread(target=fetch_data, daemon=True)
+        thread.start()
+
+    def _populate_tree(self, rows, expanded_ws_ids):
+        """Populate tree with fetched data (called from main thread)."""
         try:
-            sql = """
-                SELECT
-                    w.workstation_id,
-                    w.description AS workstation_name,
-                    e.description AS equipment_name,
-                    COUNT(r.result_id) AS total_results,
-                    SUM(CASE WHEN r.validated = 1 THEN 1 ELSE 0 END) AS validated_count,
-                    SUM(CASE WHEN r.validated = 0 THEN 1 ELSE 0 END) AS pending_count,
-                    SUM(CASE
-                        WHEN r.validated = 0 AND b.sd > 0
-                             AND ABS(r.result - b.target) > (b.sd * 3)
-                        THEN 1 ELSE 0
-                    END) AS problem_count,
-                    da.approval_id,
-                    da.approved_by,
-                    da.approved_at,
-                    u.first_name,
-                    u.last_name
-                FROM workstations w
-                INNER JOIN equipments e ON w.equipment_id = e.equipment_id
-                INNER JOIN sections s ON w.section_id = s.section_id
-                LEFT JOIN results r ON r.workstation_id = w.workstation_id
-                    AND DATE(r.received) = ?
-                    AND r.status = 1
-                    AND r.is_delete = 0
-                LEFT JOIN batches b ON r.batch_id = b.batch_id
-                    AND b.lab_id = ?
-                LEFT JOIN daily_approvals da ON da.workstation_id = w.workstation_id
-                    AND da.approval_date = ?
-                LEFT JOIN users u ON da.approved_by = u.user_id
-                WHERE w.status = 1
-                    AND s.lab_id = ?
-                GROUP BY w.workstation_id, w.description, e.description,
-                         da.approval_id, da.approved_by, da.approved_at,
-                         u.first_name, u.last_name
-                HAVING total_results > 0
-                ORDER BY w.description
-            """
-
-            lab_id = self.engine.current_ids.get("lab_id")
-            args = (selected_date.isoformat(), lab_id, selected_date.isoformat(), lab_id)
-            rows = self.engine.read(True, sql, args)
-
             if rows is None:
                 rows = []
 
@@ -397,12 +421,14 @@ class UI(ParentView):
             if expanded_ws_ids:
                 self._expand_ws_ids(expanded_ws_ids)
 
-        except Exception as e:
-            self.engine.on_log(
-                "_load_data",
-                e, type(e), sys.modules[__name__]
-            )
-            messagebox.showerror(_("Error"), f"{_('Failed to load data:')}\n{e}")
+        finally:
+            self.btn_load.config(state=tk.NORMAL)
+
+    def _on_load_error(self, error):
+        """Handle load error (called from main thread)."""
+        self.btn_load.config(state=tk.NORMAL)
+        self.lbl_stats.config(text="")
+        messagebox.showerror(_("Error"), f"{_('Failed to load data:')}\n{error}")
 
     def _insert_workstation_node(self, row):
         """Insert a workstation as parent node."""
