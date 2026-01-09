@@ -235,7 +235,7 @@ class UI(ParentView):
 
     def _start_auto_refresh(self):
         """Start auto-refresh every 30 seconds."""
-        self._load_data()
+        self._load_data(preserve_expansion=True)
         # Calculate and display next refresh time
         from datetime import timedelta
         next_refresh = datetime.now() + timedelta(seconds=30)
