@@ -40,8 +40,11 @@ pytest tests/test_qc.py::TestQC::test_get_mean_with_valid_series -v
 # Generate coverage report
 pytest --cov=. --cov-report=html --cov-report=term
 
-# Database setup
-mysql -u root -p < schema.sql
+# Database setup (initial)
+mysql -u root -p < biovarase.sql
+
+# Build Windows executable (from Windows)
+build_biovarase.cmd               # Output: dist/biovarase.dist/biovarase.exe
 ```
 
 ## Architecture
@@ -112,7 +115,13 @@ self.engine.notify("batch_changed", batch_id)
 self.engine.unsubscribe("batch_changed", self.on_batch_changed)
 ```
 
-Events: `batch_changed`, `result_changed`, `section_changed`, `supplier_changed`, `equipment_changed`, `test_method_changed`
+**Events:**
+- `batch_changed` - Batch created/modified/deleted
+- `result_changed` - QC result added/modified/deleted
+- `section_changed` - Section context changed
+- `supplier_changed` - Supplier modified
+- `equipment_changed` - Equipment modified
+- `test_method_changed` - Test method modified
 
 ### GUI Window Types
 
@@ -293,6 +302,34 @@ Point colors by SD distance:
 - **Yellow/Orange:** 2SD ≤ |z| < 3SD (warning)
 - **Red:** |z| ≥ 3SD (violation)
 
+### QC Plot Canvas Files
+| File | Purpose |
+|------|---------|
+| `ljcanvas.py` | Levey-Jennings control chart |
+| `youden_canvas.py` | Youden plot for paired levels |
+| `total_error_canvas.py` | Total Error visualization |
+| `frequency_histogram_canvas.py` | Result distribution histogram |
+| `bias_canvas.py` | Bias comparison plots |
+
+### Bland-Altman Scanner (`views/bland_altman_alert.py`)
+
+Automatic scanner for workstation comparison across all tests.
+
+**Features:**
+- Runs in background thread (no UI freeze)
+- Filters by current lab_id
+- Shows only alerts and warnings (hides OK results)
+- Uses foreground colors for GTK/Debian compatibility
+
+**Thresholds:**
+- Bias threshold: default 10%
+- % out threshold: default 5%
+
+**Color coding:**
+- Red (foreground): Alert - bias or % out exceeds threshold
+- Orange (foreground): Warning - 70% of threshold
+- Gray (foreground): Insufficient data (<10 pairs)
+
 ### Westgard Multirule Evaluation Order
 1. **1:3S** - Single value > 3SD (reject)
 2. **2:2S** - Two consecutive > 2SD same side
@@ -313,6 +350,8 @@ Point colors by SD distance:
 | `observations` | `get_observations()` | Minimum QC observations |
 | `date_format` | `get_date_format()` | Date display format |
 | `remember_batch` | `get_remember_batch()` | Remember last batch selection |
+| `autologin` | `get_autologin_flag()` | Enable auto-login for viewer user |
+| `correlation_coefficient` | `get_correlation_coefficient()` | Youden plot correlation threshold |
 
 ### Constants (app_config.py)
 | Constant | Value | Purpose |
@@ -320,8 +359,13 @@ Point colors by SD distance:
 | `BATCH_DESCRIPTION_MAX_LENGTH` | 15 | Max chars for batch level (L1, Normal, etc.) |
 | `LOT_NUMBER_MAX_LENGTH` | 20 | Max chars for lot number |
 | `MAX_LOGIN_ATTEMPTS` | 3 | Failed login attempts before lockout |
+| `LOG_MAX_SIZE_MB` | 10 | Maximum log file size before rotation |
+| `LOG_KEEP_COUNT` | 5 | Number of old log files to keep |
+| `DB_CONNECTION_TIMEOUT` | 5 | Database connection timeout in seconds |
 
 ## Testing
+
+Test infrastructure is configured via `pytest.ini` but the `tests/` directory needs to be created.
 
 ### Test Markers (pytest.ini)
 - `@pytest.mark.critical` - Medical safety tests
@@ -354,39 +398,165 @@ def test_calculate_mean_returns_correct_value():
 - **Key derivation:** PBKDF2-HMAC-SHA256 (100,000 iterations)
 - **SQL:** Parameterized queries only (SQL injection prevention)
 
-## Project Structure
+## Abbott Alinity Integration
+
+Biovarase imports QC data from Abbott Alinity instruments via network share.
+
+### Architecture
 
 ```
-biovarase/
-├── biovarase.py          # Entry point
-├── engine.py             # Main orchestrator (Singleton)
-├── app_config.py         # Application constants and config utilities
-├── dbms.py               # Database layer
-├── controller.py         # SQL builder + domain logic
-├── qc.py                 # QC computations
-├── westgards.py          # Westgard rules
-├── tools.py              # GUI utilities
-├── exporter.py           # Data export
-├── importer.py           # Data import
-├── launcher.py           # File opening
-├── security.py           # Encryption (hardware-locked)
-├── i18n.py               # Internationalization (translations)
-├── views/                # GUI windows (~50 windows)
-│   ├── parent_view.py    # Base class (singleton master windows)
-│   ├── child_view.py     # Base class (editor dialogs)
-│   ├── main.py           # Main application window
-│   ├── login.py          # Authentication dialog
-│   ├── batches.py        # QC batch management
-│   └── ...               # Domain-specific views
-├── migrations/           # Database migrations (SQL)
-├── schema.sql            # Database schema
-├── pytest.ini            # Test configuration
-└── docs/                 # Additional documentation
-
-# Local service folders (gitignored, not in repository):
-# pics/                   # Screenshots for debugging
-# quarantine/             # Old/backup files for reference
+Abbott Instruments → Windows Share → Linux Mount → abbott_import.py → MariaDB
+     (ALCI-1/2/3)    \\172.16.145.11   /mnt/biovarase_qc
 ```
+
+### File Format
+
+Abbott exports pipe-delimited `.txt` files with QC results. Key fields by position:
+| Position | Field | Example |
+|----------|-------|---------|
+| 7 | Control name | MCHEMIA, PCT |
+| 8 | Lot number | 032807240 |
+| 9 | Expiration | YYYYMMDD |
+| 10 | Level | 1, 2, 3 |
+| 12 | Test code | 311, VITD, GLUC |
+| 14 | DateTime | YYYYMMDDHHMMSSmmm |
+| 15 | Result value | 5.23 |
+| 16 | Workstation | ALCI-1, ALCI-2, ALCI-3 |
+| 18 | Target | 5.0 |
+| 19 | SD | 0.3 |
+
+### Import Script (`abbott_import_v2.py`)
+
+Simplified importer - requires pre-configured test_methods and workstation_test_methods.
+
+```bash
+# Test run (no DB changes)
+python3 abbott_import_v2.py --dry-run --verbose
+
+# Import with limit
+python3 abbott_import_v2.py --limit 100 -v
+
+# Full import (run in batches to avoid server overload)
+python3 abbott_import_v2.py --limit 300
+python3 abbott_import_v2.py --limit 600   # skips duplicates automatically
+python3 abbott_import_v2.py               # complete remaining
+```
+
+**Import flow:**
+```
+File Abbott → TESTCODE (field 12) + workstation (field 16)
+           → workstation_test_methods.external_code lookup
+           → test_method_id
+           → batch (per workstation/lot/level)
+           → result (with duplicate detection)
+```
+
+**Auto-creates on import:**
+- `tests` - New test with description from `CFGTESTQNRANGE.xlsx` or `MANUAL_MAPPINGS`
+- `test_methods` - Linked to section_id=6 (Alinity), category_id=29
+- `workstation_test_methods` - External code mapping
+- `batches` - With target/SD from file, lot format: `{lot}-L{level}`
+- `results` - Duplicate detection by (batch_id, workstation_id, received)
+
+### Configuration
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `ABBOTT_PATH` | `/mnt/biovarase_qc/EXPQC/Biovarase` | Network share mount point |
+| `SECTION_ID` | 6 | Sezione Alinity |
+| `LAB_ID` | 2 | Laboratory ID for Abbott batches |
+| `CONTROL_ID` | 71 | Control type ID for Abbott QC |
+| `VALID_WORKSTATIONS` | ALCI-1, ALCI-2, ALCI-3 | Accepted device IDs |
+| `MAPPING_FILE` | `CFGTESTQNRANGE.xlsx` | Excel with test code→description |
+
+### Test Code Mapping
+
+The importer maps Abbott test codes to descriptions using:
+1. **Excel file** (`CFGTESTQNRANGE.xlsx`) - Primary source
+2. **MANUAL_MAPPINGS dict** - Fallback for codes not in Excel
+
+Common mappings:
+```python
+'LIPLD': 'Lipasi', 'VITD': 'Vitamina D', 'B12': 'Vitamina B12',
+'GLUC': 'Glucosio', 'CREA': 'Creatinina', 'AST': 'AST/GOT', ...
+```
+
+### Test Methods Configuration
+
+When creating `test_methods` for Abbott tests, use these default values:
+
+| Field | Value | Description |
+|-------|-------|-------------|
+| `section_id` | 6 | Sezione Alinity |
+| `category_id` | 29 | Abbott category |
+| `sample_id` | 1 | Default sample type |
+| `method_id` | 18 | Abbott method |
+| `unit_id` | 40 | NA (to be refined with Excel units) |
+| `is_mandatory` | 0 | Not mandatory |
+| `status` | 1 | Active |
+| `code` | LISCODE from Excel | Max 10 chars, from CFGTESTQNRANGE.xlsx column C |
+
+### Excel File Structure (`CFGTESTQNRANGE.xlsx`)
+
+| Column | Field | Example |
+|--------|-------|---------|
+| A | TESTCODE | 311, VITD, GLUC |
+| B | DESCRIPTION | FT3 (Triiodiotironina libera) |
+| C | LISCODE | FT3, GLU, CREA |
+| D | UNIT | pg/mL, mg/dL, U/L |
+| E-N | Reference ranges | SESSO, AGEUNIT, NORMLOW, NORMHIGH, etc. |
+
+The LISCODE is used as `test_methods.code` for LIS integration.
+
+### Network Share Setup (Debian)
+
+```bash
+# Credentials file
+sudo nano /root/omnilab-creds
+# username=gcostanzi
+# password=PASSWORD
+# domain=INTRAOSA
+
+# Mount point
+sudo mkdir -p /mnt/biovarase_qc
+
+# Manual mount
+sudo mount -t cifs //172.16.145.11/Omnilab/EXPQC/Biovarase /mnt/biovarase_qc \
+  -o credentials=/root/omnilab-creds,vers=3.0,sec=ntlmssp
+
+# Automatic mount via cron (check_qc_share.sh)
+```
+
+### Migration
+
+Run before first import:
+```bash
+mysql -u root -p biovarase < migrations/006_abbott_import.sql
+```
+
+Creates `abbott_imported_files` table to track processed files.
+
+### Cron Setup
+
+```bash
+# Wrapper script: run_abbott_import.sh
+cd /home/gcostanzi@intraosa.net/Documents/projects/biovarase
+python3 abbott_import.py >> abbott_import.log 2>&1
+```
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `biovarase.py` | Entry point |
+| `engine.py` | Main orchestrator (Singleton, combines all mixins) |
+| `biovarase.sql` | Database schema for initial setup |
+| `config.enc` | Encrypted database credentials (hardware-locked, gitignored) |
+| `setup_wizard.py` | First-run configuration wizard |
+| `build_biovarase.cmd` | Windows build script (uses Nuitka) |
+| `abbott_import.py` | Abbott Alinity QC data importer |
+| `CFGTESTQNRANGE.xlsx` | Abbott test code→description mapping |
+| `run_abbott_import.sh` | Cron wrapper for Abbott import |
 
 ## Standards Compliance
 
