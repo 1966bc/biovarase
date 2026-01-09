@@ -195,8 +195,8 @@ class UI(ParentView):
         self.lstTestsMethods.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         sb_tests.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Tags for status
-        self.lstTestsMethods.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
+        # Tags for status (use foreground for better ttk theme compatibility)
+        self.lstTestsMethods.tag_configure("status", foreground="gray")
 
         self.lstTestsMethods.bind("<<TreeviewSelect>>", self._on_test_method_selected)
         self.lstTestsMethods.bind("<Double-1>", self._on_test_method_activated)
@@ -233,8 +233,9 @@ class UI(ParentView):
         self.lstBatches.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         sb_batches.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Tags for expired/expiring batches
-        self.lstBatches.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
+        # Tags for status and expired/expiring batches
+        # Use foreground for status (better ttk theme compatibility)
+        self.lstBatches.tag_configure("status", foreground="gray")
         self.lstBatches.tag_configure("expired", background="coral")
         self.lstBatches.tag_configure("expiring", background="khaki")
 
