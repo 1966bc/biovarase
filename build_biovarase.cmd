@@ -144,8 +144,6 @@ py -m nuitka biovarase.py ^
     --include-data-files=icon=icon ^
     --include-data-files=language=language ^
     --include-data-files=LICENSE=LICENSE ^
-    --include-data-files=lot_description_lenght=lot_description_lenght ^
-    --include-data-files=lot_lenght=lot_lenght ^
     --include-data-files=observations=observations ^
     --include-data-files=records=records ^
     --include-data-files=remember_batch=remember_batch ^
