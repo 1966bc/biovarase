@@ -133,7 +133,6 @@ py -m nuitka biovarase.py ^
     --nofollow-import-to=tkinter.test ^
     ^
     --include-data-dir=documents=documents ^
-    --include-data-dir=sql=sql ^
     ^
     --include-data-files=autologin=autologin ^
     --include-data-files=correlation_coefficient=correlation_coefficient ^
