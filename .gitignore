@@ -65,12 +65,7 @@ documents/*
 imports/
 quarantine/
 services/
-tests/
 dist/
-
-# Test files (local only)
-test_congif.py
-test_log_rotation.py
 
 # OS files
 .DS_Store
