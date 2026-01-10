@@ -467,12 +467,23 @@ class Main(tk.Toplevel):
         self.lblWestgard.pack(fill=tk.X, padx=4, pady=1)
 
         w = ttk.LabelFrame(frm_lists, text=_("Results"))
-        self.lstResults = tk.Listbox(w, height=8)
+        # Treeview for results
+        cols = ("date", "result")
+        self.lstResults = ttk.Treeview(w, columns=cols, show="headings", height=8)
+        self.lstResults.heading("date", text=_("Date"), anchor=tk.W)
+        self.lstResults.heading("result", text=_("Result"), anchor=tk.E)
+        self.lstResults.column("date", width=90, anchor=tk.W)
+        self.lstResults.column("result", width=80, anchor=tk.E)
+        # Tags for row colors
+        self.lstResults.tag_configure("disabled", foreground="gray")
+        self.lstResults.tag_configure("violation_3s", foreground="red")
+        self.lstResults.tag_configure("violation_2s", foreground="orange")
+        self.lstResults.tag_configure("has_notes", background="#fff2cc")
         sb_results = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstResults.yview)
         self.lstResults.configure(yscrollcommand=sb_results.set)
         self.lstResults.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         sb_results.pack(side=tk.RIGHT, fill=tk.Y)
-        self.lstResults.bind("<<ListboxSelect>>", self.on_selected_result)
+        self.lstResults.bind("<<TreeviewSelect>>", self.on_selected_result)
         self.lstResults.bind("<Double-Button-1>", self.on_update_result)
         w.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
 
@@ -697,7 +708,7 @@ class Main(tk.Toplevel):
 
         # Lista risultati
         if getattr(self, "lstResults", None) is not None:
-            self.engine.clear_listbox(self.lstResults)
+            self.engine.clear_treeview(self.lstResults)
 
     def reset_batch_data(self) -> None:
 
@@ -1155,8 +1166,8 @@ class Main(tk.Toplevel):
             self.reset_graph()
 
     def set_results(self) -> None:
-        """Fill results listbox for selected batch and workstation."""
-        self.engine.clear_listbox(self.lstResults)
+        """Fill results treeview for selected batch and workstation."""
+        self.engine.clear_treeview(self.lstResults)
         self.dict_results = {}
 
         if not (self.selected_batch and self.selected_workstation):
@@ -1165,12 +1176,12 @@ class Main(tk.Toplevel):
             return
 
         try:
-             target = float(self.selected_batch.get("target", 0.0))
-        except Exception as e:
+            target = float(self.selected_batch.get("target", 0.0))
+        except Exception:
             target = 0.0
         try:
             sd = float(self.selected_batch.get("sd", 0.0))
-        except Exception as e:
+        except Exception:
             sd = 0.0
 
         sql = """
@@ -1219,30 +1230,32 @@ class Main(tk.Toplevel):
                 for row in notes_rows
             }
 
-
-        index = 0
         for row in rs:
-            base_text = "{0:10}  {1:>10}".format(row["received_str"], row["result_rounded"])
-
-            has_notes = notes_map.get(row["result_id"], 0) > 0
-            # Add visual marker if has notes
-            text = f"* {base_text}" if has_notes else base_text
-
-            self.lstResults.insert(tk.END, text)
-
             result_val = float(row["result_rounded"])
             is_enabled = row["status"]
-            self.set_results_row_color(index, result_val, is_enabled, target, sd)
+            has_notes = notes_map.get(row["result_id"], 0) > 0
 
-            # Highlight background if has notes
+            # Build tags list
+            tags = []
+            if not is_enabled:
+                tags.append("disabled")
+            elif sd and abs(result_val - target) > 3 * sd:
+                tags.append("violation_3s")
+            elif sd and abs(result_val - target) > 2 * sd:
+                tags.append("violation_2s")
+
             if has_notes:
-                try:
-                    self.lstResults.itemconfig(index, {"background": "#fff2cc"})
-                except Exception:
-                    pass
+                tags.append("has_notes")
 
-            self.dict_results[index] = row["result_id"]
-            index += 1
+            # Add note indicator to date column
+            date_text = f"* {row['received_str']}" if has_notes else row["received_str"]
+
+            item_id = self.lstResults.insert(
+                "", tk.END,
+                values=(date_text, row["result_rounded"]),
+                tags=tuple(tags) if tags else ()
+            )
+            self.dict_results[item_id] = row["result_id"]
 
         self.get_values(rs)
 
@@ -1439,24 +1452,24 @@ class Main(tk.Toplevel):
 
     def on_selected_result(self, event: Optional[tk.Event]) -> None:
         """Handle result selection change and load selected_result dict."""
-        selection = self.lstResults.curselection()
+        selection = self.lstResults.selection()
         if not selection:
             self.selected_result = None
             return
 
-        idx = selection[0]
-        pk = self.dict_results.get(idx)
+        item_id = selection[0]
+        pk = self.dict_results.get(item_id)
         if pk is None:
             self.selected_result = None
             return
 
         self.selected_result = self.engine.get_selected("results", "result_id", pk)
 
-    def _open_result_editor_for_item(self, idx: int) -> None:
-        """Open result editor in update mode for the given listbox index."""
+    def _open_result_editor_for_item(self, item_id: str) -> None:
+        """Open result editor in update mode for the given treeview item_id."""
         try:
             # --- Build dictionaries required by result.py ---------------------
-            result_id = self.dict_results.get(idx)
+            result_id = self.dict_results.get(item_id)
             if result_id is None:
                 messagebox.showerror(
                     self.engine.app_title,
@@ -1510,7 +1523,7 @@ class Main(tk.Toplevel):
                 "workstations", "workstation_id", workstation_id
             )
 
-            views.result.UI(self, idx).on_open()
+            views.result.UI(self, item_id).on_open()
 
         except Exception as e:
             self.engine.on_log(
@@ -1519,26 +1532,6 @@ class Main(tk.Toplevel):
                 sys.exc_info()[0],
                 sys.modules[__name__],
             )
-
-
-    def set_results_row_color(self, index, result, is_enabled, target, sd):
-        """Set color of a result row according to Westgard thresholds."""
-        try:
-            if not is_enabled:
-                self.lstResults.itemconfig(index, {"fg": "gray"})
-                return
-
-            # 1s, 2s, 3s thresholds
-            if sd and abs(result - target) > 3 * sd:
-                color = "red"
-            elif sd and abs(result - target) > 2 * sd:
-                color = "orange"
-            else:
-                color = "black"
-
-            self.lstResults.itemconfig(index, {"fg": color})
-        except Exception:
-            pass
 
     def on_lj_point_double_click(self, info: dict) -> None:
         """
@@ -1561,14 +1554,14 @@ class Main(tk.Toplevel):
 
             result_id = mapping[idx]
 
-            # Find corresponding listbox index
-            list_idx = None
+            # Find corresponding treeview item_id
+            item_id = None
             for k, rid in self.dict_results.items():
                 if rid == result_id:
-                    list_idx = k
+                    item_id = k
                     break
 
-            if list_idx is None:
+            if item_id is None:
                 messagebox.showerror(
                     self.engine.app_title,
                     _("Result not found in list. Cannot edit."),
@@ -1576,13 +1569,12 @@ class Main(tk.Toplevel):
                 )
                 return
 
-            # Sync selection in the listbox
-            self.lstResults.selection_clear(0, tk.END)
-            self.lstResults.selection_set(list_idx)
-            self.lstResults.see(list_idx)
+            # Sync selection in the treeview
+            self.lstResults.selection_set(item_id)
+            self.lstResults.see(item_id)
 
             # Open editor
-            self._open_result_editor_for_item(list_idx)
+            self._open_result_editor_for_item(item_id)
 
         except Exception as e:
             self.engine.on_log(
@@ -2183,15 +2175,15 @@ class Main(tk.Toplevel):
                 messagebox.showwarning(self.engine.app_title, msg, parent=self)
                 return
 
-            selection = self.lstResults.curselection()
+            selection = self.lstResults.selection()
             if not selection:
                 msg = _("Attention please.\nSelect a result.")
                 messagebox.showinfo(self.engine.app_title, msg, parent=self)
                 return
 
             # Ensure selected_result is set before opening notes
-            idx = selection[0]
-            pk = self.dict_results.get(idx)
+            item_id = selection[0]
+            pk = self.dict_results.get(item_id)
             if pk:
                 self.selected_result = self.engine.get_selected("results", "result_id", pk)
 
