@@ -176,12 +176,12 @@ class Login(ttk.Frame):
         if rs:
             self.engine.set_log_user(rs)
 
-            # Initialize context from user's lab_id
-            user_lab_id = self.engine.log_user.get("lab_id")
+            # Initialize context from user's org_id (lab level in organizations table)
+            user_org_id = self.engine.log_user.get("org_id")
             user_role = self.engine.log_user.get("role", 99)
 
-            if user_lab_id is None:
-                # Legacy data: user without lab_id assigned
+            if user_org_id is None:
+                # User without org_id assigned
                 if user_role == 0:
                     # Admin can select lab
                     dialog = LabSelectorDialog(self)
@@ -199,7 +199,7 @@ class Login(ttk.Frame):
 
                     self.engine.init_current_ids_from_user(selected_lab_id)
                 else:
-                    # Non-admin without lab_id - configuration error
+                    # Non-admin without org_id - configuration error
                     messagebox.showerror(
                         self.engine.app_title,
                         _("No laboratory assigned to this user."),
@@ -208,8 +208,8 @@ class Login(ttk.Frame):
                     self.engine.log_user.clear()
                     return
             elif user_role == 0:
-                # Admin with lab_id: show selector with default
-                dialog = LabSelectorDialog(self, default_lab_id=user_lab_id)
+                # Admin with org_id: show selector with default
+                dialog = LabSelectorDialog(self, default_lab_id=user_org_id)
                 self.wait_window(dialog)
                 selected_lab_id = dialog.get_selected_lab_id()
 
@@ -224,8 +224,8 @@ class Login(ttk.Frame):
 
                 self.engine.init_current_ids_from_user(selected_lab_id)
             else:
-                # Normal user: use assigned lab_id
-                self.engine.init_current_ids_from_user(user_lab_id)
+                # Normal user: use assigned org_id (lab level)
+                self.engine.init_current_ids_from_user(user_org_id)
 
             self.hide()
 

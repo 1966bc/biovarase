@@ -13,11 +13,12 @@ across the multi-site laboratory hierarchy.
 
 Hierarchy visualization: Sites → Labs → Sections → Workstations
 
-Role-based access control (three-tier filtering):
-    - Admin (role=0):       See all sites (multi-site system administration)
-    - Superuser (role=1):   See all sections in their lab (QC validation)
-    - Technician (role=2):  See only their section (data entry)
-    - Autologin (role=3):   See only their section (read-only)
+Role-based access control:
+    - App Admin (role=0):        See all organizations (global access)
+    - Country/Regional/Lab Admin (1-3): See descendants of their org
+    - Superuser (role=4):        QC validation within their lab
+    - Technician (role=5):       Data entry within their scope
+    - Viewer (role=6):           Read-only access
 
 Key features:
     - Hierarchical tree navigation (left panel)
@@ -37,14 +38,24 @@ from tkinter import messagebox
 
 import views.assign_test_methods as assign
 
-# User role constants (must match engine.py)
-ROLE_ADMIN = 0       # System administrator - multi-site configuration
-ROLE_SUPERUSER = 1   # Lab manager - QC validation + lab-wide access
-ROLE_TECHNICIAN = 2  # Section worker - data entry + section-only access
-ROLE_AUTOLOGIN = 3   # Guest user - read-only access
+# User roles - imported from engine for consistency
+from engine import (
+    ROLE_APP_ADMIN, ROLE_COUNTRY_ADMIN, ROLE_REGIONAL_ADMIN,
+    ROLE_LAB_ADMIN, ROLE_SUPERUSER, ROLE_TECHNICIAN, ROLE_VIEWER
+)
+# Legacy aliases
+ROLE_ADMIN = ROLE_APP_ADMIN
+ROLE_AUTOLOGIN = ROLE_VIEWER
 
-# Tree node labels
-TREE_ROOT_LABEL = "Sites"
+# Tree node types (based on organizations.org_type)
+NODE_TYPE_COUNTRY = "country"
+NODE_TYPE_REGION = "region"
+NODE_TYPE_LAB = "lab"
+NODE_TYPE_SECTION = "section"
+NODE_TYPE_WORKSTATION = "workstation"
+
+# Tree root label
+TREE_ROOT_LABEL = "Organizations"
 
 
 class UI(ParentView):
@@ -155,217 +166,177 @@ class UI(ParentView):
 
     def _load_tree(self):
         """
-        Build the hierarchy tree: Sites → Labs → Sections → Workstations.
+        Build the hierarchy tree from organizations table.
 
-        Implements three-tier role-based filtering:
-            - Admin (role=0):       See all active sites (multi-site view)
-            - Superuser (role=1):   See all sections in their lab (lab-wide)
-            - Technician/Autologin: See only their section (section-only)
+        Structure: Country → Region → Lab → Section → Workstation
 
-        The filtering is done at the SQL level for optimal performance.
+        Role-based filtering:
+            - App Admin (role=0): See all organizations
+            - Other roles: Filtered by user's org_id scope
         """
-
         # 1) Clear any existing nodes
         for iid in self.Sites.get_children():
             self.Sites.delete(iid)
 
-        # 2) Create the root node for the hierarchy
-        root_iid = "sites_root"
+        # 2) Create the root node
+        root_iid = "org_root"
         root = self.Sites.insert("", tk.END, iid=root_iid, text=TREE_ROOT_LABEL)
 
         # 3) Get user role with fail-safe default
         try:
             role = int(self.engine.log_user.get("role", ROLE_TECHNICIAN))
-        except (ValueError, TypeError, KeyError) as e:
-            role = ROLE_TECHNICIAN  # Fail safe: restrict to section level
+        except (ValueError, TypeError, KeyError):
+            role = ROLE_TECHNICIAN
 
-        # 4) Fetch sites based on role (three-tier filtering)
+        user_org_id = self.engine.log_user.get("org_id")
+
+        # 4) Load countries (root level organizations)
         if role == ROLE_ADMIN:
-            # Admin: See all sites (multi-site system administration)
-            sql = """
-                SELECT
-                    sites.site_id          AS site_id,
-                    suppliers.description  AS site_name
-                FROM sites
-                JOIN suppliers
-                    ON suppliers.supplier_id = sites.comp_id
-                WHERE sites.status = 1
-                ORDER BY suppliers.description ASC;
-            """
-            args = ()
-
+            # Admin sees all countries
+            countries = self._load_orgs_by_type(None, "country")
         else:
-            # All non-admin users: See all sections in their laboratory
-            sql = """
-                SELECT
-                    sites.site_id          AS site_id,
-                    suppliers.description  AS site_name
-                FROM labs
-                JOIN sites
-                    ON sites.site_id = labs.site_id
-                JOIN suppliers
-                    ON suppliers.supplier_id = sites.comp_id
-                WHERE labs.lab_id = ?
-                  AND sites.status = 1
-                ORDER BY suppliers.description ASC;
-            """
-            lab_id = self.engine.current_ids.get("lab_id")
-            args = (lab_id,)
+            # Non-admin: find the country ancestor of user's org
+            countries = self._get_user_country_scope(user_org_id)
 
-        rs_sites = self.engine.read(True, sql, args)
-
-        # Guard: no sites found → just open the root and exit
-        if not rs_sites:
-            self.Sites.item(root_iid, open=True)
-            return
-
-        # 5) Build the tree: Sites → Labs → Sections → Workstations
-        for row_site in rs_sites:
-            site_id   = row_site["site_id"]
-            site_name = row_site["site_name"]
-
-            site_iid = f"site_{site_id}"
+        # 5) Build the tree: Country → Region → Lab → Section → Workstation
+        for country_id, country_name in countries:
+            country_iid = f"country_{country_id}"
             self.Sites.insert(
-                root,
-                tk.END,
-                iid=site_iid,
-                text=site_name,
-                values=(site_id, "sites")
+                root, tk.END, iid=country_iid,
+                text=country_name,
+                values=(country_id, NODE_TYPE_COUNTRY),
             )
 
-            rs_labs = self._load_labs(site_id, role)
-            if not rs_labs:
-                continue  # No labs for this site
-
-            for row_lab in rs_labs:
-                lab_id   = row_lab["lab_id"]
-                lab_name = row_lab["lab_name"]
-
-                lab_iid = f"lab_{lab_id}"
+            # Load regions under this country
+            regions = self._load_orgs_by_type(country_id, "region")
+            for region_id, region_name in regions:
+                region_iid = f"region_{region_id}"
                 self.Sites.insert(
-                    site_iid,
-                    tk.END,
-                    iid=lab_iid,
-                    text=lab_name,
-                    values=(lab_id, "labs")
+                    country_iid, tk.END, iid=region_iid,
+                    text=region_name,
+                    values=(region_id, NODE_TYPE_REGION),
                 )
 
-                rs_sections = self._load_sections(lab_id, role)
-                if not rs_sections:
-                    continue  # No sections for this lab
-
-                for row_sec in rs_sections:
-                    section_id   = row_sec["section_id"]
-                    section_name = row_sec["section_name"]
-
-                    sec_iid = f"sec_{section_id}"
+                # Load labs under this region
+                labs = self._load_orgs_by_type(region_id, "lab")
+                for lab_id, lab_name in labs:
+                    lab_iid = f"lab_{lab_id}"
                     self.Sites.insert(
-                        lab_iid,
-                        tk.END,
-                        iid=sec_iid,
-                        text=section_name,
-                        values=(section_id, "sections")
+                        region_iid, tk.END, iid=lab_iid,
+                        text=lab_name,
+                        values=(lab_id, NODE_TYPE_LAB),
                     )
 
-                    rs_workstations = self._load_workstations(section_id)
-                    if not rs_workstations:
-                        continue  # No workstations for this section
-
-                    for row_ws in rs_workstations:
-                        workstation_id   = row_ws["workstation_id"]
-                        workstation_name = row_ws["workstation_name"]
-
-                        ws_iid = f"ws_{workstation_id}"
+                    # Load sections under this lab
+                    sections = self._load_orgs_by_type(lab_id, "section")
+                    for section_id, section_name in sections:
+                        sec_iid = f"sec_{section_id}"
                         self.Sites.insert(
-                            sec_iid,
-                            tk.END,
-                            iid=ws_iid,
-                            text=workstation_name,
-                            values=(workstation_id, "workstations")
+                            lab_iid, tk.END, iid=sec_iid,
+                            text=section_name,
+                            values=(section_id, NODE_TYPE_SECTION),
                         )
 
-        # 6) Expand the root node by default
+                        # Load workstations under this section (by org_id)
+                        workstations = self._load_workstations(section_id)
+                        for ws_id, ws_descr in workstations:
+                            ws_iid = f"ws_{ws_id}"
+                            self.Sites.insert(
+                                sec_iid, tk.END, iid=ws_iid,
+                                text=ws_descr,
+                                values=(ws_id, NODE_TYPE_WORKSTATION),
+                            )
+
+        # 6) Expand root and first levels for better UX
         self.Sites.item(root_iid, open=True)
+        for child in self.Sites.get_children(root_iid):
+            self.Sites.item(child, open=True)
 
 
-    def _load_labs(self, site_id, role):
+    def _load_orgs_by_type(self, parent_id, org_type):
         """
-        Load labs for a given site, filtered by user role.
+        Load organizations of a specific type under a parent.
 
         Args:
-            site_id: The site ID to filter labs
-            role: User role (ADMIN, SUPERUSER, TECHNICIAN, AUTOLOGIN)
+            parent_id: Parent org_id (None for root/countries)
+            org_type: Organization type ('country', 'region', 'lab', 'section')
 
         Returns:
-            List of lab dictionaries or None
+            List of (org_id, description) tuples
         """
-        if role == ROLE_ADMIN:
-            # Admin: See all labs in this site
+        if parent_id is None:
             sql = """
-                SELECT
-                    labs.lab_id        AS lab_id,
-                    labs.description   AS lab_name
-                FROM labs
-                WHERE labs.site_id = ?
-                  AND labs.status = 1
-                ORDER BY labs.description ASC;
+                SELECT org_id, description
+                FROM organizations
+                WHERE parent_id IS NULL AND org_type = ? AND status = 1
+                ORDER BY description ASC
             """
-            args = (site_id,)
-
+            args = (org_type,)
         else:
-            # All non-admin users: See only their own lab (if it belongs to this site)
             sql = """
-                SELECT
-                    labs.lab_id        AS lab_id,
-                    labs.description   AS lab_name
-                FROM labs
-                WHERE labs.site_id = ?
-                  AND labs.lab_id = ?
-                  AND labs.status = 1
-                ORDER BY labs.description ASC;
+                SELECT org_id, description
+                FROM organizations
+                WHERE parent_id = ? AND org_type = ? AND status = 1
+                ORDER BY description ASC
             """
-            lab_id = self.engine.current_ids.get("lab_id")
-            args = (site_id, lab_id)
+            args = (parent_id, org_type)
 
-        return self.engine.read(True, sql, args)
+        rows = self.engine.read(True, sql, args) or []
+        return [(r["org_id"], r["description"]) for r in rows]
 
-
-    def _load_sections(self, lab_id, role):
+    def _get_user_country_scope(self, user_org_id):
         """
-        Load sections for a given lab.
+        Get the country scope for a non-admin user based on their org_id.
+
+        Traverses up the organization hierarchy to find the country.
 
         Args:
-            lab_id: The lab ID to filter sections
-            role: User role (unused, all users see all sections in their lab)
+            user_org_id: User's assigned org_id
 
         Returns:
-            List of section dictionaries or None
+            List containing the user's country (org_id, description)
         """
-        # All users see all sections in their lab
+        if user_org_id is None:
+            # No org assigned, return all countries (shouldn't happen for non-admin)
+            return self._load_orgs_by_type(None, "country")
+
+        # Traverse up to find the country using recursive CTE
         sql = """
-            SELECT
-                sections.section_id      AS section_id,
-                sections.description     AS section_name
-            FROM sections
-            WHERE sections.lab_id = ?
-              AND sections.status = 1
-            ORDER BY sections.description ASC;
+            WITH RECURSIVE ancestors AS (
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.parent_id, o.org_type, o.description
+                FROM organizations o
+                JOIN ancestors a ON o.org_id = a.parent_id
+            )
+            SELECT org_id, description FROM ancestors WHERE org_type = 'country'
         """
-        args = (lab_id,)
-        return self.engine.read(True, sql, args)
+        row = self.engine.read(False, sql, (user_org_id,))
+        if row:
+            return [(row["org_id"], row["description"])]
 
+        # Fallback: return all countries
+        return self._load_orgs_by_type(None, "country")
 
-    def _load_workstations(self, section_id):
+    def _load_workstations(self, section_org_id):
+        """
+        Load active workstations for a given section (by org_id).
+
+        Args:
+            section_org_id: The section's org_id
+
+        Returns:
+            List of (workstation_id, description) tuples
+        """
         sql = """
-            SELECT 
-                workstations.workstation_id    AS workstation_id,
-                workstations.description       AS workstation_name
+            SELECT workstation_id, description
             FROM workstations
-            WHERE workstations.section_id = ?
-              AND workstations.status = 1
-            ORDER BY workstations.description ASC;
+            WHERE org_id = ? AND status = 1
+            ORDER BY description ASC
         """
-        return self.engine.read(True, sql, (section_id,))
+        rows = self.engine.read(True, sql, (section_org_id,)) or []
+        return [(r["workstation_id"], r["description"]) for r in rows]
 
     def _clear_tests_methods(self):
         """Clear the right-hand list and reset assigned methods."""
@@ -390,7 +361,7 @@ class UI(ParentView):
         ref_id, ref_type = item["values"]
 
         # 2) If it's not a workstation, clear right panel and reset state
-        if ref_type != "workstations":
+        if ref_type != NODE_TYPE_WORKSTATION:
             self.selected_workstation = None
             self._clear_tests_methods()
             return
@@ -442,7 +413,7 @@ class UI(ParentView):
         ref_id, ref_type = item["values"]
 
         # 3) Only react to workstation nodes
-        if ref_type != "workstations":
+        if ref_type != NODE_TYPE_WORKSTATION:
             return
 
         # 4) Ensure ref_id is a valid integer

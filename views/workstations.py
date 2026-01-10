@@ -14,6 +14,12 @@ from i18n import _
 import views.workstation as workstation_ui
 from views.parent_view import ParentView
 
+# Tree node types (based on organizations.org_type)
+NODE_TYPE_COUNTRY = "country"
+NODE_TYPE_REGION = "region"
+NODE_TYPE_LAB = "lab"
+NODE_TYPE_SECTION = "section"
+
 
 class UI(ParentView):
 
@@ -25,7 +31,7 @@ class UI(ParentView):
         self.table = "workstations"
         self.primary_key = "workstation_id"
 
-        self.selected_section = None
+        self.selected_section_org_id = None  # org_id of selected section
         self.selected_workstation = None
         self.child = None
 
@@ -50,10 +56,10 @@ class UI(ParentView):
         self.pane_left = ttk.Frame(self.pw, style="App.TFrame", padding=6)
         self.pw.add(self.pane_left, minsize=260)
 
-        # Hierarchical tree: Sites → Labs → Sections
+        # Hierarchical tree: Country → Region → Lab → Section
         self.Sites = ttk.Treeview(self.pane_left, show="tree")
         self.Sites.column("#0", width=260, minwidth=220, stretch=True)
-        self.Sites.heading("#0", text=_("Sites"), anchor=tk.W)
+        self.Sites.heading("#0", text=_("Organizations"), anchor=tk.W)
 
         sb_sites = ttk.Scrollbar(self.pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
         self.Sites.configure(yscrollcommand=sb_sites.set)
@@ -129,100 +135,138 @@ class UI(ParentView):
         
     def _populate_sites_tree(self):
         """
-        Populate the Sites tree with the full hierarchy:
+        Populate the tree with the full hierarchy from organizations table:
 
-            Sites → Labs → Sections
+            Country → Region → Lab → Section
 
-        Rules:
-        - Always use engine.read(True, sql, args) (4.1).
-        - Never use positional indexing (no row[0], row[1]) (4.2).
-        - Do not use Treeview values indexing (9.1); iid must be parsable
-          by engine.parse_iid().
+        Role-based filtering:
+        - App Admin (role=0): See all organizations
+        - Other roles: Filtered by user's org_id scope
         """
         # Clear current content
         self.engine.clear_treeview(self.Sites)
 
-        # Decide which sites are visible:
-        # - Admin (role_id == 0 in log_user[5]): all sites.
-        # - Non admin: only the site associated with the current lab_id.
-        if self.engine.log_user.get("role") == 0:
-            sql = """
-                  SELECT sites.site_id, suppliers.description
-                  FROM sites
-                  INNER JOIN suppliers ON suppliers.supplier_id = sites.comp_id
-                  WHERE sites.status = 1
-                 ORDER BY suppliers.description ASC;
-            """
-            args = ()
+        root_iid = "org_root"
+        self.Sites.insert("", tk.END, iid=root_iid, text=_("Organizations"))
+
+        # Get user role
+        role = self.engine.log_user.get("role", 5)  # Default to technician
+        user_org_id = self.engine.log_user.get("org_id")
+
+        # Load countries (root level organizations)
+        if role == 0:  # App Admin
+            countries = self._load_orgs_by_type(None, "country")
         else:
-            sql = """
-                  SELECT sites.site_id, suppliers.description
-                  FROM labs
-                  INNER JOIN sites     ON sites.site_id = labs.site_id
-                  INNER JOIN suppliers ON suppliers.supplier_id = sites.comp_id
-                  WHERE labs.lab_id = ?
-                  AND sites.status = 1
-                  ORDER BY suppliers.description ASC;
-            """
-            args = (self.engine.get_lab_id(),)
+            # Non-admin: find the country ancestor of user's org
+            countries = self._get_user_country_scope(user_org_id)
 
-        rs_sites = self.engine.read(True, sql, args)
+        # Build the tree: Country → Region → Lab → Section
+        for country_id, country_name in countries:
+            country_iid = f"country_{country_id}"
+            self.Sites.insert(
+                root_iid, tk.END, iid=country_iid,
+                text=country_name,
+            )
 
-        root_iid = "sites_root"
-        self.Sites.insert("", tk.END, iid=root_iid, text=_("Sites"))
+            # Load regions under this country
+            regions = self._load_orgs_by_type(country_id, "region")
+            for region_id, region_name in regions:
+                region_iid = f"region_{region_id}"
+                self.Sites.insert(
+                    country_iid, tk.END, iid=region_iid,
+                    text=region_name,
+                )
 
-        for site_row in (rs_sites or []):
-            site_id = site_row["site_id"]
-            site_name = site_row["description"]
+                # Load labs under this region
+                labs = self._load_orgs_by_type(region_id, "lab")
+                for lab_id, lab_name in labs:
+                    lab_iid = f"lab_{lab_id}"
+                    self.Sites.insert(
+                        region_iid, tk.END, iid=lab_iid,
+                        text=lab_name,
+                    )
 
-            site_iid = f"site_{site_id}"
-            self.Sites.insert(root_iid, tk.END, iid=site_iid, text=site_name)
-
-            # Load labs for this site
-            rs_labs = self._load_labs(site_id)
-            for lab_row in (rs_labs or []):
-                lab_id = lab_row["lab_id"]
-                lab_name = lab_row["description"]
-
-                lab_iid = f"lab_{lab_id}"
-                self.Sites.insert(site_iid, tk.END, iid=lab_iid, text=lab_name)
-
-                # Load sections for this lab
-                rs_sections = self._load_sections(lab_id)
-                for sec_row in (rs_sections or []):
-                    section_id = sec_row["section_id"]
-                    section_name = sec_row["description"]
-
-                    sec_iid = f"section_{section_id}"
-                    self.Sites.insert(lab_iid, tk.END, iid=sec_iid, text=section_name)
+                    # Load sections under this lab
+                    sections = self._load_orgs_by_type(lab_id, "section")
+                    for section_id, section_name in sections:
+                        sec_iid = f"section_{section_id}"
+                        self.Sites.insert(
+                            lab_iid, tk.END, iid=sec_iid,
+                            text=section_name,
+                        )
 
         self.Sites.item(root_iid, open=True)
+        # Auto-expand first level for better UX
+        for child in self.Sites.get_children(root_iid):
+            self.Sites.item(child, open=True)
 
-    def _load_labs(self, site_id):
-      
-        sql = """
-              SELECT labs.lab_id, labs.description 
-            FROM labs 
-            WHERE labs.site_id = ? AND labs.status = 1 
-            ORDER BY labs.description ASC;
+    def _load_orgs_by_type(self, parent_id, org_type):
         """
-        
-        return self.engine.read(True, sql, (site_id,)) or []
+        Load organizations of a specific type under a parent.
 
-    def _load_sections(self, lab_id):
-     
-        sql = """
-              SELECT sections.section_id, sections.description 
-              FROM sections 
-              WHERE sections.lab_id = ? AND sections.status = 1
-              ORDER BY sections.description ASC;
+        Args:
+            parent_id: Parent org_id (None for root/countries)
+            org_type: Organization type ('country', 'region', 'lab', 'section')
+
+        Returns:
+            List of (org_id, description) tuples
         """
-        
-        return self.engine.read(True, sql, (lab_id,)) or []
+        if parent_id is None:
+            sql = """
+                SELECT org_id, description
+                FROM organizations
+                WHERE parent_id IS NULL AND org_type = ? AND status = 1
+                ORDER BY description ASC
+            """
+            args = (org_type,)
+        else:
+            sql = """
+                SELECT org_id, description
+                FROM organizations
+                WHERE parent_id = ? AND org_type = ? AND status = 1
+                ORDER BY description ASC
+            """
+            args = (parent_id, org_type)
+
+        rows = self.engine.read(True, sql, args) or []
+        return [(r["org_id"], r["description"]) for r in rows]
+
+    def _get_user_country_scope(self, user_org_id):
+        """
+        Get the country scope for a non-admin user based on their org_id.
+
+        Traverses up the organization hierarchy to find the country.
+
+        Args:
+            user_org_id: User's assigned org_id
+
+        Returns:
+            List containing the user's country (org_id, description)
+        """
+        if user_org_id is None:
+            return self._load_orgs_by_type(None, "country")
+
+        # Traverse up to find the country using recursive CTE
+        sql = """
+            WITH RECURSIVE ancestors AS (
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.parent_id, o.org_type, o.description
+                FROM organizations o
+                JOIN ancestors a ON o.org_id = a.parent_id
+            )
+            SELECT org_id, description FROM ancestors WHERE org_type = 'country'
+        """
+        row = self.engine.read(False, sql, (user_org_id,))
+        if row:
+            return [(row["org_id"], row["description"])]
+
+        return self._load_orgs_by_type(None, "country")
 
     def on_branch_selected(self, evt=None):
         """
-        Called when a node is selected in the Sites tree.
+        Called when a node is selected in the tree.
 
         Uses engine.parse_iid() to decode the iid into a structured dict
         (type + id), avoiding any positional indexing on Treeview values.
@@ -232,49 +276,42 @@ class UI(ParentView):
             self._reset_workstations()
             return
 
-        # parse_iid is expected to return something like:
-        #   {"type": "site", "id": 1}
-        #   {"type": "lab", "id": 3}
-        #   {"type": "section", "id": 7}
+        # parse_iid returns: {"type": "section", "id": 7} etc.
         info = self.engine.parse_iid(focus_iid)
         if not info:
-            # Unrecognized node → clear the workstations list
             self._reset_workstations()
             return
 
         kind = info.get("type")
         pk = info.get("id")
 
-        if kind == "section" and pk is not None:
-            # Retrieve the selected section as a dict from the DB
-            self.selected_section = self.engine.get_selected(
-                "sections", "section_id", pk
-            )
-            # Load workstations for this section
+        if kind == NODE_TYPE_SECTION and pk is not None:
+            # Store the section org_id
+            self.selected_section_org_id = pk
+            # Load workstations for this section (by org_id)
             self.set_workstations((pk,))
         else:
             # Only sections have workstations attached
             self._reset_workstations()
 
     def on_branch_activated(self, evt=None):
-   
+        """
+        Double-click on a section: open dialog to add new workstation.
+        """
         focus_iid = self.Sites.focus()
         if not focus_iid:
             return
 
         info = self.engine.parse_iid(focus_iid)
-        if not info or info.get("type") != "section":
+        if not info or info.get("type") != NODE_TYPE_SECTION:
             return
 
         pk = info.get("id")
         if pk is None:
             return
 
-        self.selected_section = self.engine.get_selected(
-            "sections", "section_id", pk
-        )
-         # INSERT mode
-        self.selected_section = self.engine.get_selected("sections", "section_id", pk)
+        # Store section org_id and open INSERT mode
+        self.selected_section_org_id = pk
         self.selected_workstation = None
         self.engine.open_child(self, workstation_ui.UI, index=None)
 
@@ -285,29 +322,32 @@ class UI(ParentView):
         """
         self.lstWorkstations.delete(*self.lstWorkstations.get_children())
         self.selected_workstation = None
+        self.selected_section_org_id = None
 
     def set_workstations(self, args):
-        
+        """
+        Load workstations for a section (by org_id).
+
+        Args:
+            args: Tuple containing (section_org_id,)
+        """
         self._reset_workstations()
 
         sql = """
-                SELECT
-                    workstations.workstation_id,
-                    equipments.description AS equipment_description,
-                    workstations.description AS workstation_description,
-                    workstations.serial,
-                    workstations.device_id,
-                    workstations.status
-                FROM workstations
-                INNER JOIN equipments
-                    ON workstations.equipment_id = equipments.equipment_id
-                INNER JOIN sections
-                    ON workstations.section_id = sections.section_id
-                WHERE sections.section_id = ?
-                  AND equipments.status = 1
-                ORDER BY workstations.description;
+            SELECT
+                workstations.workstation_id,
+                equipments.description AS equipment_description,
+                workstations.description AS workstation_description,
+                workstations.serial,
+                workstations.device_id,
+                workstations.status
+            FROM workstations
+            INNER JOIN equipments
+                ON workstations.equipment_id = equipments.equipment_id
+            WHERE workstations.org_id = ?
+              AND equipments.status = 1
+            ORDER BY workstations.description;
         """
-
 
         rows = self.engine.read(True, sql, args)
 
@@ -337,17 +377,12 @@ class UI(ParentView):
         This is used by Engine.refresh_windows_for_table() after external
         changes (e.g. Equipments editor).
         """
-        if not self.selected_section:
+        if self.selected_section_org_id is None:
             self._reset_workstations()
             return
 
-        section_id = self.selected_section.get("section_id")
-        if section_id is None:
-            self._reset_workstations()
-            return
-
-        # Reuse existing loader with the correct (section_id,) tuple
-        self.set_workstations((section_id,))
+        # Reuse existing loader with the section org_id
+        self.set_workstations((self.selected_section_org_id,))
 
     def on_workstation_selected(self, evt=None):
         

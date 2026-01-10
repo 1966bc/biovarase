@@ -227,12 +227,13 @@ class UI(ChildView):
             return
 
         self.selected_workstation = selected_workstation
-        self.workstation_section_id = selected_workstation[5]
+        # Use org_id from workstation (section level org)
+        self.workstation_org_id = selected_workstation.get("org_id") or selected_workstation.get(5)
 
-        # Compute lab_id (fail-safe: 0 on failure)
+        # Compute lab_id from org hierarchy (fail-safe: 0 on failure)
         try:
-            idd = self.engine.get_idd_by_section_id(self.workstation_section_id)  # (site_id, lab_id, comp_id)
-            self.lab_id = int(idd[1]) if idd else 0
+            idd = self.engine.get_idd_by_section_id(self.workstation_org_id)
+            self.lab_id = int(idd.get("lab_id", 0)) if idd else 0
         except Exception as e:
             self.lab_id = 0
 

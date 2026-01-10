@@ -34,8 +34,8 @@ class UI(ChildView):
         self.first_name = tk.StringVar()
         self.nickname = tk.StringVar()
         self.role = tk.IntVar(value=0)
-        self.lab_id = tk.IntVar(value=0)  # 0 = no lab (admin)
-        self.dict_labs = {}  # index -> lab_id
+        self.org_id = tk.IntVar(value=0)  # 0 = no org (app admin)
+        self.dict_orgs = {}  # index -> org_id
         self.elapsing_time = tk.IntVar(value=0)
         self.enable_time = tk.BooleanVar(value=False)
         self.status = tk.IntVar(value=1)  # 1 = enabled
@@ -89,9 +89,9 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Laboratory:")).grid(row=r, column=0, sticky=tk.W)
-        self.cbLab = ttk.Combobox(frm_left, state="readonly", width=45)
-        self.cbLab.grid(row=r, column=c, sticky=tk.W, **paddings)
+        ttk.Label(frm_left, text=_("Organization:")).grid(row=r, column=0, sticky=tk.W)
+        self.cbOrg = ttk.Combobox(frm_left, state="readonly", width=45)
+        self.cbOrg.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
         ttk.Label(frm_left, text=_("Logout time (min):")).grid(
@@ -172,7 +172,7 @@ class UI(ChildView):
             - self.parent.selected_item is expected to be a hybrid dict
               (index + column names) returned by engine.get_selected.
         """
-        self._load_labs()
+        self._load_orgs()
 
         if self.index is not None:
             # UPDATE mode
@@ -183,33 +183,69 @@ class UI(ChildView):
             # INSERT mode
             self.title(_("Add User"))
             self.status.set(1)
-            # Default: first lab in list
-            if self.dict_labs:
-                self.cbLab.current(0)
+            # Default: no organization (App Admin) - first item is "(Global)"
+            if self.dict_orgs:
+                self.cbOrg.current(0)
 
         self._focus_entry()
 
-    def _load_labs(self):
-        """Load available laboratories into the combobox."""
+    def _load_orgs(self):
+        """Load organizations hierarchy into the combobox."""
+        # Fetch all active organizations
         sql = """
-            SELECT l.lab_id, l.description AS lab_name, sup.description AS site_name
-            FROM labs l
-            INNER JOIN sites s ON l.site_id = s.site_id
-            INNER JOIN suppliers sup ON s.comp_id = sup.supplier_id
-            WHERE l.status = 1
-            ORDER BY sup.description, l.description
+            SELECT org_id, parent_id, org_type, description
+            FROM organizations
+            WHERE status = 1
+            ORDER BY org_type, description
         """
         rows = self.engine.read(True, sql, ()) or []
 
-        self.dict_labs = {}
+        # Build parent lookup
+        org_dict = {row["org_id"]: row for row in rows}
+
+        # Build display names with hierarchy path
+        self.dict_orgs = {}
         values = []
 
-        for idx, row in enumerate(rows):
-            display = f"{row['lab_name']} - {row['site_name']}"
-            values.append(display)
-            self.dict_labs[idx] = row["lab_id"]
+        # First item: Global (NULL org_id for App Admin)
+        values.append(_("(Global - App Admin)"))
+        self.dict_orgs[0] = None  # NULL org_id
 
-        self.cbLab["values"] = values
+        # Type order and prefixes
+        type_prefix = {
+            "country": "",
+            "region": "  ",
+            "lab": "    ",
+            "section": "      ",
+        }
+
+        # Sort by hierarchy: country first, then region, lab, section
+        type_order = {"country": 0, "region": 1, "lab": 2, "section": 3}
+
+        def get_path(org_id):
+            """Build full path for an organization."""
+            path = []
+            current = org_dict.get(org_id)
+            while current:
+                path.insert(0, current["description"])
+                current = org_dict.get(current["parent_id"])
+            return " > ".join(path)
+
+        # Sort rows by type and description
+        sorted_rows = sorted(rows, key=lambda r: (type_order.get(r["org_type"], 99), r["description"]))
+
+        idx = 1  # Start from 1 (0 is Global)
+        for row in sorted_rows:
+            org_id = row["org_id"]
+            org_type = row["org_type"]
+            prefix = type_prefix.get(org_type, "")
+            path = get_path(org_id)
+            display = f"{prefix}{path} [{org_type}]"
+            values.append(display)
+            self.dict_orgs[idx] = org_id
+            idx += 1
+
+        self.cbOrg["values"] = values
 
     def _focus_entry(self):
         """Focus the surname entry and select its content."""
@@ -226,7 +262,7 @@ class UI(ChildView):
 
         expected keys in self.selected_item:
             user_id, last_name, first_name, nickname, pswrd,
-            role, lab_id, elapsing_time, enable_time, status
+            role, org_id, lab_id (legacy), elapsing_time, enable_time, status
         """
         s = self.selected_item
         if not s:
@@ -241,15 +277,15 @@ class UI(ChildView):
             self.enable_time.set(bool(s.get("enable_time", 0)))
             self.status.set(int(s.get("status", 1)))
 
-            # Set lab selection
-            user_lab_id = s.get("lab_id")
-            lab_index = 0  # default: first lab
-            for idx, lid in self.dict_labs.items():
-                if lid == user_lab_id:
-                    lab_index = idx
+            # Set organization selection
+            user_org_id = s.get("org_id")
+            org_index = 0  # default: Global (NULL)
+            for idx, oid in self.dict_orgs.items():
+                if oid == user_org_id:
+                    org_index = idx
                     break
-            if self.dict_labs:
-                self.cbLab.current(lab_index)
+            if self.dict_orgs:
+                self.cbOrg.current(org_index)
 
         except Exception as e:
             self.engine.on_log("_set_values", e, type(e), sys.modules[__name__])
@@ -258,9 +294,9 @@ class UI(ChildView):
         """
         Return current form values as list suitable for SQL arguments.
 
-        Order must match the table definition after the primary key, e.g.:
+        Order must match the table definition after the primary key:
             last_name, first_name, nickname, pswrd,
-            role, lab_id, elapsing_time, enable_time, status
+            role, org_id, lab_id, elapsing_time, enable_time, status
         """
         if self.index is not None and self.selected_item:
             # Keep existing password on UPDATE
@@ -269,9 +305,13 @@ class UI(ChildView):
             # Generate a new password on INSERT
             pswrd = self.engine.get_new_password()
 
-        # Get selected lab_id (required for all users)
-        lab_index = self.cbLab.current()
-        lab_id = self.dict_labs.get(lab_index)
+        # Get selected org_id (NULL for App Admin)
+        org_index = self.cbOrg.current()
+        org_id = self.dict_orgs.get(org_index)  # Can be None for Global
+
+        # Derive lab_id from org_id for backward compatibility
+        # If org is a lab or section, find the lab_id
+        lab_id = self._derive_lab_id(org_id)
 
         return [
             self.last_name.get().strip(),
@@ -279,11 +319,48 @@ class UI(ChildView):
             self.nickname.get().strip(),
             pswrd,
             int(self.role.get()),
-            lab_id,  # Required for all users
+            org_id,   # New: organization scope
+            lab_id,   # Legacy: for backward compatibility
             int(self.elapsing_time.get()),
             int(bool(self.enable_time.get())),
             int(self.status.get()),
         ]
+
+    def _derive_lab_id(self, org_id):
+        """
+        Derive lab_id from org_id for backward compatibility.
+
+        - If org is a lab, return its org_id mapped to old lab_id
+        - If org is a section, return parent lab's org_id mapped
+        - Otherwise return None
+        """
+        if org_id is None:
+            return None
+
+        sql = """
+            SELECT org_id, parent_id, org_type
+            FROM organizations
+            WHERE org_id = ?
+        """
+        row = self.engine.read(False, sql, (org_id,))
+        if not row:
+            return None
+
+        org_type = row.get("org_type")
+
+        if org_type == "lab":
+            # For labs, look up in migration map or use legacy mapping
+            # The org_id for labs is old_lab_id + 2000
+            # So lab_id = org_id - 2000
+            return org_id - 2000 if org_id > 2000 else None
+
+        elif org_type == "section":
+            # For sections, get parent (which should be a lab)
+            parent_id = row.get("parent_id")
+            if parent_id:
+                return parent_id - 2000 if parent_id > 2000 else None
+
+        return None
 
     # ------------------------------------------------------------------ SAVE
     def _on_save(self, evt=None):

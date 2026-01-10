@@ -116,6 +116,36 @@ TRANSLATIONS = {
     # ==========================================================================
     "Admin": {"it": "Admin", "en": "Admin"},
     "Users": {"it": "Utenti", "en": "Users"},
+    "Organizations": {"it": "Organizzazioni", "en": "Organizations"},
+    "Organizations Management": {"it": "Gestione Organizzazioni", "en": "Organizations Management"},
+    "Organization": {"it": "Organizzazione", "en": "Organization"},
+    "Add Organization": {"it": "Aggiungi Organizzazione", "en": "Add Organization"},
+    "Update Organization": {"it": "Modifica Organizzazione", "en": "Update Organization"},
+    "Add Child": {"it": "Aggiungi Figlio", "en": "Add Child"},
+    "Expand All": {"it": "Espandi Tutto", "en": "Expand All"},
+    "Collapse All": {"it": "Comprimi Tutto", "en": "Collapse All"},
+    "Parent:": {"it": "Padre:", "en": "Parent:"},
+    "Type:": {"it": "Tipo:", "en": "Type:"},
+    "(Root)": {"it": "(Radice)", "en": "(Root)"},
+    "(Global - App Admin)": {"it": "(Globale - App Admin)", "en": "(Global - App Admin)"},
+    "Country": {"it": "Paese", "en": "Country"},
+    "Region": {"it": "Regione", "en": "Region"},
+    "Lab": {"it": "Laboratorio", "en": "Lab"},
+    "Section": {"it": "Sezione", "en": "Section"},
+    "Select a parent organization first.": {
+        "it": "Seleziona prima un'organizzazione padre.",
+        "en": "Select a parent organization first."
+    },
+    "This organization type cannot have children.": {
+        "it": "Questo tipo di organizzazione non può avere figli.",
+        "en": "This organization type cannot have children."
+    },
+    "Cannot delete: organization has children. Delete children first.": {
+        "it": "Impossibile eliminare: l'organizzazione ha figli. Elimina prima i figli.",
+        "en": "Cannot delete: organization has children. Delete children first."
+    },
+    "Select a type.": {"it": "Seleziona un tipo.", "en": "Select a type."},
+    "Description is mandatory.": {"it": "La descrizione è obbligatoria.", "en": "Description is mandatory."},
     "Sites": {"it": "Siti", "en": "Sites"},
     "Sites Management": {"it": "Gestione Siti", "en": "Sites Management"},
     "Labs": {"it": "Laboratori", "en": "Labs"},

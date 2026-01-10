@@ -93,26 +93,45 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 **Site → Lab → Section → Workstation → Batch → Result**
 
 ### Multi-Tenant Architecture
-`lab_id` is the primary tenant isolation boundary. All major tables include `lab_id` for direct filtering:
 
-| Table | lab_id Source | Notes |
-|-------|---------------|-------|
-| `labs` | Primary | Top of hierarchy |
-| `sections` | FK to labs | Inherits from lab |
-| `workstations` | via section | Inherits from section |
-| `categories` | Direct | Lab-specific categories |
-| `batches` | Direct | Explicit tenant isolation |
-| `results` | Direct | Denormalized for performance |
-| `test_methods` | Direct | Denormalized from section |
-| `audit_batches` | Direct | Audit trail filtering |
-| `audit_results` | Direct | Audit trail filtering |
-| `users` | Direct | User belongs to one lab |
+**Primary isolation: `organizations` table with `org_id`**
 
-Filtering pattern:
+The hierarchy is stored in a self-referential `organizations` table:
+- `org_type`: 'country', 'region', 'lab', 'section'
+- `parent_id`: References parent organization
+
+At login, `current_ids` is populated from the user's `org_id`:
 ```python
-lab_id = self.engine.get_lab_id()
-rows = self.engine.read(True, "SELECT * FROM batches WHERE lab_id = ?", (lab_id,))
+# Engine stores current context
+self.engine.current_ids = {
+    "lab_id": 2002,      # User's lab org_id
+    "site_id": 2001,     # Parent site org_id
+    "section_id": None,  # Set when section selected
+    "comp_id": 1,        # Supplier ID
+}
 ```
+
+**Filtering pattern (uses organizations table):**
+```python
+lab_id = self.engine.current_ids.get("lab_id")
+
+# Filter sections under current lab
+sql = """
+    SELECT * FROM organizations section
+    JOIN test_methods tm ON tm.org_id = section.org_id
+    WHERE section.parent_id = ? AND section.org_type = 'section'
+"""
+rows = self.engine.read(True, sql, (lab_id,))
+```
+
+**Tables with org_id:**
+| Table | org_id Usage |
+|-------|--------------|
+| `test_methods` | `org_id` = section's org_id |
+| `workstations` | `org_id` = section's org_id |
+| `batches` | `org_id` = lab's org_id |
+| `categories` | `lab_id` = lab's org_id |
+| `users` | `org_id` = assigned lab/section org_id |
 
 ### Database Access
 ```python
@@ -194,19 +213,30 @@ Config: `language` file contains "en" or "it". Engine: `get_language()`, `set_la
 
 ## Access Control
 
-```python
-ROLE_ADMIN = 0       # Regional admin, full access
-ROLE_SUPERUSER = 1   # Lab manager, QC validation
-ROLE_TECHNICIAN = 2  # Data entry
-ROLE_AUTOLOGIN = 3   # Read-only
+### User Scope via org_id
 
+Each user has an `org_id` field in the `users` table that references the `organizations` table:
+
+```python
+# At login, context is initialized from user's org_id
+user_org_id = self.engine.log_user.get("org_id")  # Returns org_id (e.g., 2002)
+self.engine.init_current_ids_from_user(user_org_id)
+
+# IMPORTANT: Use org_id, NOT lab_id (legacy field)
+# log_user["org_id"] = 2002 (correct - organizations table)
+# log_user["lab_id"] = 2    (legacy - old labs table, DO NOT USE)
+```
+
+### Permission Methods
+
+```python
 self.engine.can_validate_qc()       # Admin or Superuser
 self.engine.can_configure_system()  # Admin only
 self.engine.can_modify_data()       # Admin, Superuser, Technician
-self.engine.is_read_only()          # Autologin
+self.engine.is_read_only()          # Viewer
 ```
 
-Each user has `lab_id` - Admin can change lab (Ctrl+E), others are filtered.
+Admin (role=0) can change lab via menu (Ctrl+E), others are filtered to their org_id.
 
 ### Organizations (Flexible Hierarchy)
 

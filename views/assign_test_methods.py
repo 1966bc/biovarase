@@ -176,27 +176,31 @@ class UI(ChildView):
     # ------------------------------------------------------------------
     def set_values(self, site_id=None, workstation_id=None):
         """
-        Populate the list of assignable test methods for the given site_id
+        Populate the list of assignable test methods for the given lab context
         and target workstation_id.
 
         The query:
             - restricts to active tests / test_methods
-            - limits to the same SITE of the workstation
+            - limits to test methods in sections under the current lab
             - excludes already mapped methods using NOT EXISTS.
 
         Args:
-            site_id: Site ID to filter test methods
+            site_id: Lab org_id (from current_ids["lab_id"]) to filter test methods
             workstation_id: Workstation ID to check existing assignments
         """
         self.lstItems.delete(0, tk.END)
         self.dict_items = {}
         idx = 0
 
-        if not site_id or not workstation_id:
+        # Use lab_id from current_ids (site_id param is now lab_id for compatibility)
+        lab_id = self.engine.current_ids.get("lab_id") or site_id
+        if not lab_id or not workstation_id:
             return
 
+        # Query uses organizations table
+        # test_methods.org_id references a section, we filter sections under this lab
         sql = """
-            SELECT 
+            SELECT
                 test_methods.test_method_id              AS test_method_id,
                 tests.description                        AS test_description,
                 test_methods.code                        AS code,
@@ -204,12 +208,10 @@ class UI(ChildView):
                 methods.description                      AS method_description,
                 units.description                        AS unit
             FROM tests
-            JOIN test_methods 
+            JOIN test_methods
                 ON tests.test_id = test_methods.test_id
-            JOIN sections     
-                ON test_methods.section_id = sections.section_id
-            JOIN labs         
-                ON sections.lab_id = labs.lab_id
+            JOIN organizations section
+                ON test_methods.org_id = section.org_id
             JOIN samples
                 ON test_methods.sample_id = samples.sample_id
             JOIN methods
@@ -218,7 +220,8 @@ class UI(ChildView):
                 ON test_methods.unit_id = units.unit_id
             WHERE tests.status = 1
               AND test_methods.status = 1
-              AND labs.site_id = ?
+              AND section.parent_id = ?
+              AND section.org_type = 'section'
               AND NOT EXISTS (
                     SELECT 1
                     FROM workstation_test_methods
@@ -227,7 +230,7 @@ class UI(ChildView):
               )
             ORDER BY tests.description ASC
         """
-        rs = self.engine.read(True, sql, (site_id, workstation_id)) or []
+        rs = self.engine.read(True, sql, (lab_id, workstation_id)) or []
 
         for row in rs:
             test_method_id = row["test_method_id"]

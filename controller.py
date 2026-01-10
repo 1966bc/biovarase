@@ -524,29 +524,40 @@ class Controller:
 
     def get_company_data(self) -> Optional[Dict[str, Any]]:
         """
-        Retrieve company, site, lab and section information
-        for the currently selected section_id.
+        Retrieve hierarchical organization information for the current lab context.
+
+        Returns country, region, lab, section names from organizations table.
+        Uses the current lab_id from current_ids.
         """
+        lab_id = self.current_ids.get("lab_id")
+        if not lab_id:
+            return None
+
+        # Get lab and its ancestors using recursive CTE
         sql = """
+            WITH RECURSIVE ancestors AS (
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.parent_id, o.org_type, o.description
+                FROM organizations o
+                JOIN ancestors a ON o.org_id = a.parent_id
+            )
             SELECT
-                sites.site_id,
-                suppliers_company.description AS company,
-                suppliers_site.description AS site,
-                labs.description AS lab,
-                sections.description AS section
-            FROM sites
-            INNER JOIN suppliers AS suppliers_company
-                ON suppliers_company.supplier_id = sites.supplier_id
-            INNER JOIN suppliers AS suppliers_site
-                ON suppliers_site.supplier_id = sites.comp_id
-            INNER JOIN labs
-                ON labs.site_id = sites.site_id
-            INNER JOIN sections
-                ON sections.lab_id = labs.lab_id
-            WHERE sections.section_id = ?;
+                org_type, description
+            FROM ancestors
+            ORDER BY FIELD(org_type, 'country', 'region', 'lab', 'section')
         """
-        args = (self.get_section_id(),)
-        return self.read(False, sql, args)
+        rows = self.read(True, sql, (lab_id,))
+        if not rows:
+            return None
+
+        # Build result dict mapping org_type to description
+        result = {"lab_id": lab_id}
+        for row in rows:
+            result[row["org_type"]] = row["description"]
+
+        return result
 
     def get_selected(self, table: str, field: str, pk: Any) -> Optional[Dict[Union[int, str], Any]]:
         """
@@ -672,105 +683,124 @@ class Controller:
             }
 
         Returns None / {} if no row is found (depending on read implementation).
+
+        Note: Now uses organizations table. Returns dict with org hierarchy.
+        For backward compatibility, also includes legacy keys mapped to org_ids.
         """
+        # Get the org and its ancestors using recursive CTE
         sql = """
-            SELECT
-                sites.site_id,
-                sites.supplier_id,
-                sites.comp_id,
-                labs.lab_id,
-                sections.section_id
-            FROM
-                sites
-            INNER JOIN
-                labs ON sites.site_id = labs.site_id
-            INNER JOIN
-                sections ON labs.lab_id = sections.lab_id
-            WHERE
-                sections.section_id = ?
-            LIMIT 1;
+            WITH RECURSIVE ancestors AS (
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.parent_id, o.org_type, o.description
+                FROM organizations o
+                JOIN ancestors a ON o.org_id = a.parent_id
+            )
+            SELECT org_id, org_type FROM ancestors
         """
-        args = (section_id,)
-        # Single-row dict (or None/{} if not found)
-        row = self.read(False, sql, args)
-        return row
+        rows = self.read(True, sql, (section_id,))
+        if not rows:
+            return None
+
+        # Build result dict with both new and legacy keys
+        result = {}
+        for row in rows:
+            org_type = row["org_type"]
+            org_id = row["org_id"]
+            result[f"{org_type}_org_id"] = org_id
+
+            # Legacy key mapping for backward compatibility
+            if org_type == "section":
+                result["section_id"] = org_id
+                result[4] = org_id  # Tuple index 4
+            elif org_type == "lab":
+                result["lab_id"] = org_id
+                result[3] = org_id  # Tuple index 3
+                result[1] = org_id  # Legacy index for lab_id
+            elif org_type == "region":
+                result["site_id"] = org_id  # region = site in old model
+                result[0] = org_id  # Tuple index 0
+            elif org_type == "country":
+                result["country_org_id"] = org_id
+
+        return result
 
     def get_idd_by_lab_id(self, lab_id: int) -> Optional[Dict[str, int]]:
         """
-        Return the hierarchical IDs for a given lab_id as a dict:
+        Return the hierarchical IDs for a given lab_id (org_id) as a dict.
 
-            {
-                "site_id": ...,
-                "supplier_id": ...,
-                "comp_id": ...,
-                "lab_id": ...
-            }
+        Now uses organizations table.
 
         Returns None if no row is found.
         """
+        # Get the lab and its ancestors using recursive CTE
         sql = """
-            SELECT
-                sites.site_id,
-                sites.supplier_id,
-                sites.comp_id,
-                labs.lab_id
-            FROM
-                sites
-            INNER JOIN
-                labs ON sites.site_id = labs.site_id
-            WHERE
-                labs.lab_id = ?
-            LIMIT 1;
+            WITH RECURSIVE ancestors AS (
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.parent_id, o.org_type, o.description
+                FROM organizations o
+                JOIN ancestors a ON o.org_id = a.parent_id
+            )
+            SELECT org_id, org_type FROM ancestors
         """
-        args = (lab_id,)
-        row = self.read(False, sql, args)
-        return row
+        rows = self.read(True, sql, (lab_id,))
+        if not rows:
+            return None
+
+        # Build result dict
+        result = {"lab_id": lab_id}
+        for row in rows:
+            org_type = row["org_type"]
+            org_id = row["org_id"]
+            result[f"{org_type}_org_id"] = org_id
+            if org_type == "region":
+                result["site_id"] = org_id
+
+        return result
 
     def get_first_section_by_lab(self, lab_id: int) -> Optional[Dict[str, Any]]:
         """
-        Return the first active section for a given lab_id.
+        Return the first active section for a given lab_id (org_id).
 
-        Used to set a default section_id when initializing context from lab_id.
+        Used to set a default section when initializing context from lab_id.
+        Now uses organizations table.
 
         Args:
-            lab_id: The laboratory identifier
+            lab_id: The laboratory org_id
 
         Returns:
-            Dict with section_id, or None if no sections found
+            Dict with section_id (org_id), or None if no sections found
         """
         sql = """
-            SELECT section_id
-            FROM sections
-            WHERE lab_id = ?
+            SELECT org_id AS section_id
+            FROM organizations
+            WHERE parent_id = ?
+              AND org_type = 'section'
               AND status = 1
-            ORDER BY section_id
+            ORDER BY org_id
             LIMIT 1;
         """
         return self.read(False, sql, (lab_id,))
 
     def get_lab_id_by_section_id(self, section_id: int) -> Optional[int]:
         """
-        Return the lab_id associated with the given section_id.
+        Return the lab_id (org_id) associated with the given section_id (org_id).
 
-        This version:
-            - Uses read() for clearer, named-column results.
-            - Returns None if no row is found (safe and consistent with Engine API).
-            - Avoids tuple indexing (rs[0]) which is fragile.
-            - Makes SQL easier to read and maintain.
+        Uses organizations table - gets parent of section.
 
         Args:
-            section_id: The section identifier
+            section_id: The section org_id
 
         Returns:
-            The lab_id if found, otherwise None
+            The lab org_id if found, otherwise None
         """
-
         sql = """
-            SELECT labs.lab_id
-            FROM sites
-            INNER JOIN labs ON sites.site_id = labs.site_id
-            INNER JOIN sections ON labs.lab_id = sections.lab_id
-            WHERE sections.section_id = ?;
+            SELECT parent_id AS lab_id
+            FROM organizations
+            WHERE org_id = ? AND org_type = 'section';
         """
 
         row = self.read(False, sql, (section_id,))

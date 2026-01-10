@@ -248,7 +248,7 @@ class UI(ParentView):
               AND r.validated = 1
               AND r.status = 1
               AND r.is_delete = 0
-              AND b.lab_id = ?
+              AND b.org_id = ?
             ORDER BY t.description, w.description
         """
         rows = self.engine.read(True, sql, (selected_date.isoformat(), lab_id))
@@ -420,13 +420,13 @@ class UI(ParentView):
         lines.append("REPORT QC")
         lines.append("=" * 50)
 
-        # Get lab info
+        # Get lab info from organizations
         lab_id = self.engine.current_ids.get("lab_id")
         lab_name = ""
         if lab_id:
             lab_row = self.engine.read(
                 False,
-                "SELECT description FROM labs WHERE lab_id = ?",
+                "SELECT description FROM organizations WHERE org_id = ? AND org_type = 'lab'",
                 (lab_id,),
             )
             if lab_row:

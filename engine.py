@@ -83,11 +83,18 @@ from launcher import Launcher
 
 APP_TITLE = "Biovarase"
 
-# User role constants (hierarchy: admin > superuser > technician > autologin)
-ROLE_ADMIN = 0       # System administrator - multi-site configuration + full access
-ROLE_SUPERUSER = 1   # Lab manager - QC validation + lab-wide data access
-ROLE_TECHNICIAN = 2  # Section worker - data entry + section-only access
-ROLE_AUTOLOGIN = 3   # Guest user - read-only access
+# User role constants (international hierarchy)
+ROLE_APP_ADMIN = 0       # Global admin - all orgs, master data, system config
+ROLE_COUNTRY_ADMIN = 1   # Country admin - all descendants of country org
+ROLE_REGIONAL_ADMIN = 2  # Regional admin - all descendants of region org
+ROLE_LAB_ADMIN = 3       # Lab admin - lab config, users, workstations
+ROLE_SUPERUSER = 4       # QC supervisor - validation, batch management
+ROLE_TECHNICIAN = 5      # Technician - data entry only
+ROLE_VIEWER = 6          # Viewer - read-only access
+
+# Legacy aliases for backward compatibility during migration
+ROLE_ADMIN = ROLE_APP_ADMIN
+ROLE_AUTOLOGIN = ROLE_VIEWER
 
 
 class _EngineMeta(type):
@@ -294,66 +301,67 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         """
         Check if user can validate QC results.
 
-        Only admins (role=0) and superusers (role=1) can validate.
-        This is the primary daily QC validation permission check.
+        Roles that can validate: App Admin (0), Country Admin (1), Regional Admin (2),
+        Lab Admin (3), and Superuser (4). Technicians (5) and Viewers (6) cannot.
 
         Returns:
             bool: True if user can validate QC results, False otherwise
         """
         role = self.get_user_role()
-        return role <= ROLE_SUPERUSER  # Admin (0) or Superuser (1)
+        return role <= ROLE_SUPERUSER  # Roles 0-4 can validate
 
     def can_configure_system(self) -> bool:
         """
-        Check if user can access system configuration.
+        Check if user can access global system configuration (master data).
 
-        Only admins (role=0) can configure global entities like:
-        - Units of measurement
-        - Test methods
-        - Test names
-        - Sites, Labs, Sections
+        Only App Admin (role=0) can configure global entities like:
+        - Tests, Units, Methods, Samples (global master data)
+        - Equipments, Controls (shared across all organizations)
         - Ensures "Glucose is Glucose everywhere"
 
         Returns:
             bool: True if user can configure system, False otherwise
         """
         role = self.get_user_role()
-        return role == ROLE_ADMIN
+        return role == ROLE_APP_ADMIN
 
     def can_modify_data(self) -> bool:
         """
         Check if user can insert/edit data.
 
-        Admins (role=0), superusers (role=1), and technicians (role=2) can modify data.
-        Autologin users (role=3) are read-only.
+        All roles except Viewer (role=6) can modify data:
+        - App/Country/Regional/Lab Admin (0-3): Full control within scope
+        - Superuser (4): QC management
+        - Technician (5): Data entry
 
         Returns:
             bool: True if user can modify data, False otherwise
         """
         role = self.get_user_role()
-        return role <= ROLE_TECHNICIAN  # Admin (0), Superuser (1), Technician (2)
+        return role <= ROLE_TECHNICIAN  # Roles 0-5 can modify
 
     def is_read_only(self) -> bool:
         """
         Check if user has read-only access.
 
-        Autologin users (role=3) and any role >= 3 are read-only.
+        Only Viewer (role=6) is read-only.
         Used for demo kiosks, monitoring screens, or guest access.
 
         Returns:
             bool: True if user is read-only, False otherwise
         """
         role = self.get_user_role()
-        return role >= ROLE_AUTOLOGIN
+        return role >= ROLE_VIEWER  # Only role 6 is read-only
 
     def get_data_scope(self) -> tuple:
         """
-        Get appropriate data filtering scope based on user role.
+        Get appropriate data filtering scope based on user role and org_id.
 
         Returns:
             tuple: (scope_type: str, filter_id: int or None)
-                - Admin: ("all_sites", None) - no filtering
-                - All others: ("lab", lab_id) - filter by lab_id
+                - App Admin: ("global", None) - no filtering
+                - Country/Regional/Lab Admin: ("org", org_id) - filter by org hierarchy
+                - Superuser/Technician/Viewer: ("lab", lab_id) - filter by lab_id
 
         Example:
             scope, filter_id = self.get_data_scope()
@@ -363,12 +371,45 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         """
         role = self.get_user_role()
 
-        if role == ROLE_ADMIN:
-            return ("all_sites", None)
+        if role == ROLE_APP_ADMIN:
+            return ("global", None)
         else:
-            # All non-admin users filter by lab_id
+            # All non-admin users filter by lab_id (for now)
+            # TODO: Implement org hierarchy filtering for Country/Regional admins
             lab_id = self.current_ids.get("lab_id")
             return ("lab", lab_id)
+
+    def can_manage_local_config(self) -> bool:
+        """
+        Check if user can manage local configuration (workstations, test_methods, batches).
+
+        Lab Admin (3) and above can configure local entities within their scope.
+
+        Returns:
+            bool: True if user can manage local config, False otherwise
+        """
+        role = self.get_user_role()
+        return role <= ROLE_LAB_ADMIN  # Roles 0-3 can manage local config
+
+    def is_lab_admin(self) -> bool:
+        """
+        Check if user is Lab Admin (role=3).
+
+        Lab Admin can configure their lab: workstations, test_methods, users, batches.
+
+        Returns:
+            bool: True if user is Lab Admin, False otherwise
+        """
+        return self.get_user_role() == ROLE_LAB_ADMIN
+
+    def get_user_org_id(self) -> int:
+        """
+        Return the org_id of the logged user.
+
+        Returns:
+            int or None: User's org_id (None for App Admin = global scope)
+        """
+        return self.log_user.get("org_id")
 
     def get_autologin_flag(self) -> bool:
         """
@@ -465,39 +506,39 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def init_current_ids_from_user(self, lab_id: int = None) -> bool:
         """
-        Initialize current_ids from user's lab_id or provided lab_id.
+        Initialize current_ids from user's org_id or provided lab org_id.
 
-        Sets up the full context including site_id, lab_id, and a default
-        section_id (first active section in the lab for backward compatibility).
+        Uses organizations table. The lab_id stored in current_ids is actually
+        the org_id of the lab-level organization.
 
         Args:
-            lab_id: Optional lab_id override (used by admin lab selector)
-                    If None, uses log_user["lab_id"]
+            lab_id: Optional lab org_id override (used by admin lab selector)
+                    If None, uses log_user["org_id"]
 
         Returns:
             True if context was successfully initialized, False otherwise
         """
         try:
-            # Use provided lab_id or get from logged user
+            # Use provided lab_id or get from logged user's org_id
             if lab_id is None:
-                lab_id = self.log_user.get("lab_id")
+                # IMPORTANT: Use org_id (new field) not lab_id (legacy field)
+                lab_id = self.log_user.get("org_id")
 
             if lab_id is None:
-                # No lab assigned (admin without selection)
+                # No org assigned (admin without selection)
                 self.current_ids = {}
                 return False
 
-            # Query DB for hierarchical IDs related to this lab_id
+            # Query DB for hierarchical org IDs related to this lab org_id
             row = self.get_idd_by_lab_id(lab_id)
             if not row:
                 self.current_ids = {}
                 return False
 
+            # current_ids uses lab_id to store the lab's org_id for backward compatibility
             self.current_ids = {
-                "site_id": row["site_id"],
-                "supplier_id": row["supplier_id"],
-                "comp_id": row["comp_id"],
-                "lab_id": row["lab_id"],
+                "site_id": row.get("site_id"),      # region org_id (was site)
+                "lab_id": row.get("lab_id", lab_id), # lab org_id
             }
 
             # Get default section_id (first active section in this lab)
@@ -524,34 +565,34 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def is_admin(self) -> bool:
         """
-        Check if user is admin (role=0).
+        Check if user is App Admin (role=0).
 
-        Admin has full access to system configuration and all operations.
+        App Admin has full global access to system configuration and all organizations.
 
         Returns:
-            bool: True if user is admin, False otherwise
+            bool: True if user is App Admin, False otherwise
         """
-        return self.get_user_role() == ROLE_ADMIN
+        return self.get_user_role() == ROLE_APP_ADMIN
 
     def is_superuser(self) -> bool:
         """
-        Check if user is superuser (role=1).
+        Check if user is Superuser (role=4).
 
-        Superuser can validate QC for entire laboratory.
+        Superuser can validate QC and manage batches within their lab.
 
         Returns:
-            bool: True if user is superuser, False otherwise
+            bool: True if user is Superuser, False otherwise
         """
         return self.get_user_role() == ROLE_SUPERUSER
 
     def is_user(self) -> bool:
         """
-        Check if user is technician (role=2).
+        Check if user is Technician (role=5).
 
-        Technician can enter data in their section.
+        Technician can enter QC data in their assigned scope.
 
         Returns:
-            bool: True if user is technician, False otherwise
+            bool: True if user is Technician, False otherwise
         """
         return self.get_user_role() == ROLE_TECHNICIAN
 
@@ -559,12 +600,13 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         """
         Check if user can delete QC results.
 
-        Only admins and superusers can delete results.
+        Roles that can delete: App Admin (0), Country Admin (1), Regional Admin (2),
+        Lab Admin (3), and Superuser (4). Technicians and Viewers cannot.
 
         Returns:
             bool: True if user can delete results, False otherwise
         """
-        return self.get_user_role() <= ROLE_SUPERUSER  # Admin (0) or Superuser (1)
+        return self.get_user_role() <= ROLE_SUPERUSER  # Roles 0-4 can delete
 
     def get_log_file(self):
         path = self.get_file("log.txt") 
@@ -637,6 +679,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         self.log_user.clear()
 
         # Define field names in declaration order (matching users table schema)
+        # Note: org_id added after role in migration 013
         field_names = [
             "user_id",
             "last_name",
@@ -644,7 +687,8 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             "nickname",
             "pswrd",         # Column name in DB is 'pswrd', not 'password'
             "role",
-            "lab_id",        # Default laboratory (admin role=0 can change via menu)
+            "org_id",        # Organization scope (NULL = App Admin, else org hierarchy)
+            "lab_id",        # Legacy: Default laboratory (kept for backward compatibility)
             "elapsing_time",
             "enable_time",
             "status"
@@ -652,7 +696,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
         # Populate with both numeric and string keys for compatibility
         for idx, field_name in enumerate(field_names):
-            value = rs[field_name]              # Access dict value by key
+            value = rs.get(field_name)          # Use .get() for optional fields
             self.log_user[idx] = value          # Backward compatibility
             self.log_user[field_name] = value   # New readable access
 

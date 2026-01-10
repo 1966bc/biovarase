@@ -140,12 +140,12 @@ class App(tk.Tk):
                 log_to_file("Autologin failed: generic user authentication failed", "WARNING")
                 return False
 
-            # Initialize context from autologin user's lab_id
-            user_lab_id = self.engine.log_user.get("lab_id")
-            if user_lab_id:
-                self.engine.init_current_ids_from_user(user_lab_id)
+            # Initialize context from autologin user's org_id
+            user_org_id = self.engine.log_user.get("org_id")
+            if user_org_id:
+                self.engine.init_current_ids_from_user(user_org_id)
             else:
-                log_to_file("Autologin user has no lab_id assigned", "WARNING")
+                log_to_file("Autologin user has no org_id assigned", "WARNING")
 
             # Autologin successful - simulate successful login
             login_frame.hide()
