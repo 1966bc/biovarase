@@ -344,7 +344,7 @@ class UI(ChildView):
         Build the argument list for INSERT/UPDATE on 'results'.
 
         Table structure (without PK result_id):
-            batch_id, run_number, workstation_id, reagent_lot,
+            batch_id, lab_id, run_number, workstation_id, reagent_lot,
             result, received, status,
             validated, validated_by, validated_at,
             is_delete, log_time, log_id, log_ip
@@ -393,6 +393,9 @@ class UI(ChildView):
         # FK batch_id
         batch_id = self.selected_batch["batch_id"]
 
+        # lab_id from batch (multi-tenant isolation)
+        lab_id = self.selected_batch["lab_id"]
+
         # FK workstation_id
         workstation_id = self.selected_workstation["workstation_id"]
 
@@ -403,6 +406,7 @@ class UI(ChildView):
 
         args = [
             batch_id,         # batch_id
+            lab_id,           # lab_id (multi-tenant)
             run_number,       # run_number
             workstation_id,   # workstation_id
             reagent_lot_value,  # reagent_lot

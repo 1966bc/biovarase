@@ -2061,7 +2061,7 @@ class Main(tk.Toplevel):
                     min_val = round(target - sd, 2)
                     max_val = round(target + sd, 2)
                                                                                         
-                    sql_insert = "INSERT INTO results(batch_id, workstation_id, result, received, log_time, log_id) VALUES(?,?,?,?,?,?)"
+                    sql_insert = "INSERT INTO results(batch_id, lab_id, workstation_id, result, received, log_time, log_id) VALUES(?,?,?,?,?,?,?)"
                     log_time = self.engine.get_log_time()
 
                     # Convert log_time to datetime if string
@@ -2075,6 +2075,7 @@ class Main(tk.Toplevel):
                         result = round(random.uniform(min_val, max_val), 2)
                         args = (
                             self.selected_batch["batch_id"],
+                            self.selected_batch["lab_id"],
                             self.selected_workstation["workstation_id"],
                             result,
                             current_log_time,

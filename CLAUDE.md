@@ -92,6 +92,28 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 ### Data Hierarchy
 **Site → Lab → Section → Workstation → Batch → Result**
 
+### Multi-Tenant Architecture
+`lab_id` is the primary tenant isolation boundary. All major tables include `lab_id` for direct filtering:
+
+| Table | lab_id Source | Notes |
+|-------|---------------|-------|
+| `labs` | Primary | Top of hierarchy |
+| `sections` | FK to labs | Inherits from lab |
+| `workstations` | via section | Inherits from section |
+| `categories` | Direct | Lab-specific categories |
+| `batches` | Direct | Explicit tenant isolation |
+| `results` | Direct | Denormalized for performance |
+| `test_methods` | Direct | Denormalized from section |
+| `audit_batches` | Direct | Audit trail filtering |
+| `audit_results` | Direct | Audit trail filtering |
+| `users` | Direct | User belongs to one lab |
+
+Filtering pattern:
+```python
+lab_id = self.engine.get_lab_id()
+rows = self.engine.read(True, "SELECT * FROM batches WHERE lab_id = ?", (lab_id,))
+```
+
 ### Database Access
 ```python
 # Read - ALWAYS dictionary access
@@ -307,9 +329,28 @@ mysql -u root -p biovarase < migrations/002_add_external_code.sql
 mysql -u root -p biovarase < migrations/003_add_daily_approvals.sql
 mysql -u root -p biovarase < migrations/004_reduce_lot_number_size.sql
 mysql -u root -p biovarase < migrations/005_add_lab_id_to_categories.sql
-mysql -u root -p biovarese < migrations/006_abbott_import.sql
+mysql -u root -p biovarase < migrations/006_abbott_import.sql
 mysql -u root -p biovarase < migrations/007_add_lab_id_to_users.sql
+
+# Multi-tenant enhancement (full lab_id isolation)
+mysql -u root -p biovarase < migrations/008_add_lab_id_to_results.sql
+mysql -u root -p biovarase < migrations/009_add_lab_id_to_audit_batches.sql
+mysql -u root -p biovarase < migrations/010_add_lab_id_to_audit_results.sql
+mysql -u root -p biovarase < migrations/011_add_lab_id_to_test_methods.sql
 ```
+
+### Post-Migration Verification (008-011)
+After running migrations 008-011, verify:
+```bash
+mysql -u root -p biovarase -e "DESCRIBE results;"   # lab_id after batch_id
+mysql -u root -p biovarase -e "SELECT COUNT(*) FROM results WHERE lab_id IS NULL;"  # should be 0
+```
+
+Code already updated for lab_id support:
+- `views/result.py` `_get_values()` - includes lab_id from batch
+- `views/main.py` test data INSERT - includes lab_id from batch
+- `controller.py` `import_qc_file_auto()` - includes lab_id from context
+- `abbott_import_v2.py` / `abbott_import.py` - includes LAB_ID constant
 
 ## Key Files
 
