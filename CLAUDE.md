@@ -267,7 +267,7 @@ TRANSLATIONS = {
 
 ### Coverage
 
-- **44 views** with i18n support (83% of all views)
+- **59 view files** in `views/` directory (base classes + editors + master windows)
 - Entry point `biovarase.py` has i18n (exit confirmation dialog)
 - Base classes (`parent_view.py`, `child_view.py`) have no UI strings
 - Lookup views inherit i18n from `LookupUI` base class
@@ -386,6 +386,8 @@ Automatic scanner for workstation comparison across all tests.
 | `LOG_MAX_SIZE_MB` | 10 | Maximum log file size before rotation |
 | `LOG_KEEP_COUNT` | 5 | Number of old log files to keep |
 | `DB_CONNECTION_TIMEOUT` | 5 | Database connection timeout in seconds |
+| `IDLE_MONITOR_POLL_INTERVAL` | 1 | Polling interval for idle monitoring (seconds) |
+| `THREAD_JOIN_TIMEOUT` | 2.0 | Timeout for thread join operations (seconds) |
 
 ## Database Migrations
 
