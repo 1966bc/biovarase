@@ -29,6 +29,7 @@ from tkinter import ttk
 from tkinter import messagebox
 from datetime import datetime
 from calendarium import Calendarium
+import views.plots
 
 
 # Role constants
@@ -69,6 +70,8 @@ class UI(ParentView):
         self.selected_date = None
         self.can_validate = False
         self._refresh_job = None  # Auto-refresh timer
+        self._resume_refresh_job = None  # Resume timer after interaction
+        self._user_interacting = False  # Flag: user is interacting
 
         # Data dictionaries
         self.dict_workstations = {}  # item_id -> workstation data
@@ -163,6 +166,7 @@ class UI(ParentView):
 
         # Bindings
         self.tree.bind("<<TreeviewOpen>>", self._on_expand)
+        self.tree.bind("<<TreeviewSelect>>", self._on_user_interaction)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
 
         # Statistics frame
@@ -235,6 +239,11 @@ class UI(ParentView):
 
     def _start_auto_refresh(self):
         """Start auto-refresh every 30 seconds."""
+        # Skip if user is interacting
+        if self._user_interacting:
+            self._refresh_job = self.after(30000, self._start_auto_refresh)
+            return
+
         self._load_data(preserve_expansion=True)
         # Calculate and display next refresh time
         from datetime import timedelta
@@ -249,7 +258,36 @@ class UI(ParentView):
         if self._refresh_job:
             self.after_cancel(self._refresh_job)
             self._refresh_job = None
+        if self._resume_refresh_job:
+            self.after_cancel(self._resume_refresh_job)
+            self._resume_refresh_job = None
+        self._user_interacting = False
         self.lbl_refresh.config(text="")
+
+    def _on_user_interaction(self, evt=None):
+        """Handle user interaction - pause auto-refresh for 60 seconds."""
+        self._user_interacting = True
+        self.lbl_refresh.config(
+            text=f"⏸ {_('Auto-refresh paused')}",
+            foreground="orange"
+        )
+
+        # Cancel previous resume timer
+        if self._resume_refresh_job:
+            self.after_cancel(self._resume_refresh_job)
+
+        # Schedule resume after 60 seconds of inactivity
+        self._resume_refresh_job = self.after(60000, self._resume_auto_refresh)
+
+    def _resume_auto_refresh(self):
+        """Resume auto-refresh after inactivity period."""
+        self._user_interacting = False
+        self._resume_refresh_job = None
+        self.lbl_refresh.config(foreground="gray")
+        # Force immediate refresh
+        if self._refresh_job:
+            self.after_cancel(self._refresh_job)
+        self._start_auto_refresh()
 
     def _check_user_permissions(self):
         """Check user role and enable/disable validation controls."""
@@ -313,6 +351,10 @@ class UI(ParentView):
 
     def _on_expand(self, evt, item_id=None):
         """Handle expand event - load results for workstation."""
+        # Pause auto-refresh only on user action (not programmatic)
+        if evt is not None:
+            self._on_user_interaction()
+
         if item_id is None:
             item_id = self.tree.focus()
         if not item_id:
@@ -436,7 +478,7 @@ class UI(ParentView):
                     approved_ws += 1
 
             self.lbl_stats.config(
-                text=f"Workstations: {total_ws}  |  Approved: {approved_ws}  |  Pending: {total_ws - approved_ws}"
+                text=f"Workstation: {total_ws}  |  {_('Validated:')} {approved_ws}  |  {_('Pending:')} {total_ws - approved_ws}"
             )
 
             # Check mandatory tests
@@ -640,10 +682,11 @@ class UI(ParentView):
         return None, None, None
 
     def _on_double_click(self, evt):
-        """Handle double-click - validate single result."""
-        if not self.can_validate:
-            return
-
+        """
+        Handle double-click on result:
+        - If |z-score| < 2 (OK): validate directly
+        - If |z-score| >= 2 (problem): show Levey-Jennings chart
+        """
         item_id = self.tree.identify_row(evt.y)
         if not item_id:
             return
@@ -656,11 +699,83 @@ class UI(ParentView):
         if not row:
             return
 
+        # Calculate z-score
+        result_val = float(row["result"])
+        target = float(row["target"])
+        sd = float(row["sd"])
+        zscore = abs((result_val - target) / sd) if sd > 0 else 0
+
+        # If problem (|z| >= 2): show LJ chart
+        if zscore >= 2:
+            self._show_lj_chart(row)
+            return
+
+        # If OK and can validate: validate directly
+        if not self.can_validate:
+            return
+
         if row["validated"] == 1:
             messagebox.showinfo(_("Validation"), _("This result is already validated."))
             return
 
         self._validate_result(row["result_id"], item_id)
+
+    def _show_lj_chart(self, row):
+        """Open Levey-Jennings chart for the result's test method and workstation."""
+        try:
+            batch_id = row["batch_id"]
+            workstation_id = row["workstation_id"]
+
+            # Get test_method_id from batch
+            sql_batch = """
+                SELECT test_method_id FROM batches WHERE batch_id = ?
+            """
+            batch_row = self.engine.read(False, sql_batch, (batch_id,))
+            if not batch_row:
+                return
+
+            test_method_id = batch_row["test_method_id"]
+
+            # Get test_method details
+            selected_test_method = self.engine.get_selected(
+                "test_methods", "test_method_id", test_method_id
+            )
+            if not selected_test_method:
+                return
+
+            # Get workstation details (legacy tuple format)
+            sql_ws = """
+                SELECT workstation_id, description, status, description, serial
+                FROM workstations WHERE workstation_id = ?
+            """
+            ws_row = self.engine.read(False, sql_ws, (workstation_id,))
+            if not ws_row:
+                return
+
+            # Convert to tuple for plots.py compatibility
+            selected_workstation = (
+                ws_row["workstation_id"],
+                ws_row["description"],
+                ws_row["status"],
+                ws_row["description"],
+                ws_row["serial"]
+            )
+
+            # Get observations count from config
+            observations = self.engine.get_observations() or 30
+
+            # Open plots window
+            views.plots.UI(self).on_open(
+                selected_test_method,
+                selected_workstation,
+                int(observations)
+            )
+
+        except Exception as e:
+            self.engine.on_log(
+                "_show_lj_chart",
+                e, type(e), sys.modules[__name__]
+            )
 
     def _on_approve_workstation(self):
         """Approve selected workstation."""
@@ -1170,12 +1285,12 @@ class UI(ParentView):
 
         if missing:
             self.lbl_mandatory.config(
-                text=f"⚠ Missing mandatory: {len(missing)} (click)",
+                text=f"⚠ {_('Missing mandatory:')} {len(missing)} (click)",
                 foreground="red"
             )
         else:
             self.lbl_mandatory.config(
-                text="✓ All mandatory OK",
+                text=f"✓ {_('All mandatory OK')}",
                 foreground="green"
             )
 

@@ -363,9 +363,40 @@ Automatic scanner for workstation comparison across all tests.
 | `LOG_KEEP_COUNT` | 5 | Number of old log files to keep |
 | `DB_CONNECTION_TIMEOUT` | 5 | Database connection timeout in seconds |
 
+## Database Migrations
+
+Migrations are in `migrations/` directory. Run in order after initial `biovarase.sql` setup:
+
+```bash
+# Run all migrations in sequence
+mysql -u root -p biovarase < migrations/001_reduce_batch_description_size.sql
+mysql -u root -p biovarase < migrations/002_add_external_code.sql
+mysql -u root -p biovarase < migrations/003_add_daily_approvals.sql
+mysql -u root -p biovarase < migrations/004_reduce_lot_number_size.sql
+mysql -u root -p biovarase < migrations/005_add_lab_id_to_categories.sql
+mysql -u root -p biovarase < migrations/006_abbott_import.sql
+```
+
+| Migration | Purpose |
+|-----------|---------|
+| 001 | Reduce batches.description to VARCHAR(15) |
+| 002 | Add external_code to workstation_test_methods |
+| 003 | Add daily_approvals table |
+| 004 | Reduce batches.lot_number to VARCHAR(20) |
+| 005 | Add lab_id to categories (multi-tenant filtering) |
+| 006 | Add abbott_imported_files table for import tracking |
+
 ## Testing
 
-Test infrastructure is configured via `pytest.ini` but the `tests/` directory needs to be created.
+Tests are in `tests/` directory with pytest infrastructure configured via `pytest.ini`.
+
+| Test File | Coverage |
+|-----------|----------|
+| `test_qc.py` | QC statistical calculations |
+| `test_westgards.py` | Westgard multirule validation |
+| `test_security.py` | Encryption and password hashing |
+| `test_log_rotation.py` | Log file rotation |
+| `conftest.py` | Shared fixtures |
 
 ### Test Markers (pytest.ini)
 - `@pytest.mark.critical` - Medical safety tests
@@ -526,15 +557,6 @@ sudo mount -t cifs //172.16.145.11/Omnilab/EXPQC/Biovarase /mnt/biovarase_qc \
 
 # Automatic mount via cron (check_qc_share.sh)
 ```
-
-### Migration
-
-Run before first import:
-```bash
-mysql -u root -p biovarase < migrations/006_abbott_import.sql
-```
-
-Creates `abbott_imported_files` table to track processed files.
 
 ### Cron Setup
 

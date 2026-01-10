@@ -36,13 +36,13 @@ class UI(ChildView):
     Opens via engine.on_open() for creating new results or editing existing ones.
     """
 
-    def __init__(self, parent: tk.Widget, index: Optional[int] = None) -> None:
+    def __init__(self, parent: tk.Widget, index: Optional[str] = None) -> None:
         """
         Initialize the result editor window.
 
         Args:
             parent: Parent widget (typically the main results window)
-            index: Index of existing result to edit, or None for new result
+            index: Treeview item_id of existing result to edit, or None for new result
         """
         super().__init__(parent, name="result")
 
@@ -491,20 +491,19 @@ class UI(ChildView):
         Args:
             last_id: The result_id of the saved record
         """
-        if self.index is not None:
-            idx = self.index
-        else:
-            # Find index of last_id in parent's mapping
-            keys = list(self.parent.dict_results.keys())
-            vals = list(self.parent.dict_results.values())
-            try:
-                idx = keys[vals.index(last_id)]
-            except ValueError:
-                # last_id not found: nothing to select
-                return
+        # After save, treeview is reloaded and item_ids change.
+        # Always search for the result_id in the updated dict_results.
+        item_id = None
+        for k, rid in self.parent.dict_results.items():
+            if rid == last_id:
+                item_id = k
+                break
 
-        self.parent.lstResults.selection_set(idx)
-        self.parent.lstResults.see(idx)
+        if item_id is None:
+            return
+
+        self.parent.lstResults.selection_set(item_id)
+        self.parent.lstResults.see(item_id)
 
     def _delete(self, evt: Optional[tk.Event] = None) -> None:
         """

@@ -884,6 +884,15 @@ TRANSLATIONS = {
         "it": "Seleziona questi valori nella vista Bland-Altman.",
         "en": "Please select these values in the Bland-Altman view."
     },
+
+    # ==========================================================================
+    # Daily Validation Statistics
+    # ==========================================================================
+    "Validated:": {"it": "Validati:", "en": "Validated:"},
+    "Pending:": {"it": "Pendenti:", "en": "Pending:"},
+    "All mandatory OK": {"it": "Test obbligatori OK", "en": "All mandatory OK"},
+    "Missing mandatory:": {"it": "Obbligatori mancanti:", "en": "Missing mandatory:"},
+    "Auto-refresh paused": {"it": "Aggiornamento sospeso", "en": "Auto-refresh paused"},
 }
 
 
