@@ -16,7 +16,7 @@ import views.goal as goal_editor
 from views.parent_view import ParentView
 
 
-SQL_LAB_DESCRIPTION = "SELECT description FROM labs WHERE lab_id = ? LIMIT 1;"
+SQL_LAB_DESCRIPTION = "SELECT description FROM organizations WHERE org_id = ? AND org_type = 'lab' LIMIT 1;"
 
 SQL_TEST_METHODS = """
                     SELECT
@@ -25,17 +25,17 @@ SQL_TEST_METHODS = """
                       samples.description  AS sample_description,
                       methods.description  AS method_description,
                       units.description    AS unit_description,
-                      sections.description    AS section_description,
+                      org.description      AS section_description,
                       test_methods.status  AS status
                     FROM tests
                     INNER JOIN test_methods ON tests.test_id = test_methods.test_id
                     INNER JOIN samples ON test_methods.sample_id = samples.sample_id
                     INNER JOIN methods ON test_methods.method_id = methods.method_id
                     INNER JOIN units   ON test_methods.unit_id   = units.unit_id
-                    INNER JOIN sections ON test_methods.section_id = sections.section_id
-                    INNER JOIN labs ON sections.lab_id = labs.lab_id
+                    INNER JOIN organizations org ON test_methods.org_id = org.org_id
+                    INNER JOIN organizations lab ON org.parent_id = lab.org_id
                     WHERE tests.test_id = ?
-                      AND labs.lab_id = ?
+                      AND lab.org_id = ?
                       AND tests.status = 1
                     ORDER BY tests.description ASC;
                     """

@@ -78,6 +78,7 @@ import views.tea
 import views.analytical
 import views.change_password
 import views.sites
+import views.organizations
 import views.importer
 import views.zscore
 import views.daily_validation
@@ -307,6 +308,7 @@ class Main(tk.Toplevel):
             m_documents.add_command(label=i[0], underline=i[1], command=i[2])
 
         items = ((_("Suppliers"), 0, self.on_suppliers),
+                 (_("Organizations"), 0, self.on_organizations),
                  (_("Sites"), 0, self.on_sites),
                  (_("Labs"), 0, self.on_labs),
                  (_("Sections"), 0, self.on_sections),
@@ -599,7 +601,8 @@ class Main(tk.Toplevel):
         #print(self.engine.current_ids)
         company = self.engine.get_company_data()
         if company:
-            self.title(f"Biovarase {company['site']}")
+            # Use region name (was 'site' in old schema)
+            self.title(f"Biovarase {company.get('region', company.get('lab', ''))}")
         else:
             self.title("Biovarase")
 
@@ -616,11 +619,10 @@ class Main(tk.Toplevel):
         Args:
             company (dict): Dictionary returned by get_company_data(), e.g.
                             {
-                                "site_id": 1,
-                                "company": "Regione Lazio",
-                                "site": "Ospedale Santo Preferito",
-                                "lab": "Chimica Clinica",
-                                "section": "Spettrometria"
+                                "lab_id": 1,
+                                "country": "Italia",
+                                "region": "Regione Lazio",
+                                "lab": "UOC Biochimica Clinica"
                             }
 
         Returns:
@@ -629,7 +631,7 @@ class Main(tk.Toplevel):
         if not company:
             return ""
 
-        # Show only lab name (section filtering removed)
+        # Show only lab name
         lab = company.get("lab", "")
         return lab[:80]
 
@@ -637,7 +639,8 @@ class Main(tk.Toplevel):
         """Re-read section-dependent data and update title, status bar and lists."""
         company = self.engine.get_company_data()
         if company:
-            self.title(f"Biovarase {company['site']}")
+            # Use region name (was 'site' in old schema)
+            self.title(f"Biovarase {company.get('region', company.get('lab', ''))}")
             self.status_bar_site_description.set(
                 self.get_status_bar_site_description(company)
             )
@@ -824,37 +827,28 @@ class Main(tk.Toplevel):
 
         role = self.engine.log_user["role"]
 
-        if role == 0:
-            # Admin: categories belonging to labs in this site
-            sql = """
-                    SELECT DISTINCT categories.category_id,
-                                    categories.description
-                    FROM test_methods
-                    INNER JOIN sections ON sections.section_id = test_methods.section_id
-                    INNER JOIN labs ON labs.lab_id = sections.lab_id
-                    INNER JOIN categories ON categories.category_id = test_methods.category_id
-                                          AND categories.lab_id = labs.lab_id
-                    WHERE labs.site_id = ?
-                    AND test_methods.status = 1
-                    AND categories.status = 1
-                    ORDER BY categories.description;
-                """
-            args = (self.engine.current_ids.get("site_id"),)
-        else:
-            # All non-admin users: categories belonging to their lab
-            sql = """
-                    SELECT DISTINCT categories.category_id,
-                                    categories.description
-                    FROM test_methods
-                    INNER JOIN sections ON sections.section_id = test_methods.section_id
-                    INNER JOIN categories ON categories.category_id = test_methods.category_id
-                                          AND categories.lab_id = sections.lab_id
-                    WHERE sections.lab_id = ?
-                    AND test_methods.status = 1
-                    AND categories.status = 1
-                    ORDER BY categories.description;
-                """
-            args = (self.engine.get_lab_id(),)
+        # Get categories from test_methods in sections under current lab
+        lab_id = self.engine.current_ids.get("lab_id")
+        if not lab_id:
+            self.cbCategories["values"] = []
+            return
+
+        # Query uses organizations table
+        # test_methods.org_id references a section (child of lab)
+        sql = """
+            SELECT DISTINCT categories.category_id,
+                            categories.description
+            FROM test_methods
+            INNER JOIN organizations section ON test_methods.org_id = section.org_id
+            INNER JOIN categories ON categories.category_id = test_methods.category_id
+                                  AND categories.org_id = section.parent_id
+            WHERE section.parent_id = ?
+              AND section.org_type = 'section'
+              AND test_methods.status = 1
+              AND categories.status = 1
+            ORDER BY categories.description;
+        """
+        args = (lab_id,)
             
         rs = self.engine.read(True, sql, args)
 
@@ -882,43 +876,27 @@ class Main(tk.Toplevel):
         if category_id is None:
             return
 
-        # Get lab_id from selected category
-        category_lab_id = None
-        if self.selected_category:
-            category_lab_id = self.selected_category.get("lab_id")
+        # Get lab_id from current context
+        lab_id = self.engine.current_ids.get("lab_id")
+        if not lab_id:
+            self.cbTests["values"] = []
+            return
 
-        role = self.engine.log_user["role"]
-
-        if role == 0:
-            # Admin: filter by category's lab_id
-            sql = """
-                  SELECT test_methods.test_method_id,
-                         tests.description
-                  FROM test_methods
-                  JOIN tests ON tests.test_id = test_methods.test_id
-                  JOIN sections ON sections.section_id = test_methods.section_id
-                  WHERE test_methods.category_id = ?
-                  AND sections.lab_id = ?
-                  AND tests.status = 1
-                  AND test_methods.status = 1
-                  ORDER BY tests.description;
-                  """
-            args = (category_id, category_lab_id)
-        else:
-            # All non-admin users: filter by their lab_id
-            sql = """
-                  SELECT test_methods.test_method_id,
-                         tests.description
-                  FROM test_methods
-                  JOIN tests ON tests.test_id = test_methods.test_id
-                  JOIN sections ON sections.section_id = test_methods.section_id
-                  WHERE test_methods.category_id = ?
-                  AND sections.lab_id = ?
-                  AND tests.status = 1
-                  AND test_methods.status = 1
-                  ORDER BY tests.description;
-                  """
-            args = (category_id, self.engine.get_lab_id())
+        # Query using organizations - filter test_methods in sections under this lab
+        sql = """
+            SELECT test_methods.test_method_id,
+                   tests.description
+            FROM test_methods
+            JOIN tests ON tests.test_id = test_methods.test_id
+            JOIN organizations section ON test_methods.org_id = section.org_id
+            WHERE test_methods.category_id = ?
+              AND section.parent_id = ?
+              AND section.org_type = 'section'
+              AND tests.status = 1
+              AND test_methods.status = 1
+            ORDER BY tests.description;
+        """
+        args = (category_id, lab_id)
 
         rs = self.engine.read(True, sql, args)
         if rs:
@@ -942,54 +920,33 @@ class Main(tk.Toplevel):
         if not self.selected_test_method:
             return
 
-        # Get lab_id from selected category
-        category_lab_id = None
-        if self.selected_category:
-            category_lab_id = self.selected_category.get("lab_id")
-
-        role = self.engine.log_user["role"]
+        # Get lab_id from current context
+        lab_id = self.engine.current_ids.get("lab_id")
         test_method_id = self.selected_test_method["test_method_id"]
 
-        if role == 0:
-            # Admin: filter by category's lab_id
-            sql = """
-                    SELECT workstations.workstation_id,
-                           workstations.description,
-                           workstations.serial
-                    FROM workstation_test_methods
-                    JOIN workstations
-                      ON workstation_test_methods.workstation_id = workstations.workstation_id
-                    JOIN sections
-                      ON sections.section_id = workstations.section_id
-                    JOIN equipments
-                      ON equipments.equipment_id = workstations.equipment_id
-                    WHERE workstation_test_methods.test_method_id = ?
-                      AND sections.lab_id = ?
-                      AND workstations.status = 1
-                      AND equipments.status = 1
-                    ORDER BY workstations.rank ASC;
-                 """
-            args = (test_method_id, category_lab_id)
-        else:
-            # All non-admin users: filter by their lab_id
-            sql = """
-                    SELECT workstations.workstation_id,
-                           workstations.description,
-                           workstations.serial
-                    FROM workstation_test_methods
-                    JOIN workstations
-                      ON workstation_test_methods.workstation_id = workstations.workstation_id
-                    JOIN sections
-                      ON sections.section_id = workstations.section_id
-                    JOIN equipments
-                      ON equipments.equipment_id = workstations.equipment_id
-                    WHERE workstation_test_methods.test_method_id = ?
-                      AND sections.lab_id = ?
-                      AND workstations.status = 1
-                      AND equipments.status = 1
-                    ORDER BY workstations.rank ASC;
-                 """
-            args = (test_method_id, self.engine.get_lab_id())
+        if not lab_id:
+            return
+
+        # Query using organizations - workstations.org_id is section, filter by parent lab
+        sql = """
+            SELECT workstations.workstation_id,
+                   workstations.description,
+                   workstations.serial
+            FROM workstation_test_methods
+            JOIN workstations
+              ON workstation_test_methods.workstation_id = workstations.workstation_id
+            JOIN organizations section
+              ON section.org_id = workstations.org_id
+            JOIN equipments
+              ON equipments.equipment_id = workstations.equipment_id
+            WHERE workstation_test_methods.test_method_id = ?
+              AND section.parent_id = ?
+              AND section.org_type = 'section'
+              AND workstations.status = 1
+              AND equipments.status = 1
+            ORDER BY workstations.rank ASC;
+        """
+        args = (test_method_id, lab_id)
 
         rs = self.engine.read(True, sql, args)
 
@@ -1841,8 +1798,17 @@ class Main(tk.Toplevel):
             msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
-        
+
         views.sites.UI(self).on_open()
+
+    def on_organizations(self,):
+        """Open Organizations management window (App Admin only)."""
+        if not self.engine.is_admin():
+            msg = self.engine.user_not_enable
+            messagebox.showwarning(self.engine.app_title, msg, parent=self)
+            return
+
+        views.organizations.UI(self).on_open()
 
     def on_sections(self,):
         if not self.engine.is_admin():
@@ -2342,8 +2308,10 @@ class Main(tk.Toplevel):
     def _fetch_available_sections(self, role):
         """Fetch sections available to user based on role.
 
+        Uses organizations table for section hierarchy.
+
         Args:
-            role: User role (0=Admin, 1=Superuser, 2=Technician)
+            role: User role (0=Admin, etc.)
 
         Returns:
             List of section dicts with section_id, description, and lab_name, or None on error.
@@ -2352,27 +2320,30 @@ class Main(tk.Toplevel):
             # Admin: all active sections with lab name
             sql = """
                 SELECT
-                    sections.section_id,
-                    sections.description,
-                    labs.description AS lab_name
-                FROM sections
-                JOIN labs ON labs.lab_id = sections.lab_id
-                WHERE sections.status = 1
-                ORDER BY labs.description, sections.description
+                    section.org_id AS section_id,
+                    section.description,
+                    lab.description AS lab_name
+                FROM organizations section
+                JOIN organizations lab ON section.parent_id = lab.org_id
+                WHERE section.org_type = 'section'
+                  AND section.status = 1
+                ORDER BY lab.description, section.description
             """
             args = ()
         else:
-            # Superuser/Technician: only sections in their lab
+            # Other users: only sections in their lab
             lab_id = self.engine.current_ids.get("lab_id")
             sql = """
                 SELECT
-                    sections.section_id,
-                    sections.description,
-                    labs.description AS lab_name
-                FROM sections
-                JOIN labs ON labs.lab_id = sections.lab_id
-                WHERE sections.lab_id = ? AND sections.status = 1
-                ORDER BY labs.description, sections.description
+                    section.org_id AS section_id,
+                    section.description,
+                    lab.description AS lab_name
+                FROM organizations section
+                JOIN organizations lab ON section.parent_id = lab.org_id
+                WHERE section.parent_id = ?
+                  AND section.org_type = 'section'
+                  AND section.status = 1
+                ORDER BY lab.description, section.description
             """
             args = (lab_id,)
 

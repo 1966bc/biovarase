@@ -92,14 +92,18 @@ class LabSelectorDialog(tk.Toplevel):
         self.lab_ids = []
 
     def _load_labs(self):
-        """Load available laboratories with site names."""
+        """Load available laboratories with region names from organizations."""
+        # Get labs from organizations table (org_type='lab')
+        # Join with parent organization (region) for context
         sql = """
-            SELECT l.lab_id, l.description AS lab_name, sup.description AS site_name
-            FROM labs l
-            INNER JOIN sites s ON l.site_id = s.site_id
-            INNER JOIN suppliers sup ON s.comp_id = sup.supplier_id
-            WHERE l.status = 1
-            ORDER BY sup.description, l.description
+            SELECT
+                lab.org_id AS lab_id,
+                lab.description AS lab_name,
+                COALESCE(region.description, 'N/A') AS region_name
+            FROM organizations lab
+            LEFT JOIN organizations region ON lab.parent_id = region.org_id
+            WHERE lab.org_type = 'lab' AND lab.status = 1
+            ORDER BY region.description, lab.description
         """
         rows = self.engine.read(True, sql, ()) or []
 
@@ -109,7 +113,7 @@ class LabSelectorDialog(tk.Toplevel):
         if rows:
             default_idx = 0
             for idx, row in enumerate(rows):
-                display = f"{row['lab_name']} - {row['site_name']}"
+                display = f"{row['lab_name']} - {row['region_name']}"
                 self.listbox.insert(tk.END, display)
                 self.lab_ids.append(row["lab_id"])
                 if row["lab_id"] == self.default_lab_id:

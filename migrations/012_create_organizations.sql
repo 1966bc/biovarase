@@ -34,16 +34,17 @@ INSERT INTO organizations (org_id, parent_id, org_type, code, description, statu
 VALUES (1, NULL, 'country', 'ITA', 'Italia', 1);
 
 -- Step 3: Migrate existing sites as regions under Italy
--- Note: Adjust parent_id if you have multiple countries
+-- Note: sites.description comes from suppliers table via supplier_id
 INSERT INTO organizations (org_id, parent_id, org_type, code, description, status)
 SELECT
-    site_id + 1000 AS org_id,  -- Offset to avoid PK conflicts
-    1 AS parent_id,             -- Italy
+    s.site_id + 1000 AS org_id,  -- Offset to avoid PK conflicts
+    1 AS parent_id,               -- Italy
     'region' AS org_type,
     NULL AS code,
-    description,
-    status
-FROM sites;
+    sup.description AS description,
+    s.status
+FROM sites s
+JOIN suppliers sup ON s.supplier_id = sup.supplier_id;
 
 -- Step 4: Migrate existing labs under their respective sites (now regions)
 INSERT INTO organizations (org_id, parent_id, org_type, code, description, status)

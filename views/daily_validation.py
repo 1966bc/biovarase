@@ -32,11 +32,14 @@ from calendarium import Calendarium
 import views.plots
 
 
-# Role constants
-ROLE_ADMIN = 0
-ROLE_SUPERUSER = 1
-ROLE_TECHNICIAN = 2
-ROLE_AUTOLOGIN = 3
+# User roles - imported from engine for consistency
+from engine import (
+    ROLE_APP_ADMIN, ROLE_COUNTRY_ADMIN, ROLE_REGIONAL_ADMIN,
+    ROLE_LAB_ADMIN, ROLE_SUPERUSER, ROLE_TECHNICIAN, ROLE_VIEWER
+)
+# Legacy aliases
+ROLE_ADMIN = ROLE_APP_ADMIN
+ROLE_AUTOLOGIN = ROLE_VIEWER
 
 # Node type tags
 TAG_WORKSTATION = "ws"
@@ -292,8 +295,8 @@ class UI(ParentView):
     def _check_user_permissions(self):
         """Check user role and enable/disable validation controls."""
         try:
-            user_role = self.engine.get_user_role()
-            self.can_validate = user_role in (ROLE_ADMIN, ROLE_SUPERUSER)
+            # Use engine's permission helper (roles 0-4 can validate)
+            self.can_validate = self.engine.can_validate_qc()
 
             if self.can_validate:
                 self.lbl_role.config(text=_("Validation enabled"), foreground="green")

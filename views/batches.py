@@ -18,10 +18,11 @@ hierarchical view of QC batches organized by:
     - Batches for selected test method + workstation (right pane)
 
 The window implements role-based access control:
-    - Admin (role=0): See all sites - system configuration access
-    - Superuser (role=1): See all sections in their lab - QC validation
-    - Technician (role=2): See only their section - data entry
-    - Autologin (role=3): See their section - read-only
+    - App Admin (role=0): See all organizations - global access
+    - Country/Regional/Lab Admin (1-3): See descendants of their org
+    - Superuser (role=4): QC validation within their lab
+    - Technician (role=5): Data entry within their scope
+    - Viewer (role=6): Read-only access
 
 Architecture:
     - Singleton master window (PROJECT_RULES 7.1)
@@ -47,17 +48,27 @@ STATUS_ACTIVE = 1
 # Pane weight ratios (left, middle, right)
 PANE_WEIGHTS = (0.28, 0.36, 0.36)
 
-# Tree node types
-NODE_TYPE_SITES = "sites"
-NODE_TYPE_LABS = "labs"
-NODE_TYPE_SECTIONS = "sections"
-NODE_TYPE_WORKSTATIONS = "workstations"
+# Tree node types (now based on organizations.org_type)
+NODE_TYPE_COUNTRY = "country"
+NODE_TYPE_REGION = "region"
+NODE_TYPE_LAB = "lab"
+NODE_TYPE_SECTION = "section"
+NODE_TYPE_WORKSTATION = "workstation"
 
-# User roles (hierarchy: admin > superuser > technician > autologin)
-ROLE_ADMIN = 0       # System administrator - multi-site configuration
-ROLE_SUPERUSER = 1   # Lab manager - QC validation, lab-wide access
-ROLE_TECHNICIAN = 2  # Section worker - data entry, section-only access
-ROLE_AUTOLOGIN = 3   # Guest user - read-only access
+# Legacy aliases for backward compatibility
+NODE_TYPE_SITES = NODE_TYPE_REGION
+NODE_TYPE_LABS = NODE_TYPE_LAB
+NODE_TYPE_SECTIONS = NODE_TYPE_SECTION
+NODE_TYPE_WORKSTATIONS = NODE_TYPE_WORKSTATION
+
+# User roles - imported from engine for consistency
+from engine import (
+    ROLE_APP_ADMIN, ROLE_COUNTRY_ADMIN, ROLE_REGIONAL_ADMIN,
+    ROLE_LAB_ADMIN, ROLE_SUPERUSER, ROLE_TECHNICIAN, ROLE_VIEWER
+)
+# Legacy aliases
+ROLE_ADMIN = ROLE_APP_ADMIN
+ROLE_AUTOLOGIN = ROLE_VIEWER
 
 
 class UI(ParentView):
@@ -70,15 +81,16 @@ class UI(ParentView):
         - Right pane: Batches for selected test method + workstation combination
 
     Role-Based Access Control:
-        - Admin (role=0): Multi-site view, all sections across all sites
-        - Superuser (role=1): Lab-wide view, all sections in their laboratory
-        - Technician (role=2): Section-only view, their assigned section
-        - Autologin (role=3): Section-only view, read-only access
+        - App Admin (role=0): Global view, all organizations
+        - Country/Regional/Lab Admin (1-3): Descendants of their org
+        - Superuser (role=4): Lab-wide QC management
+        - Technician (role=5): Data entry in assigned scope
+        - Viewer (role=6): Read-only access
 
     Data Filtering:
-        Admin → No filtering or by selected site
-        Superuser → WHERE lab_id = ? (lab-wide)
-        Technician/Autologin → WHERE section_id = ? (section-only)
+        App Admin → No filtering (global)
+        Admin hierarchy → WHERE org_id IN descendants
+        Superuser/Technician/Viewer → WHERE lab_id = ?
 
     Attributes:
         _loaded: Flag for lazy tree loading
@@ -315,200 +327,193 @@ class UI(ParentView):
 
     def _load_tree(self, _evt: Optional[tk.Event] = None) -> None:
         """
-        Populate the Sites → Labs → Sections → Workstations tree.
+        Populate the Organizations hierarchy tree from the organizations table.
 
-        Implements three-tier role-based filtering:
-            - Admin (role=0): See all active sites (multi-site view)
-            - Superuser (role=1): See all sections in their lab (lab-wide)
-            - Technician/Autologin (role≥2): See only their section (section-only)
+        Structure: Country → Region → Lab → Section → Workstation
+
+        Role-based filtering:
+            - App Admin (role=0): See all organizations
+            - Other roles: Filtered by user's org_id scope
 
         Args:
             _evt: Optional Tkinter event (unused, for event binding compatibility)
         """
         self.Sites.delete(*self.Sites.get_children())
-        root = self.Sites.insert("", tk.END, iid="root", text=_("Sites"))
+        root = self.Sites.insert("", tk.END, iid="root", text=_("Organizations"))
 
-        # Determine user role
+        # Determine user role and org scope
         try:
-            role = int(self.engine.log_user.get("role", 2))  # Default: technician
-        except (ValueError, TypeError, KeyError) as e:
-            role = 2  # Fail safe: restrict to section level
+            role = int(self.engine.log_user.get("role", ROLE_TECHNICIAN))
+        except (ValueError, TypeError, KeyError):
+            role = ROLE_TECHNICIAN
 
+        user_org_id = self.engine.log_user.get("org_id")
+
+        # Load countries (root level organizations)
         if role == ROLE_ADMIN:
-            # Admin: See all sites (multi-site system administration)
-            sql = """
-                SELECT
-                    sites.site_id,
-                    suppliers.description AS site_name
-                FROM
-                    sites
-                JOIN
-                    suppliers ON suppliers.supplier_id = sites.comp_id
-                WHERE
-                    sites.status = 1
-                ORDER BY
-                    suppliers.description ASC;
-            """
-            args = ()
-
+            # Admin sees all countries
+            countries = self._load_orgs_by_type(None, "country")
         else:
-            # All non-admin users: See all sections in their laboratory
-            sql = """
-                SELECT
-                    sites.site_id,
-                    suppliers.description AS site_name
-                FROM
-                    labs
-                JOIN
-                    sites ON sites.site_id = labs.site_id
-                JOIN
-                    suppliers ON suppliers.supplier_id = sites.comp_id
-                WHERE
-                    labs.lab_id = ?
-                    AND sites.status = 1
-                ORDER BY
-                    suppliers.description ASC;
-            """
-            try:
-                lab_id = self.engine.current_ids.get("lab_id")
-                if lab_id is None:
-                    lab_id = -1
-            except (AttributeError, TypeError) as e:
-                lab_id = -1
-            args = (lab_id,)
+            # Non-admin: find the country ancestor of user's org
+            countries = self._get_user_country_scope(user_org_id)
 
-        try:
-            site_rows = self.engine.read(True, sql, args) or []
-        except Exception as e:
-            self.engine.on_log("_load_tree:sites", e, type(e), sys.modules[__name__])
-            site_rows = []
-
-        for row in site_rows:
-            site_id = row.get("site_id")
-            site_name = row.get("site_name") or ""
-            if site_id is None:
-                continue
-
-            site_iid = f"site_{site_id}"
+        for country_id, country_name in countries:
+            country_iid = f"country_{country_id}"
             self.Sites.insert(
-                root,
-                tk.END,
-                iid=site_iid,
-                text=site_name,
-                values=(site_id, NODE_TYPE_SITES),
+                root, tk.END, iid=country_iid,
+                text=country_name,
+                values=(country_id, NODE_TYPE_COUNTRY),
             )
 
-            labs = self._load_labs(site_id) or []
-            for lab_id, lab_name in labs:
-                lab_iid = f"lab_{lab_id}"
+            # Load regions under this country
+            regions = self._load_orgs_by_type(country_id, "region")
+            for region_id, region_name in regions:
+                region_iid = f"region_{region_id}"
                 self.Sites.insert(
-                    site_iid,
-                    tk.END,
-                    iid=lab_iid,
-                    text=lab_name,
-                    values=(lab_id, NODE_TYPE_LABS),
+                    country_iid, tk.END, iid=region_iid,
+                    text=region_name,
+                    values=(region_id, NODE_TYPE_REGION),
                 )
 
-                sections = self._load_sections(lab_id) or []
-                for section_id, section_name in sections:
-                    sec_iid = f"sec_{section_id}"
+                # Load labs under this region
+                labs = self._load_orgs_by_type(region_id, "lab")
+                for lab_id, lab_name in labs:
+                    lab_iid = f"lab_{lab_id}"
                     self.Sites.insert(
-                        lab_iid,
-                        tk.END,
-                        iid=sec_iid,
-                        text=section_name,
-                        values=(section_id, NODE_TYPE_SECTIONS),
+                        region_iid, tk.END, iid=lab_iid,
+                        text=lab_name,
+                        values=(lab_id, NODE_TYPE_LAB),
                     )
 
-                    workstations = self._load_workstations(section_id) or []
-                    for ws_id, ws_descr in workstations:
-                        ws_iid = f"ws_{ws_id}"
+                    # Load sections under this lab
+                    sections = self._load_orgs_by_type(lab_id, "section")
+                    for section_id, section_name in sections:
+                        sec_iid = f"sec_{section_id}"
                         self.Sites.insert(
-                            sec_iid,
-                            tk.END,
-                            iid=ws_iid,
-                            text=ws_descr,
-                            values=(ws_id, NODE_TYPE_WORKSTATIONS),
+                            lab_iid, tk.END, iid=sec_iid,
+                            text=section_name,
+                            values=(section_id, NODE_TYPE_SECTION),
                         )
 
+                        # Load workstations under this section (by org_id)
+                        workstations = self._load_workstations(section_id)
+                        for ws_id, ws_descr in workstations:
+                            ws_iid = f"ws_{ws_id}"
+                            self.Sites.insert(
+                                sec_iid, tk.END, iid=ws_iid,
+                                text=ws_descr,
+                                values=(ws_id, NODE_TYPE_WORKSTATION),
+                            )
+
         self.Sites.item(root, open=True)
+        # Auto-expand first levels for better UX
+        for child in self.Sites.get_children(root):
+            self.Sites.item(child, open=True)
 
-    def _load_labs(self, site_id: int) -> List[Tuple[int, str]]:
+    def _load_orgs_by_type(self, parent_id: Optional[int], org_type: str) -> List[Tuple[int, str]]:
         """
-        Load active labs for a given site.
-
-        Args:
-            site_id: The site ID to filter by
-
-        Returns:
-            List of (lab_id, description) tuples, or [] on error
-        """
-        sql = """
-            SELECT lab_id, description
-            FROM labs
-            WHERE site_id = ? AND status = 1
-            ORDER BY description ASC;
-        """
-        rows = self.engine.read(True, sql, (site_id,)) or []
-        return [(r["lab_id"], r["description"]) for r in rows]
-
-    def _load_sections(self, lab_id: int) -> List[Tuple[int, str]]:
-        """
-        Load active sections for a given lab.
+        Load organizations of a specific type under a parent.
 
         Args:
-            lab_id: The lab ID to filter by
+            parent_id: Parent org_id (None for root/countries)
+            org_type: Organization type ('country', 'region', 'lab', 'section')
 
         Returns:
-            List of (section_id, description) tuples, or [] on error
+            List of (org_id, description) tuples
         """
-        sql = """
-            SELECT
-                sections.section_id,
-                sections.description
-            FROM
-                sections
-            WHERE
-                sections.lab_id = ?
-                AND sections.status = 1
-            ORDER BY
-                sections.description ASC;
-        """
+        if parent_id is None:
+            sql = """
+                SELECT org_id, description
+                FROM organizations
+                WHERE parent_id IS NULL AND org_type = ? AND status = 1
+                ORDER BY description ASC
+            """
+            args = (org_type,)
+        else:
+            sql = """
+                SELECT org_id, description
+                FROM organizations
+                WHERE parent_id = ? AND org_type = ? AND status = 1
+                ORDER BY description ASC
+            """
+            args = (parent_id, org_type)
+
         try:
-            rows = self.engine.read(True, sql, (lab_id,)) or []
-            return [(r["section_id"], r["description"]) for r in rows]
+            rows = self.engine.read(True, sql, args) or []
+            return [(r["org_id"], r["description"]) for r in rows]
         except Exception as e:
-            self.engine.on_log("_load_sections", e, type(e), sys.modules[__name__])
+            self.engine.on_log("_load_orgs_by_type", e, type(e), sys.modules[__name__])
             return []
 
-    def _load_workstations(self, section_id: int) -> List[Tuple[int, str]]:
+    def _get_user_country_scope(self, user_org_id: Optional[int]) -> List[Tuple[int, str]]:
         """
-        Load active workstations for a given section.
+        Get the country scope for a non-admin user based on their org_id.
+
+        Traverses up the organization hierarchy to find the country.
 
         Args:
-            section_id: The section ID to filter by
+            user_org_id: User's assigned org_id
 
         Returns:
-            List of (workstation_id, description) tuples, or [] on error
+            List containing the user's country (org_id, description)
         """
+        if user_org_id is None:
+            # No org assigned, return all countries (shouldn't happen for non-admin)
+            return self._load_orgs_by_type(None, "country")
+
+        # Traverse up to find the country
         sql = """
-            SELECT
-                workstations.workstation_id,
-                workstations.description
-            FROM
-                workstations
-            WHERE
-                workstations.section_id = ?
-                AND workstations.status = 1
-            ORDER BY
-                workstations.description ASC;
+            WITH RECURSIVE ancestors AS (
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.parent_id, o.org_type, o.description
+                FROM organizations o
+                JOIN ancestors a ON o.org_id = a.parent_id
+            )
+            SELECT org_id, description FROM ancestors WHERE org_type = 'country'
         """
         try:
-            rows = self.engine.read(True, sql, (section_id,)) or []
+            row = self.engine.read(False, sql, (user_org_id,))
+            if row:
+                return [(row["org_id"], row["description"])]
+        except Exception as e:
+            self.engine.on_log("_get_user_country_scope", e, type(e), sys.modules[__name__])
+
+        # Fallback: return all countries
+        return self._load_orgs_by_type(None, "country")
+
+    def _load_workstations(self, section_org_id: int) -> List[Tuple[int, str]]:
+        """
+        Load active workstations for a given section (by org_id).
+
+        Args:
+            section_org_id: The section's org_id
+
+        Returns:
+            List of (workstation_id, description) tuples
+        """
+        sql = """
+            SELECT workstation_id, description
+            FROM workstations
+            WHERE org_id = ? AND status = 1
+            ORDER BY description ASC
+        """
+        try:
+            rows = self.engine.read(True, sql, (section_org_id,)) or []
             return [(r["workstation_id"], r["description"]) for r in rows]
         except Exception as e:
             self.engine.on_log("_load_workstations", e, type(e), sys.modules[__name__])
             return []
+
+    # Legacy methods for backward compatibility (deprecated)
+    def _load_labs(self, site_id: int) -> List[Tuple[int, str]]:
+        """Deprecated: Use _load_orgs_by_type instead."""
+        return self._load_orgs_by_type(site_id, "lab")
+
+    def _load_sections(self, lab_id: int) -> List[Tuple[int, str]]:
+        """Deprecated: Use _load_orgs_by_type instead."""
+        return self._load_orgs_by_type(lab_id, "section")
 
     # ---------------------------------------------------------------------
     # Selection Handlers

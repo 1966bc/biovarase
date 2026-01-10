@@ -250,12 +250,11 @@ class UI(ParentView):
         """
         Load only sections belonging to the lab of the current context.
 
-        The lab is resolved from the Engine context:
-            - Prefer engine.current_ids['lab_id'].
-            - Fallback to engine.get_lab_id_by_section_id(engine.get_section_id()).
+        Uses organizations table to get sections (org_type='section')
+        that are children of the current lab (org_id).
 
         Populates:
-            self.dict_sections: index -> section_id
+            self.dict_sections: index -> org_id (section)
             self.cbSections["values"]: list of section descriptions
         """
         self.dict_sections = {}
@@ -268,12 +267,13 @@ class UI(ParentView):
             return
 
         sql = """
-            SELECT 
-                section_id,
+            SELECT
+                org_id AS section_id,
                 description
-            FROM sections
+            FROM organizations
             WHERE status = 1
-              AND lab_id = ?
+              AND parent_id = ?
+              AND org_type = 'section'
             ORDER BY description;
         """
         rs = self.engine.read(True, sql, (lab_id,)) or []
@@ -352,10 +352,10 @@ class UI(ParentView):
         else:
             self.cbUnits.set("")
 
-        # Section
-        section_id = item.get("section_id")
+        # Section (now uses org_id)
+        org_id = item.get("org_id") or item.get("section_id")
         try:
-            k = next(k for k, v in self.dict_sections.items() if v == section_id)
+            k = next(k for k, v in self.dict_sections.items() if v == org_id)
             self.cbSections.current(k)
         except StopIteration:
             self.cbSections.set("")
@@ -400,7 +400,7 @@ class UI(ParentView):
             self.dict_samples[self.cbSamples.current()],        # sample_id
             self.dict_methods[self.cbMethods.current()],        # method_id
             self.dict_units[self.cbUnits.current()],            # unit_id
-            self.dict_sections[self.cbSections.current()],       # section_id
+            self.dict_sections[self.cbSections.current()],      # org_id (section)
             int(self.is_mandatory.get()),                       # is_mandatory
             int(self.status.get()),                             # status
         ]

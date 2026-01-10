@@ -148,14 +148,14 @@ class UI(ChildView):
 
     # ----------------------------------------------------------------------
     def on_open(self):
-
-        self.selected_section = getattr(self.parent, "selected_section", None)
+        # Get section org_id from parent (workstations.py now uses org_id)
+        self.selected_section_org_id = getattr(self.parent, "selected_section_org_id", None)
         self.selected_workstation = getattr(self.parent, "selected_workstation", None)
 
-        if self.selected_section is not None:
+        if self.selected_section_org_id is not None:
             self._set_instruments()
             self._set_sections()
-            self._set_section(self.selected_section)
+            self._set_section(self.selected_section_org_id)
 
         if self.selected_workstation is not None:
             self._set_values()
@@ -194,8 +194,8 @@ class UI(ChildView):
 
     # ----------------------------------------------------------------------
     def _set_sections(self):
-
-        if not self.selected_section:
+        """Load sections from organizations table based on selected section's lab."""
+        if self.selected_section_org_id is None:
             self.dict_sections.clear()
             self.cbSections["values"] = ()
             return
@@ -203,53 +203,46 @@ class UI(ChildView):
         self.dict_sections.clear()
         values = []
 
-        lab_id = self.selected_section.get("lab_id")
+        # Get the lab (parent of section) from organizations
+        sql_parent = """
+            SELECT parent_id FROM organizations
+            WHERE org_id = ? AND org_type = 'section'
+        """
+        row = self.engine.read(False, sql_parent, (self.selected_section_org_id,))
+        lab_org_id = row["parent_id"] if row else None
 
-        # Fallback if lab_id missing
-        if lab_id is None:
-            section_id = self.selected_section.get("section_id")
-            if section_id is not None:
-                try:
-                    ids = self.engine.get_idd_by_section_id(section_id)
-                    lab_id = ids[3]  # site_id, supplier_id, comp_id, lab_id, section_id
-                except Exception as e:
-                    lab_id = None
-
-        if lab_id is None:
+        if lab_org_id is None:
             self.cbSections["values"] = ()
             return
 
+        # Load all sections under this lab
         sql = """
-            SELECT section_id, description
-            FROM sections
-            WHERE lab_id = ? AND status = 1
+            SELECT org_id, description
+            FROM organizations
+            WHERE parent_id = ? AND org_type = 'section' AND status = 1
             ORDER BY description;
         """
 
-        rows = self.engine.read(True, sql, (lab_id,))
+        rows = self.engine.read(True, sql, (lab_org_id,))
 
         for idx, row in enumerate(rows or []):
-            section_id = row["section_id"]
+            org_id = row["org_id"]
             desc = row["description"] or ""
-            self.dict_sections[idx] = section_id
+            self.dict_sections[idx] = org_id
             values.append(desc)
 
         self.cbSections["values"] = values
 
     # ----------------------------------------------------------------------
-    def _set_section(self, selected_section):
-
-        if not selected_section or not self.dict_sections:
-            return
-
-        section_id = selected_section.get("section_id")
-        if section_id is None:
+    def _set_section(self, section_org_id):
+        """Set the section combobox to the given org_id."""
+        if section_org_id is None or not self.dict_sections:
             return
 
         try:
-            key = next(k for k, v in self.dict_sections.items() if v == section_id)
+            key = next(k for k, v in self.dict_sections.items() if v == section_org_id)
             self.cbSections.current(key)
-        except Exception as e:
+        except StopIteration:
             pass
 
     # ----------------------------------------------------------------------
@@ -258,26 +251,26 @@ class UI(ChildView):
 
     # ----------------------------------------------------------------------
     def _get_values(self):
-
+        """Get form values for INSERT/UPDATE. Returns org_id for section."""
         equipment_idx = self.cbEquipments.current()
         section_idx = self.cbSections.current()
 
         equipment_id = self.dict_instruments.get(equipment_idx)
-        section_id = self.dict_sections.get(section_idx)
+        org_id = self.dict_sections.get(section_idx)  # Now org_id, not section_id
 
         return [
             equipment_id,
             self.device_id.get(),
             self.description.get(),
             self.serial.get(),
-            section_id,
+            org_id,  # This is now org_id for the section
             self.rank.get(),
             self.status.get(),
         ]
 
     # ----------------------------------------------------------------------
     def _set_values(self):
-
+        """Set form values from selected workstation."""
         if not self.selected_workstation:
             return
 
@@ -286,19 +279,19 @@ class UI(ChildView):
         try:
             key = next(k for k, v in self.dict_instruments.items() if v == equipment_id)
             self.cbEquipments.current(key)
-        except Exception as e:
+        except StopIteration:
             pass
 
         self.device_id.set(self.selected_workstation.get("device_id", ""))
         self.description.set(self.selected_workstation.get("description", ""))
         self.serial.set(self.selected_workstation.get("serial", ""))
 
-        # Sections combobox
-        section_id = self.selected_workstation.get("section_id")
+        # Sections combobox - now uses org_id
+        org_id = self.selected_workstation.get("org_id")
         try:
-            key = next(k for k, v in self.dict_sections.items() if v == section_id)
+            key = next(k for k, v in self.dict_sections.items() if v == org_id)
             self.cbSections.current(key)
-        except Exception as e:
+        except StopIteration:
             pass
 
         self.rank.set(self.selected_workstation.get("rank", 1))
@@ -339,9 +332,8 @@ class UI(ChildView):
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 
-        if self.selected_section:
-            section_id = self.selected_section.get("section_id")
-            self.parent.set_workstations((section_id,))
+        if self.selected_section_org_id:
+            self.parent.set_workstations((self.selected_section_org_id,))
 
         try:
             if self.index is not None:
