@@ -208,37 +208,57 @@ self.engine.is_read_only()          # Autologin
 
 Each user has `lab_id` - Admin can change lab (Ctrl+E), others are filtered.
 
-### Regional Governance (FUTURE)
+### International Hierarchy
 
-For regional deployment (multiple hospitals/labs):
+```
+Country (Italia, France, España...)
+  └── Region/Site (Lazio, Île-de-France...)
+        └── Lab (Hospital laboratory)
+              └── Section (Chemistry, Hematology...)
+                    └── Workstation (Instrument)
+```
 
-**Admin = Regional level:**
-- Manages ALL laboratories
-- Controls master data shared across labs
+### Role Hierarchy
 
-**Superuser = Laboratory level:**
-- Maximum role within a single lab
-- Cannot modify master data
+| Role | Constant | Scope | Permissions |
+|------|----------|-------|-------------|
+| 0 | `ROLE_APP_ADMIN` | Global | All countries, master data, system config |
+| 1 | `ROLE_COUNTRY_ADMIN` | Country | All regions/labs in country |
+| 2 | `ROLE_REGIONAL_ADMIN` | Region (site_id) | All labs in region, regional reporting |
+| 3 | `ROLE_LAB_ADMIN` | Lab (lab_id) | Users, workstations, test_methods |
+| 4 | `ROLE_SUPERUSER` | Lab | QC validation, batch management |
+| 5 | `ROLE_TECHNICIAN` | Lab | Data entry only |
+| 6 | `ROLE_VIEWER` | Lab | Read-only |
 
-**Master Data (Admin only):**
+**User scope fields:**
+- `country_id` - For Country Admin (NULL = all countries)
+- `site_id` - For Regional Admin (NULL = all regions)
+- `lab_id` - For Lab Admin and below (NULL = derived from above)
+
+### Data Governance
+
+**Global Master Data (App Admin only):**
 | Table | Scope | Reason |
 |-------|-------|--------|
-| `tests` | Regional | Consistent analyte naming across labs |
-| `units` | Regional | Standard units of measurement |
-| `methods` | Regional | Analytical methods catalog |
-| `samples` | Regional | Sample types |
+| `tests` | Global | Consistent analyte naming worldwide |
+| `units` | Global | Standard units of measurement |
+| `methods` | Global | Analytical methods catalog |
+| `samples` | Global | Sample types |
+| `equipments` | Global | Instrument manufacturers/models |
+| `controls` | Global | QC materials (Bio-Rad, Roche, etc.) |
 
-**Local Data (Superuser can manage):**
+**Local Data (Lab Admin can manage):**
 | Table | Scope | Reason |
 |-------|-------|--------|
-| `test_methods` | Lab | Local configuration of tests |
+| `test_methods` | Lab | Local test configuration |
 | `workstations` | Lab | Lab's instruments |
 | `batches` | Lab | QC lots |
 | `results` | Lab | QC data |
 
 **Benefits:**
-- Consistent nomenclature ("Glucosio" everywhere, not "GLUC", "Glucose")
-- Regional reporting and aggregation
+- International scalability (Abbott partnership)
+- Consistent nomenclature across countries
+- Hierarchical reporting (lab → region → country → global)
 - Single point of maintenance for master data
 
 ## QC Domain
@@ -370,6 +390,11 @@ mysql -u root -p biovarase < migrations/008_add_lab_id_to_results.sql
 mysql -u root -p biovarase < migrations/009_add_lab_id_to_audit_batches.sql
 mysql -u root -p biovarase < migrations/010_add_lab_id_to_audit_results.sql
 mysql -u root -p biovarase < migrations/011_add_lab_id_to_test_methods.sql
+
+# International hierarchy and role refactoring
+mysql -u root -p biovarase < migrations/012_create_countries_table.sql
+mysql -u root -p biovarase < migrations/013_add_scope_to_users.sql
+mysql -u root -p biovarase < migrations/014_migrate_user_roles.sql
 ```
 
 ### Production Migration Guide (008-011)
