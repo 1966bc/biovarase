@@ -208,32 +208,55 @@ self.engine.is_read_only()          # Autologin
 
 Each user has `lab_id` - Admin can change lab (Ctrl+E), others are filtered.
 
-### International Hierarchy
+### Organizations (Flexible Hierarchy)
+
+Single `organizations` table with `parent_id` for any depth:
 
 ```
-Country (Italia, France, España...)
-  └── Region/Site (Lazio, Île-de-France...)
-        └── Lab (Hospital laboratory)
-              └── Section (Chemistry, Hematology...)
-                    └── Workstation (Instrument)
+organizations (org_type, parent_id)
+├── Italia (country, NULL)
+│   ├── Lazio (region, parent=Italia)
+│   │   ├── Ospedale San Camillo (lab, parent=Lazio)
+│   │   │   ├── Chimica Clinica (section, parent=San Camillo)
+│   │   │   └── Ematologia (section, parent=San Camillo)
+│   │   └── Policlinico Umberto I (lab, parent=Lazio)
+│   └── Lombardia (region, parent=Italia)
+└── France (country, NULL)
+```
+
+**Benefits:**
+- Flexible depth without schema changes
+- Single `org_id` field for all scopes
+- Easy recursive queries with CTEs
+- Add levels (district, department) without migration
+
+**Query descendants:**
+```sql
+WITH RECURSIVE tree AS (
+    SELECT org_id, parent_id, org_type, description
+    FROM organizations WHERE org_id = ?  -- Start point
+    UNION ALL
+    SELECT o.org_id, o.parent_id, o.org_type, o.description
+    FROM organizations o JOIN tree t ON o.parent_id = t.org_id
+)
+SELECT * FROM tree;
 ```
 
 ### Role Hierarchy
 
 | Role | Constant | Scope | Permissions |
 |------|----------|-------|-------------|
-| 0 | `ROLE_APP_ADMIN` | Global | All countries, master data, system config |
-| 1 | `ROLE_COUNTRY_ADMIN` | Country | All regions/labs in country |
-| 2 | `ROLE_REGIONAL_ADMIN` | Region (site_id) | All labs in region, regional reporting |
-| 3 | `ROLE_LAB_ADMIN` | Lab (lab_id) | Users, workstations, test_methods |
+| 0 | `ROLE_APP_ADMIN` | Global | All orgs, master data, system config |
+| 1 | `ROLE_COUNTRY_ADMIN` | Country | All descendants of country org |
+| 2 | `ROLE_REGIONAL_ADMIN` | Region | All descendants of region org |
+| 3 | `ROLE_LAB_ADMIN` | Lab | Lab config, users, workstations |
 | 4 | `ROLE_SUPERUSER` | Lab | QC validation, batch management |
 | 5 | `ROLE_TECHNICIAN` | Lab | Data entry only |
 | 6 | `ROLE_VIEWER` | Lab | Read-only |
 
-**User scope fields:**
-- `country_id` - For Country Admin (NULL = all countries)
-- `site_id` - For Regional Admin (NULL = all regions)
-- `lab_id` - For Lab Admin and below (NULL = derived from above)
+**User scope:** Single `org_id` field
+- `org_id = NULL` → App Admin (sees everything)
+- `org_id = X` → User sees org X and all its descendants
 
 ### Data Governance
 
@@ -391,10 +414,11 @@ mysql -u root -p biovarase < migrations/009_add_lab_id_to_audit_batches.sql
 mysql -u root -p biovarase < migrations/010_add_lab_id_to_audit_results.sql
 mysql -u root -p biovarase < migrations/011_add_lab_id_to_test_methods.sql
 
-# International hierarchy and role refactoring
-mysql -u root -p biovarase < migrations/012_create_countries_table.sql
-mysql -u root -p biovarase < migrations/013_add_scope_to_users.sql
-mysql -u root -p biovarase < migrations/014_migrate_user_roles.sql
+# Organizations hierarchy (replaces countries/sites/labs/sections)
+mysql -u root -p biovarase < migrations/012_create_organizations.sql
+mysql -u root -p biovarase < migrations/013_add_org_id_to_tables.sql
+mysql -u root -p biovarase < migrations/014_update_roles_and_triggers.sql
+# mysql -u root -p biovarase < migrations/015_cleanup_old_hierarchy.sql  # ONLY after full testing!
 ```
 
 ### Production Migration Guide (008-011)
