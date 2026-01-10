@@ -150,7 +150,7 @@ class UI(ParentView):
         ):
             return
 
-        args = (selected_date, self.engine.get_section_id())
+        args = (selected_date, self.engine.get_lab_id())
 
         try:
             # Optional: show busy state if Engine provides it

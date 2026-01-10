@@ -34,6 +34,8 @@ class UI(ChildView):
         self.first_name = tk.StringVar()
         self.nickname = tk.StringVar()
         self.role = tk.IntVar(value=0)
+        self.lab_id = tk.IntVar(value=0)  # 0 = no lab (admin)
+        self.dict_labs = {}  # index -> lab_id
         self.elapsing_time = tk.IntVar(value=0)
         self.enable_time = tk.BooleanVar(value=False)
         self.status = tk.IntVar(value=1)  # 1 = enabled
@@ -85,6 +87,11 @@ class UI(ChildView):
             wrap=True,
             textvariable=self.role,
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
+
+        r += 1
+        ttk.Label(frm_left, text=_("Laboratory:")).grid(row=r, column=0, sticky=tk.W)
+        self.cbLab = ttk.Combobox(frm_left, state="readonly", width=45)
+        self.cbLab.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
         ttk.Label(frm_left, text=_("Logout time (min):")).grid(
@@ -165,6 +172,8 @@ class UI(ChildView):
             - self.parent.selected_item is expected to be a hybrid dict
               (index + column names) returned by engine.get_selected.
         """
+        self._load_labs()
+
         if self.index is not None:
             # UPDATE mode
             self.title(_("Update User"))
@@ -174,8 +183,33 @@ class UI(ChildView):
             # INSERT mode
             self.title(_("Add User"))
             self.status.set(1)
+            # Default: first lab in list
+            if self.dict_labs:
+                self.cbLab.current(0)
 
         self._focus_entry()
+
+    def _load_labs(self):
+        """Load available laboratories into the combobox."""
+        sql = """
+            SELECT l.lab_id, l.description AS lab_name, sup.description AS site_name
+            FROM labs l
+            INNER JOIN sites s ON l.site_id = s.site_id
+            INNER JOIN suppliers sup ON s.comp_id = sup.supplier_id
+            WHERE l.status = 1
+            ORDER BY sup.description, l.description
+        """
+        rows = self.engine.read(True, sql, ()) or []
+
+        self.dict_labs = {}
+        values = []
+
+        for idx, row in enumerate(rows):
+            display = f"{row['lab_name']} - {row['site_name']}"
+            values.append(display)
+            self.dict_labs[idx] = row["lab_id"]
+
+        self.cbLab["values"] = values
 
     def _focus_entry(self):
         """Focus the surname entry and select its content."""
@@ -192,7 +226,7 @@ class UI(ChildView):
 
         expected keys in self.selected_item:
             user_id, last_name, first_name, nickname, pswrd,
-            role, elapsing_time, enable_time, status
+            role, lab_id, elapsing_time, enable_time, status
         """
         s = self.selected_item
         if not s:
@@ -206,6 +240,17 @@ class UI(ChildView):
             self.elapsing_time.set(int(s.get("elapsing_time", 0)))
             self.enable_time.set(bool(s.get("enable_time", 0)))
             self.status.set(int(s.get("status", 1)))
+
+            # Set lab selection
+            user_lab_id = s.get("lab_id")
+            lab_index = 0  # default: first lab
+            for idx, lid in self.dict_labs.items():
+                if lid == user_lab_id:
+                    lab_index = idx
+                    break
+            if self.dict_labs:
+                self.cbLab.current(lab_index)
+
         except Exception as e:
             self.engine.on_log("_set_values", e, type(e), sys.modules[__name__])
 
@@ -215,7 +260,7 @@ class UI(ChildView):
 
         Order must match the table definition after the primary key, e.g.:
             last_name, first_name, nickname, pswrd,
-            role, elapsing_time, enable_time, status
+            role, lab_id, elapsing_time, enable_time, status
         """
         if self.index is not None and self.selected_item:
             # Keep existing password on UPDATE
@@ -224,12 +269,17 @@ class UI(ChildView):
             # Generate a new password on INSERT
             pswrd = self.engine.get_new_password()
 
+        # Get selected lab_id (required for all users)
+        lab_index = self.cbLab.current()
+        lab_id = self.dict_labs.get(lab_index)
+
         return [
             self.last_name.get().strip(),
             self.first_name.get().strip(),
             self.nickname.get().strip(),
             pswrd,
             int(self.role.get()),
+            lab_id,  # Required for all users
             int(self.elapsing_time.get()),
             int(bool(self.enable_time.get())),
             int(self.status.get()),
@@ -284,24 +334,28 @@ class UI(ChildView):
             sql = self.engine.build_sql(self.parent.table, op="insert")
             target_id = None  # will be resolved from last_id
 
-        try:
-            last_id = self.engine.write(sql, tuple(args))
+        last_id = self.engine.write(sql, tuple(args))
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(title, msg, parent=self)
+            return
 
-            # 5) Refresh parent list
-            self.parent._load_items()
+        # 5) Refresh parent list
+        self.parent._load_items()
 
-            # Determine which PK should be reselected
-            if self.index is None and last_id is not None:
-                target_id = int(last_id)
+        # Determine which PK should be reselected
+        if self.index is None and last_id is not None:
+            target_id = int(last_id)
 
-            # 6) Reselect row in parent (if possible)
-            self._reselect_in_parent(target_id)
+        # 6) Reselect row in parent (if possible)
+        self._reselect_in_parent(target_id)
 
-            # Close editor
-            self.on_cancel()
-
-        except Exception as exc:
-            messagebox.showerror(title, f"{_('Save failed.')}:\n{exc}", parent=self)
+        # Close editor
+        self.on_cancel()
 
     def _reselect_in_parent(self, target_pk=None):
         """

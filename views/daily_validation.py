@@ -833,14 +833,27 @@ class UI(ParentView):
                       AND r.is_delete = 0
                       AND b.lab_id = ?
                 """
-                self.engine.write(sql_validate, (user_id, ws_id, self.selected_date.isoformat(), lab_id))
+                result = self.engine.write(sql_validate, (user_id, ws_id, self.selected_date.isoformat(), lab_id))
+                if result is None:
+                    err = self.engine.last_write_error
+                    msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+                    messagebox.showerror(_("Error"), msg)
+                    return
+
+                # Notify observers about result changes
+                self.engine.notify("result_changed", ws_id)
 
             # 2. Insert approval record
             sql_approve = """
                 INSERT INTO daily_approvals (approval_date, workstation_id, approved_by)
                 VALUES (?, ?, ?)
             """
-            self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
+            result = self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
+            if result is None:
+                err = self.engine.last_write_error
+                msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+                messagebox.showerror(_("Error"), msg)
+                return
 
             messagebox.showinfo(_("Success"), _("Workstation '{0}' approved.").format(ws_name))
             self._load_data(preserve_expansion=True)
@@ -882,7 +895,15 @@ class UI(ParentView):
                     validated_at = NOW()
                 WHERE result_id = ?
             """
-            self.engine.write(sql, (user_id, result_id))
+            result = self.engine.write(sql, (user_id, result_id))
+            if result is None:
+                err = self.engine.last_write_error
+                msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+                messagebox.showerror(_("Error"), msg)
+                return
+
+            # Notify observers
+            self.engine.notify("result_changed", result_id)
 
             # Update tree display
             row = self.dict_results[item_id]
@@ -891,7 +912,9 @@ class UI(ParentView):
 
             color = self.engine.get_rgb(200, 255, 200)
             values = list(self.tree.item(item_id, "values"))
-            values[4] = "✓"
+            # Show validator name
+            validator_name = f"{self.engine.log_user.get('first_name', '')} {self.engine.log_user.get('last_name', '')}".strip()
+            values[4] = f"✓ {validator_name}" if validator_name else "✓"
             self.tree.item(item_id, values=values, tags=(TAG_RESULT, color))
             self.tree.tag_configure(color, background=color)
 
@@ -950,7 +973,11 @@ class UI(ParentView):
                     INSERT INTO daily_approvals (approval_date, workstation_id, approved_by)
                     VALUES (?, ?, ?)
                 """
-                self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
+                result = self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
+                if result is None:
+                    err = self.engine.last_write_error
+                    msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+                    messagebox.showerror(_("Error"), msg)
 
         except Exception as e:
             self.engine.on_log(
@@ -972,6 +999,19 @@ class UI(ParentView):
 
         if row["validated"] == 0:
             messagebox.showinfo(_("Invalidate"), _("This result is not validated."))
+            return
+
+        # Check if user can invalidate this result
+        current_user_id = self.engine.log_user.get("user_id")
+        current_user_role = self.engine.log_user.get("role")
+        validated_by = row.get("validated_by")
+
+        # Only admin or the user who validated can invalidate
+        if current_user_role != 0 and validated_by != current_user_id:
+            messagebox.showwarning(
+                _("Invalidate"),
+                _("You can only invalidate results you validated yourself.")
+            )
             return
 
         ws_id = row["workstation_id"]
@@ -1000,7 +1040,15 @@ class UI(ParentView):
                     validated_at = NULL
                 WHERE result_id = ?
             """
-            self.engine.write(sql, (row["result_id"],))
+            result = self.engine.write(sql, (row["result_id"],))
+            if result is None:
+                err = self.engine.last_write_error
+                msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+                messagebox.showerror(_("Error"), msg)
+                return
+
+            # Notify observers
+            self.engine.notify("result_changed", row["result_id"])
 
             # Revoke workstation approval if it was approved
             if ws_approved:
@@ -1008,7 +1056,12 @@ class UI(ParentView):
                     DELETE FROM daily_approvals
                     WHERE workstation_id = ? AND approval_date = ?
                 """
-                self.engine.write(sql_revoke, (ws_id, self.selected_date.isoformat()))
+                result = self.engine.write(sql_revoke, (ws_id, self.selected_date.isoformat()))
+                if result is None:
+                    err = self.engine.last_write_error
+                    msg = self.engine.get_user_friendly_db_error(err) if err else _("Delete failed.")
+                    messagebox.showerror(_("Error"), msg)
+                    return
                 messagebox.showinfo(_("Success"), _("Result invalidated. Workstation approval revoked."))
             else:
                 messagebox.showinfo(_("Success"), _("Result invalidated."))

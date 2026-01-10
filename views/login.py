@@ -18,6 +18,7 @@ from monitor import Monitor
 from app_config import MAX_LOGIN_ATTEMPTS
 from i18n import _, set_language
 import views.main as ui
+from views.lab_selector import LabSelectorDialog
 
 
 class Login(ttk.Frame):
@@ -174,6 +175,58 @@ class Login(ttk.Frame):
 
         if rs:
             self.engine.set_log_user(rs)
+
+            # Initialize context from user's lab_id
+            user_lab_id = self.engine.log_user.get("lab_id")
+            user_role = self.engine.log_user.get("role", 99)
+
+            if user_lab_id is None:
+                # Legacy data: user without lab_id assigned
+                if user_role == 0:
+                    # Admin can select lab
+                    dialog = LabSelectorDialog(self)
+                    self.wait_window(dialog)
+                    selected_lab_id = dialog.get_selected_lab_id()
+
+                    if selected_lab_id is None:
+                        messagebox.showinfo(
+                            self.engine.app_title,
+                            _("Login cancelled."),
+                            parent=self
+                        )
+                        self.engine.log_user.clear()
+                        return
+
+                    self.engine.init_current_ids_from_user(selected_lab_id)
+                else:
+                    # Non-admin without lab_id - configuration error
+                    messagebox.showerror(
+                        self.engine.app_title,
+                        _("No laboratory assigned to this user."),
+                        parent=self
+                    )
+                    self.engine.log_user.clear()
+                    return
+            elif user_role == 0:
+                # Admin with lab_id: show selector with default
+                dialog = LabSelectorDialog(self, default_lab_id=user_lab_id)
+                self.wait_window(dialog)
+                selected_lab_id = dialog.get_selected_lab_id()
+
+                if selected_lab_id is None:
+                    messagebox.showinfo(
+                        self.engine.app_title,
+                        _("Login cancelled."),
+                        parent=self
+                    )
+                    self.engine.log_user.clear()
+                    return
+
+                self.engine.init_current_ids_from_user(selected_lab_id)
+            else:
+                # Normal user: use assigned lab_id
+                self.engine.init_current_ids_from_user(user_lab_id)
+
             self.hide()
 
             # Start idle monitor if enabled for this user

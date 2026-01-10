@@ -174,18 +174,21 @@ class UI(ParentView):
             return
 
         # 3) Update DB with new bcrypt hash
-        try:
-            hashed = self._hash_new_password(new_pw)
-            user_id = self.engine.log_user["user_id"]
-            sql = "UPDATE users SET pswrd = ? WHERE user_id = ?;"
-            self.engine.write(False, sql, (hashed, user_id))
+        hashed = self._hash_new_password(new_pw)
+        user_id = self.engine.log_user["user_id"]
+        sql = "UPDATE users SET pswrd = ? WHERE user_id = ?;"
+        result = self.engine.write(sql, (hashed, user_id))
+        if result is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.parent.title(), msg, parent=self)
+            return
 
-            messagebox.showinfo(self.parent.title(), _("Password changed successfully."), parent=self)
-            self.on_cancel()
-
-        except Exception as e:
-            messagebox.showerror(self.parent.title(),
-                                 f"{_('Error')}:\n{e}", parent=self)
+        messagebox.showinfo(self.parent.title(), _("Password changed successfully."), parent=self)
+        self.on_cancel()
 
     def __on_cancel(self, evt=None):
         """Destroys the window and resets the Singleton reference."""

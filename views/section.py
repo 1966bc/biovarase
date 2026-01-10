@@ -139,17 +139,12 @@ class UI(ChildView):
         if self.index is not None:
             # ------------------------ UPDATE MODE ------------------------
             try:
-                # Prefer the in-memory context (engine.current_ids) if available
-                current_sid = getattr(self.engine, "current_ids", {}).get("section_id")
-
-                # Fallback to file-based value if the context is not loaded
-                if current_sid is None:
-                    current_sid = int(self.engine.get_section_id())
-
+                # Get current section from in-memory context
+                current_sid = self.engine.current_ids.get("section_id")
                 editing_sid = int(self.index)
 
                 # Auto-check "Set It" only if editing the currently active section
-                self.set_it.set(editing_sid == int(current_sid))
+                self.set_it.set(current_sid is not None and editing_sid == int(current_sid))
 
             except Exception as e:
                 # Log any issue but do not interrupt the UI
@@ -385,7 +380,11 @@ class UI(ChildView):
             # 5. Execute the SQL and retrieve the result
             last_id = self.engine.write(sql, tuple(args))
             if last_id is None:
-                raise RuntimeError("Write failed: Engine returned None.")
+                err = self.engine.last_write_error
+                if err:
+                    raise RuntimeError(self.engine.get_user_friendly_db_error(err))
+                else:
+                    raise RuntimeError(_("Save failed."))
 
             # Determine the actual record ID
             resolved_id = pk if is_update else int(last_id)
@@ -427,16 +426,11 @@ class UI(ChildView):
     
     def _set_current_section(self, section_id: int):
         """
-        Save the current section_id, reload the hierarchical context
-        (site_id, lab_id, supplier_id, etc.) and update interested windows.
+        Update the current section_id in context and notify interested windows.
         """
         try:
-            # Persist the new current section_id to disk
+            # Update section_id in current_ids
             self.engine.set_section_id(section_id)
-
-            # Reload in-memory context IDs (site_id, lab_id, supplier_id, ...)
-            if hasattr(self.engine, "load_context_ids"):
-                self.engine.load_context_ids()
 
             # Notify the main window (dispatcher for context changes)
             main = self.engine.dict_instances.get("main")

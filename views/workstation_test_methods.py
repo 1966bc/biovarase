@@ -194,8 +194,8 @@ class UI(ParentView):
             """
             args = ()
 
-        elif role == ROLE_SUPERUSER:
-            # Superuser: See all sections in their laboratory (QC validation)
+        else:
+            # All non-admin users: See all sections in their laboratory
             sql = """
                 SELECT
                     sites.site_id          AS site_id,
@@ -211,26 +211,6 @@ class UI(ParentView):
             """
             lab_id = self.engine.current_ids.get("lab_id")
             args = (lab_id,)
-
-        else:  # TECHNICIAN (role=2) or AUTOLOGIN (role=3)
-            # Technician/Autologin: See only their section
-            sql = """
-                SELECT
-                    sites.site_id          AS site_id,
-                    suppliers.description  AS site_name
-                FROM sections
-                JOIN labs
-                    ON labs.lab_id = sections.lab_id
-                JOIN sites
-                    ON sites.site_id = labs.site_id
-                JOIN suppliers
-                    ON suppliers.supplier_id = sites.comp_id
-                WHERE sections.section_id = ?
-                  AND sites.status = 1
-                ORDER BY suppliers.description ASC;
-            """
-            section_id = int(self.engine.get_section_id())
-            args = (section_id,)
 
         rs_sites = self.engine.read(True, sql, args)
 
@@ -332,8 +312,8 @@ class UI(ParentView):
             """
             args = (site_id,)
 
-        elif role == ROLE_SUPERUSER:
-            # Superuser: See only their own lab (if it belongs to this site)
+        else:
+            # All non-admin users: See only their own lab (if it belongs to this site)
             sql = """
                 SELECT
                     labs.lab_id        AS lab_id,
@@ -347,65 +327,31 @@ class UI(ParentView):
             lab_id = self.engine.current_ids.get("lab_id")
             args = (site_id, lab_id)
 
-        else:  # TECHNICIAN or AUTOLOGIN
-            # Technician/Autologin: See only the lab containing their section
-            sql = """
-                SELECT
-                    labs.lab_id        AS lab_id,
-                    labs.description   AS lab_name
-                FROM sections
-                JOIN labs
-                    ON labs.lab_id = sections.lab_id
-                WHERE labs.site_id = ?
-                  AND sections.section_id = ?
-                  AND labs.status = 1
-                ORDER BY labs.description ASC;
-            """
-            section_id = int(self.engine.get_section_id())
-            args = (site_id, section_id)
-
         return self.engine.read(True, sql, args)
 
 
     def _load_sections(self, lab_id, role):
         """
-        Load sections for a given lab, filtered by user role.
+        Load sections for a given lab.
 
         Args:
             lab_id: The lab ID to filter sections
-            role: User role (ADMIN, SUPERUSER, TECHNICIAN, AUTOLOGIN)
+            role: User role (unused, all users see all sections in their lab)
 
         Returns:
             List of section dictionaries or None
         """
-        if role == ROLE_ADMIN or role == ROLE_SUPERUSER:
-            # Admin/Superuser: See all sections in this lab
-            sql = """
-                SELECT
-                    sections.section_id      AS section_id,
-                    sections.description     AS section_name
-                FROM sections
-                WHERE sections.lab_id = ?
-                  AND sections.status = 1
-                ORDER BY sections.description ASC;
-            """
-            args = (lab_id,)
-
-        else:  # TECHNICIAN or AUTOLOGIN
-            # Technician/Autologin: See only their own section
-            sql = """
-                SELECT
-                    sections.section_id      AS section_id,
-                    sections.description     AS section_name
-                FROM sections
-                WHERE sections.lab_id = ?
-                  AND sections.section_id = ?
-                  AND sections.status = 1
-                ORDER BY sections.description ASC;
-            """
-            section_id = int(self.engine.get_section_id())
-            args = (lab_id, section_id)
-
+        # All users see all sections in their lab
+        sql = """
+            SELECT
+                sections.section_id      AS section_id,
+                sections.description     AS section_name
+            FROM sections
+            WHERE sections.lab_id = ?
+              AND sections.status = 1
+            ORDER BY sections.description ASC;
+        """
+        args = (lab_id,)
         return self.engine.read(True, sql, args)
 
 
@@ -633,7 +579,15 @@ class UI(ParentView):
             pk
         )
 
-        self.engine.write(sql, args)
+        result = self.engine.write(sql, args)
+        if result is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Delete failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
 
         # 7) Refresh the right panel
         self._set_tests_methods((self.selected_workstation["workstation_id"],))
@@ -746,7 +700,15 @@ class UI(ParentView):
         """
         args = (new_code, self.selected_workstation["workstation_id"], test_method_id)
 
-        self.engine.write(sql, args)
+        result = self.engine.write(sql, args)
+        if result is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
 
         # 5) Refresh list
         self._set_tests_methods((self.selected_workstation["workstation_id"],))

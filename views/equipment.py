@@ -282,38 +282,32 @@ class UI(ChildView):
             target_pk = None
 
         # 5) Execute write
+        last_id = self.engine.write(sql, tuple(args))
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(title, msg, parent=self)
+            return
+
+        # 6) Reload parent list
+        self.parent.set_values()
+
+        # Determine which PK we need to reselect
+        if target_pk is None and last_id is not None:
+            target_pk = int(last_id)
+
+        self._reselect_in_parent(target_pk)
+
+        # 7) Cross-window refresh: equipments → workstations
         try:
-            last_id = self.engine.write(sql, tuple(args))
-            # 6) Reload parent list
-            self.parent.set_values()
+            self.engine.refresh_windows_for_table(self.parent.table)
+        except Exception:
+            pass
 
-            # Determine which PK we need to reselect
-            if target_pk is None and last_id is not None:
-                target_pk = int(last_id)
-
-            self._reselect_in_parent(target_pk)
-
-            # 7) Cross-window refresh: equipments → workstations
-            try:
-                self.engine.refresh_windows_for_table(self.parent.table)
-            except Exception as e:
-                pass
-
-            self.on_cancel()
-
-        except Exception as exc:
-            # Log and notify user (logging MUST NOT break the UI)
-            try:
-                self.engine.on_log(
-                    "equipment._on_save:write",
-                    exc,
-                    type(exc),
-                    sys.modules[__name__],
-                )
-            except Exception as e:
-                pass
-
-            messagebox.showerror(title, f"{_('Save error:')}\n{exc}", parent=self)
+        self.on_cancel()
 
     def _reselect_in_parent(self, target_pk):
         """Reselect item in parent using dict_items (index → pk) after save."""

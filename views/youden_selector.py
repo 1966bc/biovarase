@@ -149,19 +149,20 @@ class UI(ChildView):
         ).pack(side=tk.LEFT)
 
     def _load_workstations(self):
-        """Load workstations for the current section and apply pre-selection."""
-        section_id = self.engine.get_section_id()
-        if not section_id:
+        """Load workstations for the current lab and apply pre-selection."""
+        lab_id = self.engine.get_lab_id()
+        if not lab_id:
             return
 
         sql = """
-            SELECT workstation_id, description, serial
-            FROM workstations
-            WHERE section_id = ? AND status = 1
-            ORDER BY description
+            SELECT w.workstation_id, w.description, w.serial
+            FROM workstations w
+            JOIN sections s ON s.section_id = w.section_id
+            WHERE s.lab_id = ? AND w.status = 1
+            ORDER BY w.description
         """
 
-        rows = self.engine.read(True, sql, (section_id,))
+        rows = self.engine.read(True, sql, (lab_id,))
         self.workstations = list(rows) if rows else []
 
         values = [f"{ws['description']} ({ws['serial']})" for ws in self.workstations]

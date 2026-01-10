@@ -363,35 +363,35 @@ class UI(ChildView):
             # INSERT
             sql = self.engine.build_sql(self.parent.table, op="insert")
 
-        try:
-            self.engine.write(sql, tuple(args))
+        last_id = self.engine.write(sql, tuple(args))
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(title, msg, parent=self)
+            return
 
-            # Refresh master
-            if hasattr(self.parent, "refresh_labs_and_restore_branch"):
-                self.parent.refresh_labs_and_restore_branch()
-            elif hasattr(self.parent, "_load_labs_for_hospital") and self.selected_hospital:
-                site_id = self.selected_hospital.get("site_id")
-                if site_id is not None:
-                    self.parent._load_labs_for_hospital(site_id)
+        # Refresh master
+        if hasattr(self.parent, "refresh_labs_and_restore_branch"):
+            self.parent.refresh_labs_and_restore_branch()
+        elif hasattr(self.parent, "_load_labs_for_hospital") and self.selected_hospital:
+            site_id = self.selected_hospital.get("site_id")
+            if site_id is not None:
+                self.parent._load_labs_for_hospital(site_id)
 
-            # Cross-window refresh via Controller / Engine dispatcher
-            # labs → sections, workstation_test_methods, ecc. (vedi mapping)
-            if hasattr(self.engine, "refresh_windows_for_table"):
-                try:
-                    # parent.table should be “labs”
-                    self.engine.refresh_windows_for_table(self.parent.table)
-                except Exception as e:
-                    # Never block saving due to a GUI issue
-                    pass
-          
-            self.on_cancel()
+        # Cross-window refresh via Controller / Engine dispatcher
+        # labs → sections, workstation_test_methods, ecc. (vedi mapping)
+        if hasattr(self.engine, "refresh_windows_for_table"):
+            try:
+                # parent.table should be "labs"
+                self.engine.refresh_windows_for_table(self.parent.table)
+            except Exception:
+                # Never block saving due to a GUI issue
+                pass
 
-        except Exception as exc:
-            messagebox.showerror(
-                title,
-                f"{_('Save error:')}\n{exc}",
-                parent=self,
-            )
+        self.on_cancel()
 
     def on_cancel(self, evt=None):
         """Close dialog."""

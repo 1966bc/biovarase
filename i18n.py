@@ -89,6 +89,12 @@ TRANSLATIONS = {
     "Do you want to quit {app_name}?": {"it": "Vuoi uscire da {app_name}?", "en": "Do you want to quit {app_name}?"},
     "Change User": {"it": "Cambia Utente", "en": "Change User"},
     "Change Section": {"it": "Cambia Sezione", "en": "Change Section"},
+    "Change Laboratory": {"it": "Cambia Laboratorio", "en": "Change Laboratory"},
+    "Same Laboratory": {"it": "Stesso Laboratorio", "en": "Same Laboratory"},
+    "Already in this laboratory.": {"it": "Sei già in questo laboratorio.", "en": "Already in this laboratory."},
+    "Laboratory Changed": {"it": "Laboratorio Cambiato", "en": "Laboratory Changed"},
+    "Only administrators can change laboratory.": {"it": "Solo gli amministratori possono cambiare laboratorio.", "en": "Only administrators can change laboratory."},
+    "Failed to change laboratory:": {"it": "Impossibile cambiare laboratorio:", "en": "Failed to change laboratory:"},
     "Log": {"it": "Log", "en": "Log"},
     "Analytica": {"it": "Analitici", "en": "Analytica"},
     "Insert random results": {"it": "Inserisci risultati casuali", "en": "Insert random results"},
@@ -180,6 +186,7 @@ TRANSLATIONS = {
     # Status Bar
     # ==========================================================================
     "Site:": {"it": "Sito:", "en": "Site:"},
+    "Lab:": {"it": "Lab:", "en": "Lab:"},
     "Observations:": {"it": "Osservazioni:", "en": "Observations:"},
     "Z Score:": {"it": "Z Score:", "en": "Z Score:"},
     "Delta Degree of Freedom": {"it": "Delta Gradi di Libertà", "en": "Delta Degree of Freedom"},
@@ -227,6 +234,9 @@ TRANSLATIONS = {
     "Hospital:": {"it": "Ospedale:", "en": "Hospital:"},
     "Manager:": {"it": "Responsabile:", "en": "Manager:"},
     "Laboratory:": {"it": "Laboratorio:", "en": "Laboratory:"},
+    "Laboratory": {"it": "Laboratorio", "en": "Laboratory"},
+    "(Admin)": {"it": "(Admin)", "en": "(Admin)"},
+    "(No laboratory - Admin)": {"it": "(Nessun laboratorio - Admin)", "en": "(No laboratory - Admin)"},
     "Update Lab": {"it": "Modifica Laboratorio", "en": "Update Lab"},
     "Add Lab": {"it": "Aggiungi Laboratorio", "en": "Add Lab"},
     "Select a Hospital.": {"it": "Selezionare un Ospedale.", "en": "Select a Hospital."},
@@ -420,6 +430,23 @@ TRANSLATIONS = {
         "en": "Please check the expiration date."
     },
     "Save failed.": {"it": "Salvataggio fallito.", "en": "Save failed."},
+    "Delete failed.": {"it": "Eliminazione fallita.", "en": "Delete failed."},
+    "The entered value is too long.": {
+        "it": "Il valore inserito è troppo lungo.",
+        "en": "The entered value is too long."
+    },
+    "A required field is empty.": {
+        "it": "Un campo obbligatorio è vuoto.",
+        "en": "A required field is empty."
+    },
+    "A record with this value already exists.": {
+        "it": "Esiste già un record con questo valore.",
+        "en": "A record with this value already exists."
+    },
+    "Cannot delete: this record is referenced by other data.": {
+        "it": "Impossibile eliminare: questo record è referenziato da altri dati.",
+        "en": "Cannot delete: this record is referenced by other data."
+    },
     "Lower value exceeds upper value.": {
         "it": "Il valore inferiore supera il valore superiore.",
         "en": "Lower value exceeds upper value."
@@ -893,6 +920,84 @@ TRANSLATIONS = {
     "All mandatory OK": {"it": "Test obbligatori OK", "en": "All mandatory OK"},
     "Missing mandatory:": {"it": "Obbligatori mancanti:", "en": "Missing mandatory:"},
     "Auto-refresh paused": {"it": "Aggiornamento sospeso", "en": "Auto-refresh paused"},
+
+    # ==========================================================================
+    # QC Report
+    # ==========================================================================
+    "QC Report": {"it": "Report QC", "en": "QC Report"},
+    "Select All": {"it": "Seleziona tutti", "en": "Select All"},
+    "Deselect All": {"it": "Deseleziona tutti", "en": "Deselect All"},
+    "Generate Report": {"it": "Genera Report", "en": "Generate Report"},
+    "Please select a valid date.": {
+        "it": "Seleziona una data valida.",
+        "en": "Please select a valid date."
+    },
+    "No laboratory selected.": {
+        "it": "Nessun laboratorio selezionato.",
+        "en": "No laboratory selected."
+    },
+    "Please select at least one test.": {
+        "it": "Seleziona almeno un test.",
+        "en": "Please select at least one test."
+    },
+    "Save Report": {"it": "Salva Report", "en": "Save Report"},
+    "Report saved successfully.": {
+        "it": "Report salvato correttamente.",
+        "en": "Report saved successfully."
+    },
+    "Error saving file:": {
+        "it": "Errore nel salvataggio del file:",
+        "en": "Error saving file:"
+    },
+    "No validated results found for this date.": {
+        "it": "Nessun risultato validato trovato per questa data.",
+        "en": "No validated results found for this date."
+    },
+    "Preview": {"it": "Anteprima", "en": "Preview"},
+    "Report Preview": {"it": "Anteprima Report", "en": "Report Preview"},
+    "Print": {"it": "Stampa", "en": "Print"},
+    "Report sent to printer.": {
+        "it": "Report inviato alla stampante.",
+        "en": "Report sent to printer."
+    },
+    "Printer not available. Use Save to export the file.": {
+        "it": "Stampante non disponibile. Usa Salva per esportare il file.",
+        "en": "Printer not available. Use Save to export the file."
+    },
+    "Print error:": {"it": "Errore di stampa:", "en": "Print error:"},
+    "You can only invalidate results you validated yourself.": {
+        "it": "Puoi invalidare solo i risultati che hai validato tu.",
+        "en": "You can only invalidate results you validated yourself."
+    },
+    "Copy": {"it": "Copia", "en": "Copy"},
+    "Report copied to clipboard.": {
+        "it": "Report copiato negli appunti.",
+        "en": "Report copied to clipboard."
+    },
+    "Filter:": {"it": "Filtro:", "en": "Filter:"},
+    "All": {"it": "Tutti", "en": "All"},
+    "OK": {"it": "OK", "en": "OK"},
+    "Warning": {"it": "Warning", "en": "Warning"},
+    "Violation": {"it": "Violazione", "en": "Violation"},
+
+    # ==========================================================================
+    # Lab Selector
+    # ==========================================================================
+    "Select Laboratory": {"it": "Seleziona Laboratorio", "en": "Select Laboratory"},
+    "Select the laboratory to work with:": {
+        "it": "Seleziona il laboratorio con cui lavorare:",
+        "en": "Select the laboratory to work with:"
+    },
+    "Please select a laboratory.": {
+        "it": "Seleziona un laboratorio.",
+        "en": "Please select a laboratory."
+    },
+    "Login cancelled.": {"it": "Login annullato.", "en": "Login cancelled."},
+    "No laboratory assigned to this user.": {
+        "it": "Nessun laboratorio assegnato a questo utente.",
+        "en": "No laboratory assigned to this user."
+    },
+    "Select": {"it": "Seleziona", "en": "Select"},
 }
 
 

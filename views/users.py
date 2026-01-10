@@ -17,13 +17,15 @@ import views.user as ui
 
 SQL = """
     SELECT
-        user_id,
-        last_name,
-        first_name,
-        nickname,
-        status
-    FROM users
-    ORDER BY last_name ASC, first_name ASC
+        u.user_id,
+        u.last_name,
+        u.first_name,
+        u.nickname,
+        u.status,
+        l.description AS lab_name
+    FROM users u
+    LEFT JOIN labs l ON u.lab_id = l.lab_id
+    ORDER BY u.last_name ASC, u.first_name ASC
 """
 
 
@@ -76,18 +78,21 @@ class UI(ParentView):
         frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 8), expand=True)
 
         # Define columns
-        cols = ("last_name", "first_name", "nickname")
+        cols = ("last_name", "first_name", "nickname", "lab")
         self.lstItems = ttk.Treeview(frm_left, columns=cols, show="headings")
 
         # Configure columns
-        self.lstItems.column("last_name", width=200, minwidth=150, anchor=tk.W)
+        self.lstItems.column("last_name", width=180, minwidth=120, anchor=tk.W)
         self.lstItems.heading("last_name", text=_("Surname:").rstrip(":"), anchor=tk.W)
 
-        self.lstItems.column("first_name", width=200, minwidth=150, anchor=tk.W)
+        self.lstItems.column("first_name", width=180, minwidth=120, anchor=tk.W)
         self.lstItems.heading("first_name", text=_("First Name:").rstrip(":"), anchor=tk.W)
 
-        self.lstItems.column("nickname", width=150, minwidth=100, anchor=tk.W)
+        self.lstItems.column("nickname", width=120, minwidth=80, anchor=tk.W)
         self.lstItems.heading("nickname", text=_("Nick:").rstrip(":"), anchor=tk.W)
+
+        self.lstItems.column("lab", width=200, minwidth=150, anchor=tk.W)
+        self.lstItems.heading("lab", text=_("Laboratory"), anchor=tk.W)
 
         # Tag for inactive users
         self.lstItems.tag_configure("inactive", background=self.engine.get_rgb(211, 211, 211))
@@ -136,6 +141,7 @@ class UI(ParentView):
             last_name = (row.get("last_name") or "").strip()
             first_name = (row.get("first_name") or "").strip()
             nickname = (row.get("nickname") or "").strip()
+            lab_name = row.get("lab_name") or _("Not Assigned")
 
             tags = ("inactive",) if status != 1 else ()
 
@@ -143,7 +149,7 @@ class UI(ParentView):
                 "",
                 tk.END,
                 iid=str(user_id),
-                values=(last_name, first_name, nickname),
+                values=(last_name, first_name, nickname, lab_name),
                 tags=tags,
             )
 

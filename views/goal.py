@@ -249,47 +249,45 @@ class UI(ChildView):
 
         args = self._get_values()
 
-        try:
-            if self.selected_goal:
-                # UPDATE
-                sql = self.engine.build_sql("goals", op="update")
-                args.append(self.selected_goal["goal_id"])
-                self.engine.write(sql, args)
+        if self.selected_goal:
+            # UPDATE
+            sql = self.engine.build_sql("goals", op="update")
+            args.append(self.selected_goal["goal_id"])
+            result = self.engine.write(sql, args)
+        else:
+            # INSERT → fallback to UPDATE on UNIQUE
+            sql = self.engine.build_sql("goals", op="insert")
+            result = self.engine.write(sql, args)
 
+            # Check for duplicate error and fallback to UPDATE
+            if result is None:
+                err = self.engine.last_write_error
+                err_str = str(err) if err else ""
+                if "Duplicate entry" in err_str or "1062" in err_str:
+                    row = self.engine.read(
+                        False,
+                        "SELECT * FROM goals WHERE test_method_id = ? LIMIT 1;",
+                        (args[0],),
+                    )
+                    if row:
+                        sql = self.engine.build_sql("goals", op="update")
+                        args.append(row["goal_id"])
+                        result = self.engine.write(sql, args)
+
+        if result is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
             else:
-                # INSERT → fallback to UPDATE on UNIQUE
-                try:
-                    sql = self.engine.build_sql("goals", op="insert")
-                    self.engine.write(sql, args)
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
 
-                except Exception as e:
-                    if "Duplicate entry" in str(e) or "1062" in str(e):
-                        row = self.engine.read(
-                            False,
-                            "SELECT * FROM goals WHERE test_method_id = ? LIMIT 1;",
-                            (args[0],),
-                        )
-                        if row:
-                            sql = self.engine.build_sql("goals", op="update")
-                            args.append(row["goal_id"])
-                            self.engine.write(sql, args)
-                        else:
-                            raise
-                    else:
-                        raise
+        # Notify parent to refresh
+        if hasattr(self.parent, "on_test_method_selected"):
+            self.parent.on_test_method_selected()
 
-            # Notify parent to refresh
-            if hasattr(self.parent, "on_test_method_selected"):
-                self.parent.on_test_method_selected()
-
-            self.on_cancel()
-
-        except Exception as exc:
-            messagebox.showerror(
-                self.engine.app_title,
-                f"{_('Save error:')}\n{exc}",
-                parent=self,
-            )
+        self.on_cancel()
 
     def on_cancel(self, evt=None):
         """Close dialog."""

@@ -145,7 +145,7 @@ class UI(ParentView):
             INNER JOIN sites          AS si ON l.site_id         = si.site_id
             INNER JOIN workstations   AS w  ON r.workstation_id  = w.workstation_id
             WHERE t.status = 1
-              AND se.section_id = ?
+              AND se.lab_id = ?
               AND g.to_export = 1
               AND b.status = 1
               AND b.expiration IS NOT NULL
@@ -155,10 +155,10 @@ class UI(ParentView):
             ORDER BY t.description;
         """
 
-        section_id = self.engine.get_section_id()
+        lab_id = self.engine.get_lab_id()
 
         # MUST use read_dict(): result rows are dictionaries
-        rs = self.engine.read(True, sql, (section_id,))
+        rs = self.engine.read(True, sql, (lab_id,))
 
         if rs:
             # Dispatch to exporter (engine side) with dict-based rows

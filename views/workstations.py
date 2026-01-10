@@ -144,28 +144,27 @@ class UI(ParentView):
 
         # Decide which sites are visible:
         # - Admin (role_id == 0 in log_user[5]): all sites.
-        # - Non admin: only the site associated with the current section_id.
+        # - Non admin: only the site associated with the current lab_id.
         if self.engine.log_user.get("role") == 0:
             sql = """
-                  SELECT sites.site_id, suppliers.description 
-                  FROM sites 
-                  INNER JOIN suppliers ON suppliers.supplier_id = sites.comp_id 
-                  WHERE sites.status = 1 
+                  SELECT sites.site_id, suppliers.description
+                  FROM sites
+                  INNER JOIN suppliers ON suppliers.supplier_id = sites.comp_id
+                  WHERE sites.status = 1
                  ORDER BY suppliers.description ASC;
             """
             args = ()
         else:
             sql = """
-                  SELECT sites.site_id, suppliers.description 
-                  FROM sections 
-                  INNER JOIN labs      ON labs.lab_id = sections.lab_id 
-                  INNER JOIN sites     ON sites.site_id = labs.site_id 
-                  INNER JOIN suppliers ON suppliers.supplier_id = sites.comp_id 
-                  WHERE sections.section_id = ? 
-                  AND sites.status = 1 
+                  SELECT sites.site_id, suppliers.description
+                  FROM labs
+                  INNER JOIN sites     ON sites.site_id = labs.site_id
+                  INNER JOIN suppliers ON suppliers.supplier_id = sites.comp_id
+                  WHERE labs.lab_id = ?
+                  AND sites.status = 1
                   ORDER BY suppliers.description ASC;
             """
-            args = (self.engine.get_section_id(),)
+            args = (self.engine.get_lab_id(),)
 
         rs_sites = self.engine.read(True, sql, args)
 

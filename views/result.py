@@ -460,6 +460,14 @@ class UI(ChildView):
             sql = self.engine.build_sql(self.table, op="insert")
 
         last_id = self.engine.write(sql, tuple(args))
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
 
         self._update_main_results_lists()
         self._set_index(last_id)

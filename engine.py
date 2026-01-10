@@ -217,7 +217,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         self.title = APP_TITLE
         self.app_title = APP_TITLE
         self.current_ids = {}
-        self.load_context_ids()
+        # Context is initialized at login via init_current_ids_from_user()
   
         
     def __str__(self):
@@ -353,8 +353,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         Returns:
             tuple: (scope_type: str, filter_id: int or None)
                 - Admin: ("all_sites", None) - no filtering
-                - Superuser: ("lab", lab_id) - filter by lab_id
-                - Technician/Autologin: ("section", section_id) - filter by section_id
+                - All others: ("lab", lab_id) - filter by lab_id
 
         Example:
             scope, filter_id = self.get_data_scope()
@@ -366,12 +365,10 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
         if role == ROLE_ADMIN:
             return ("all_sites", None)
-        elif role == ROLE_SUPERUSER:
+        else:
+            # All non-admin users filter by lab_id
             lab_id = self.current_ids.get("lab_id")
             return ("lab", lab_id)
-        else:  # TECHNICIAN or AUTOLOGIN
-            section_id = self.get_section_id()
-            return ("section", section_id)
 
     def get_autologin_flag(self) -> bool:
         """
@@ -465,6 +462,55 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             # Log the error but do not crash the app
             self.on_log("load_context_ids", e, type(e), sys.modules[__name__])
             self.current_ids = {}
+
+    def init_current_ids_from_user(self, lab_id: int = None) -> bool:
+        """
+        Initialize current_ids from user's lab_id or provided lab_id.
+
+        Sets up the full context including site_id, lab_id, and a default
+        section_id (first active section in the lab for backward compatibility).
+
+        Args:
+            lab_id: Optional lab_id override (used by admin lab selector)
+                    If None, uses log_user["lab_id"]
+
+        Returns:
+            True if context was successfully initialized, False otherwise
+        """
+        try:
+            # Use provided lab_id or get from logged user
+            if lab_id is None:
+                lab_id = self.log_user.get("lab_id")
+
+            if lab_id is None:
+                # No lab assigned (admin without selection)
+                self.current_ids = {}
+                return False
+
+            # Query DB for hierarchical IDs related to this lab_id
+            row = self.get_idd_by_lab_id(lab_id)
+            if not row:
+                self.current_ids = {}
+                return False
+
+            self.current_ids = {
+                "site_id": row["site_id"],
+                "supplier_id": row["supplier_id"],
+                "comp_id": row["comp_id"],
+                "lab_id": row["lab_id"],
+            }
+
+            # Get default section_id (first active section in this lab)
+            section_row = self.get_first_section_by_lab(lab_id)
+            if section_row:
+                self.current_ids["section_id"] = section_row["section_id"]
+
+            return True
+
+        except Exception as e:
+            self.on_log("init_current_ids_from_user", e, type(e), sys.modules[__name__])
+            self.current_ids = {}
+            return False
 
     def get_user_role(self) -> int:
         """
@@ -598,6 +644,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             "nickname",
             "pswrd",         # Column name in DB is 'pswrd', not 'password'
             "role",
+            "lab_id",        # Default laboratory (admin role=0 can change via menu)
             "elapsing_time",
             "enable_time",
             "status"
@@ -633,30 +680,32 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         sys.modules[__name__])
 
     def get_section_id(self):
+        """
+        Return current section_id from context.
 
-        try:
-            path = self.get_file("section_id")
-            with open(path, 'r') as f:
-                v = f.readline()
-            return int(v)
-        except (FileNotFoundError, IOError, ValueError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
+        Returns:
+            int or None: Current section_id from current_ids
+        """
+        return self.current_ids.get("section_id")
+
+    def get_lab_id(self):
+        """
+        Return current lab_id from context.
+
+        Returns:
+            int or None: Current lab_id from current_ids
+        """
+        return self.current_ids.get("lab_id")
 
     def set_section_id(self, value):
+        """
+        Update section_id in current_ids.
 
-        try:
-            path = self.get_file("section_id")
-            with open(path, "w") as f:
-                f.write(str(value))
-
-        except (FileNotFoundError, IOError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
+        Args:
+            value: New section_id value
+        """
+        if value is not None:
+            self.current_ids["section_id"] = int(value)
 
     def get_language(self):
         """

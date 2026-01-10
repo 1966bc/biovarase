@@ -513,7 +513,12 @@ class UI(ChildView):
         # Execute
         last_id = self.engine.write(sql, args)
         if last_id is None:
-            messagebox.showerror(self.engine.app_title, _("Save failed."), parent=self)
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 
         target_id = self.selected_batch[0] if self.index is not None else last_id

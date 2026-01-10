@@ -135,14 +135,15 @@ class UI(ChildView):
         self.received.focus_set()
 
     def _load_workstations(self) -> None:
-        """Load workstations based on user role and section."""
+        """Load workstations based on user's lab."""
         try:
-            section_id = self.engine.get_section_id()
-            sql = """SELECT workstation_id, description
-                     FROM workstations
-                     WHERE section_id = ? AND status = 1
-                     ORDER BY rank, description"""
-            rows = self.engine.read(True, sql, (section_id,))
+            lab_id = self.engine.get_lab_id()
+            sql = """SELECT w.workstation_id, w.description
+                     FROM workstations w
+                     JOIN sections s ON s.section_id = w.section_id
+                     WHERE s.lab_id = ? AND w.status = 1
+                     ORDER BY w.rank, w.description"""
+            rows = self.engine.read(True, sql, (lab_id,))
 
             values = []
             self.dict_workstations = {}
