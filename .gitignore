@@ -5,8 +5,22 @@ secrets.txt
 .env
 .env.*
 
+# User settings (machine-specific)
+ddof
+zscore
+language
+observations
+date_format
+remember_batch
+autologin
+correlation_coefficient
+
 # Logs
 log.txt
+log_*.txt
+
+# Generated reports
+QC_Report_*.txt
 
 # Backup files
 *.bak
@@ -78,5 +92,6 @@ PROJECT_FILE_INVENTORY.md
 PROJECT_FILE_TO_CONTROL.md
 SESSION_CONTEXT.md
 TESTING.md
+docs/
 pics/
 quarantine/

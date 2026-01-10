@@ -33,7 +33,7 @@ Biovarase is a comprehensive QC (Quality Control) management application designe
 - **Cross-Platform** - Linux and Windows 10/11 support
 - **MariaDB Backend** - Robust relational database
 - **Tkinter GUI** - Native desktop interface
-- **Automated Testing** - 89 tests with 100% pass rate
+- **Automated Testing** - 87 tests with pytest infrastructure
 - **Log Rotation** - Automatic log management (10MB limit, 5 file retention)
 
 ---
