@@ -275,7 +275,7 @@ TRANSLATIONS = {
 ## Role-Based Access Control
 
 ```python
-ROLE_ADMIN = 0       # Full system access
+ROLE_ADMIN = 0       # Full system access, can change laboratory
 ROLE_SUPERUSER = 1   # QC validation, lab-wide
 ROLE_TECHNICIAN = 2  # Data entry, section-only
 ROLE_AUTOLOGIN = 3   # Read-only guest
@@ -285,6 +285,29 @@ self.engine.can_configure_system() # Admin only
 self.engine.can_modify_data()      # Admin, Superuser, or Technician
 self.engine.is_read_only()         # Autologin
 ```
+
+### Lab-Based Access Control
+
+Each user has a `lab_id` in the users table (required for all users):
+
+- **Admin (role=0):** Can select laboratory at login and change via menu (Ctrl+E)
+- **Other users:** Filtered to their assigned laboratory only
+
+```python
+# At login, context is initialized from user's lab_id
+self.engine.init_current_ids_from_user(lab_id)
+
+# Admin can change lab without logout
+# Menu: File → Change Laboratory (Ctrl+E)
+
+# Get current lab for filtering
+lab_id = self.engine.get_lab_id()
+```
+
+**Lab selector dialog** (`views/lab_selector.py`):
+- Shows all labs with site name: "Lab Name - Site Name"
+- Pre-selects user's default lab
+- Used at login (admin) and for "Change Laboratory" menu
 
 ## QC Domain Knowledge
 
@@ -343,7 +366,6 @@ Automatic scanner for workstation comparison across all tests.
 ### Configuration Files
 | File | Access Method | Purpose |
 |------|---------------|---------|
-| `section_id` | `get_section_id()` | Current working section |
 | `ddof` | `get_ddof()` | Degrees of freedom (0 or 1) |
 | `zscore` | `get_zscore()` | Coverage factor (1.96 = 95% CI) |
 | `language` | `get_language()` | UI language (en, it) |
@@ -352,6 +374,8 @@ Automatic scanner for workstation comparison across all tests.
 | `remember_batch` | `get_remember_batch()` | Remember last batch selection |
 | `autologin` | `get_autologin_flag()` | Enable auto-login for viewer user |
 | `correlation_coefficient` | `get_correlation_coefficient()` | Youden plot correlation threshold |
+
+**Note:** `section_id` and `lab_id` are now stored in `current_ids` (initialized from user's lab at login), not in config files.
 
 ### Constants (app_config.py)
 | Constant | Value | Purpose |
@@ -375,6 +399,7 @@ mysql -u root -p biovarase < migrations/003_add_daily_approvals.sql
 mysql -u root -p biovarase < migrations/004_reduce_lot_number_size.sql
 mysql -u root -p biovarase < migrations/005_add_lab_id_to_categories.sql
 mysql -u root -p biovarase < migrations/006_abbott_import.sql
+mysql -u root -p biovarase < migrations/007_add_lab_id_to_users.sql
 ```
 
 | Migration | Purpose |
@@ -385,6 +410,7 @@ mysql -u root -p biovarase < migrations/006_abbott_import.sql
 | 004 | Reduce batches.lot_number to VARCHAR(20) |
 | 005 | Add lab_id to categories (multi-tenant filtering) |
 | 006 | Add abbott_imported_files table for import tracking |
+| 007 | Add lab_id to users (lab-based access control) |
 
 ## Testing
 
@@ -579,9 +605,11 @@ python3 abbott_import_v2.py >> abbott_import.log 2>&1
 | `config.enc` | Encrypted database credentials (hardware-locked, gitignored) |
 | `setup_wizard.py` | First-run configuration wizard |
 | `build_biovarase.cmd` | Windows build script (uses Nuitka) |
-| `abbott_import.py` | Abbott Alinity QC data importer |
+| `abbott_import_v2.py` | Abbott Alinity QC data importer (v2) |
 | `CFGTESTQNRANGE.xlsx` | Abbott test code→description mapping |
 | `run_abbott_import.sh` | Cron wrapper for Abbott import |
+| `views/lab_selector.py` | Lab selection dialog for admin users |
+| `views/qc_report.py` | QC Report generator for documentation |
 
 ## Standards Compliance
 
