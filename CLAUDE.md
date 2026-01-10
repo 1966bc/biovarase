@@ -339,11 +339,68 @@ mysql -u root -p biovarase < migrations/010_add_lab_id_to_audit_results.sql
 mysql -u root -p biovarase < migrations/011_add_lab_id_to_test_methods.sql
 ```
 
-### Post-Migration Verification (008-011)
-After running migrations 008-011, verify:
+### Production Migration Guide (008-011)
+
+**Step 1: Run migrations in order**
 ```bash
-mysql -u root -p biovarase -e "DESCRIBE results;"   # lab_id after batch_id
-mysql -u root -p biovarase -e "SELECT COUNT(*) FROM results WHERE lab_id IS NULL;"  # should be 0
+cd /path/to/biovarase/migrations
+mysql -u root -p biovarase < 008_add_lab_id_to_results.sql
+# If FK fails, continue to Step 2 before retrying
+mysql -u root -p biovarase < 009_add_lab_id_to_audit_batches.sql
+mysql -u root -p biovarase < 010_add_lab_id_to_audit_results.sql
+mysql -u root -p biovarase < 011_add_lab_id_to_test_methods.sql
+```
+
+**Step 2: Fix orphan data (if FK constraint fails)**
+```sql
+-- Check which lab_ids exist
+SELECT lab_id, description FROM labs;
+
+-- Check invalid lab_ids in batches
+SELECT DISTINCT lab_id, COUNT(*) FROM batches GROUP BY lab_id;
+
+-- Check invalid lab_ids in results
+SELECT DISTINCT lab_id, COUNT(*) FROM results GROUP BY lab_id;
+
+-- Option A: Delete orphan data (if test data)
+DELETE FROM results WHERE lab_id IS NULL OR lab_id NOT IN (SELECT lab_id FROM labs);
+DELETE FROM batches WHERE lab_id NOT IN (SELECT lab_id FROM labs);
+
+-- Option B: Fix to valid lab_id (if real data)
+UPDATE batches SET lab_id = 2 WHERE lab_id NOT IN (SELECT lab_id FROM labs);
+UPDATE results SET lab_id = 2 WHERE lab_id IS NULL OR lab_id NOT IN (SELECT lab_id FROM labs);
+
+-- Retry FK constraint
+ALTER TABLE results
+ADD CONSTRAINT fk_results_lab
+FOREIGN KEY (lab_id) REFERENCES labs(lab_id)
+ON DELETE RESTRICT ON UPDATE CASCADE;
+```
+
+**Step 3: Fix test_methods with section_id = 0**
+```sql
+-- Check orphan test_methods
+SELECT tm.test_method_id, tm.section_id, COUNT(b.batch_id) as batches
+FROM test_methods tm
+LEFT JOIN batches b ON tm.test_method_id = b.test_method_id
+WHERE tm.section_id = 0
+GROUP BY tm.test_method_id;
+
+-- If batches exist, fix to valid section/lab
+UPDATE test_methods SET section_id = 6, lab_id = 2 WHERE section_id = 0;
+
+-- If no batches, delete
+DELETE FROM test_methods WHERE section_id = 0;
+```
+
+**Step 4: Verify**
+```sql
+SELECT 'results' AS tbl, COUNT(*) AS nulls FROM results WHERE lab_id IS NULL
+UNION ALL SELECT 'test_methods', COUNT(*) FROM test_methods WHERE lab_id IS NULL;
+-- Should be 0 for both
+
+SHOW TRIGGERS;
+-- Should show 4 triggers with lab_id in INSERT statements
 ```
 
 Code already updated for lab_id support:
