@@ -296,6 +296,7 @@ class Controller:
             try:
                 args = (
                     batch_id,               # batch_id
+                    self.get_lab_id(),      # lab_id (multi-tenant)
                     "0",                    # run_number (MANDATORY, cannot be NULL)
                     workstation_id,         # workstation_id
                     reagent_lot_value,      # reagent_lot

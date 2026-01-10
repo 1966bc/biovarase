@@ -31,6 +31,7 @@ from pathlib import Path
 # Configuration
 ABBOTT_PATH = "/mnt/biovarase_qc/EXPQC/Biovarase"
 SECTION_ID = 6  # Sezione Alinity
+LAB_ID = 2  # Laboratory ID for Abbott batches/results
 VALID_WORKSTATIONS = ("ALCI-1", "ALCI-2", "ALCI-3")
 MAPPING_FILE = "CFGTESTQNRANGE.xlsx"  # Excel with test code -> description mapping
 
@@ -409,10 +410,10 @@ class AbbottImporter:
 
         result_id = self.insert(
             """INSERT INTO results
-               (batch_id, run_number, workstation_id, result, received,
+               (batch_id, lab_id, run_number, workstation_id, result, received,
                 status, validated, is_delete, log_id)
-               VALUES (?, '0', ?, ?, ?, 1, 0, 0, 1)""",
-            (batch_id, workstation_id, result_value, received)
+               VALUES (?, ?, '0', ?, ?, ?, 1, 0, 0, 1)""",
+            (batch_id, LAB_ID, workstation_id, result_value, received)
         )
         if result_id:
             self.stats["results_inserted"] += 1
