@@ -195,8 +195,8 @@ Config: `language` file contains "en" or "it". Engine: `get_language()`, `set_la
 ## Access Control
 
 ```python
-ROLE_ADMIN = 0       # Full access, can change laboratory
-ROLE_SUPERUSER = 1   # QC validation
+ROLE_ADMIN = 0       # Regional admin, full access
+ROLE_SUPERUSER = 1   # Lab manager, QC validation
 ROLE_TECHNICIAN = 2  # Data entry
 ROLE_AUTOLOGIN = 3   # Read-only
 
@@ -207,6 +207,39 @@ self.engine.is_read_only()          # Autologin
 ```
 
 Each user has `lab_id` - Admin can change lab (Ctrl+E), others are filtered.
+
+### Regional Governance (FUTURE)
+
+For regional deployment (multiple hospitals/labs):
+
+**Admin = Regional level:**
+- Manages ALL laboratories
+- Controls master data shared across labs
+
+**Superuser = Laboratory level:**
+- Maximum role within a single lab
+- Cannot modify master data
+
+**Master Data (Admin only):**
+| Table | Scope | Reason |
+|-------|-------|--------|
+| `tests` | Regional | Consistent analyte naming across labs |
+| `units` | Regional | Standard units of measurement |
+| `methods` | Regional | Analytical methods catalog |
+| `samples` | Regional | Sample types |
+
+**Local Data (Superuser can manage):**
+| Table | Scope | Reason |
+|-------|-------|--------|
+| `test_methods` | Lab | Local configuration of tests |
+| `workstations` | Lab | Lab's instruments |
+| `batches` | Lab | QC lots |
+| `results` | Lab | QC data |
+
+**Benefits:**
+- Consistent nomenclature ("Glucosio" everywhere, not "GLUC", "Glucose")
+- Regional reporting and aggregation
+- Single point of maintenance for master data
 
 ## QC Domain
 
