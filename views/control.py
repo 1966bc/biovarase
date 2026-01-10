@@ -209,17 +209,19 @@ class UI(ChildView):
         else:
             sql = self.engine.build_sql(self.parent.table, op="insert")
 
-        try:
-            last_id = self.engine.write(sql, args)
-            self.parent.set_values()
-            self._reselect_in_parent(last_id if self.index is None else None)
-            self.on_cancel()
-        except Exception as exc:
-            messagebox.showerror(
-                self.engine.app_title,
-                f"{_('Save failed.')}:\n{exc}",
-                parent=self,
-            )
+        last_id = self.engine.write(sql, args)
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
+
+        self.parent.set_values()
+        self._reselect_in_parent(last_id if self.index is None else None)
+        self.on_cancel()
 
     def _reselect_in_parent(self, last_id=None):
         """

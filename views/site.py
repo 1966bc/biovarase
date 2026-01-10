@@ -300,59 +300,53 @@ class UI(ChildView):
             messagebox.showwarning(title, str(ve), parent=self)
             return
 
-        try:
-            # 4) Build SQL and write to database
-            if self.index is not None:
-                # UPDATE mode
-                sql = self.engine.build_sql(self.parent.table, op="update")
-                pk = int(self.index)
-                args.append(pk)
-                self.engine.write(sql, args)
-                pk_to_select = pk
+        # 4) Build SQL and write to database
+        if self.index is not None:
+            # UPDATE mode
+            sql = self.engine.build_sql(self.parent.table, op="update")
+            pk = int(self.index)
+            args.append(pk)
+            result = self.engine.write(sql, args)
+            pk_to_select = pk
+        else:
+            # INSERT mode
+            sql = self.engine.build_sql(self.parent.table, op="insert")
+            result = self.engine.write(sql, args)
+            pk_to_select = int(result) if result else None
+
+        if result is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
             else:
-                # INSERT mode
-                sql = self.engine.build_sql(self.parent.table, op="insert")
-                last_id = self.engine.write(sql, args)
-                pk_to_select = int(last_id)
+                msg = _("Save failed.")
+            messagebox.showerror(title, msg, parent=self)
+            return
 
-            # 5) Notify parent window (sites master) to refresh and reselect the edited row
-            if hasattr(self.parent, "reload_and_reselect"):
-                self.parent.reload_and_reselect(pk_to_select)
-            elif hasattr(self.parent, "on_open"):
-                self.parent.on_open()
+        # 5) Notify parent window (sites master) to refresh and reselect the edited row
+        if hasattr(self.parent, "reload_and_reselect"):
+            self.parent.reload_and_reselect(pk_to_select)
+        elif hasattr(self.parent, "on_open"):
+            self.parent.on_open()
 
-            # 6) Cross-window update for LABS window (PROJECT_RULES)
-            #    If the LABS window is open, we MUST refresh its tree.
+        # 6) Cross-window update for LABS window (PROJECT_RULES)
+        #    If the LABS window is open, we MUST refresh its tree.
+        try:
+            win = self.engine.dict_instances.get("labs")
+        except Exception:
+            win = None
+
+        if win is not None:
             try:
-                win = self.engine.dict_instances.get("labs")
-            except Exception as e:
-                win = None
-
-            if win is not None:
-                try:
-                    if win.winfo_exists():
-                        # Reload the treeview in LABS (company → hospitals)
-                        win._load_tree()
-                except Exception as e:
-                    # Cross-window updates MUST NOT break the save process
-                    pass
-
-            # 7) Close this editor window
-            self.on_cancel()
-
-        except Exception as exc:
-            # Log errors safely (logging must not break the UI)
-            try:
-                self.engine.on_log(
-                    "site._on_save:write",
-                    exc,
-                    type(exc),
-                    sys.modules[__name__],
-                )
-            except Exception as e:
+                if win.winfo_exists():
+                    # Reload the treeview in LABS (company → hospitals)
+                    win._load_tree()
+            except Exception:
+                # Cross-window updates MUST NOT break the save process
                 pass
 
-            messagebox.showerror(title, f"{_('Save error:')}\n{exc}", parent=self)
+        # 7) Close this editor window
+        self.on_cancel()
 
 
     def on_cancel(self, evt=None):

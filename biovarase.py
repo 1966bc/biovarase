@@ -92,8 +92,7 @@ class App(tk.Tk):
             host=kwargs['host']
         )
 
-        self.engine.load_context_ids()
-
+        # Context is initialized at login via init_current_ids_from_user()
         self.set_style()
         msg = "Biovarase"
         self.title(msg)
@@ -140,6 +139,13 @@ class App(tk.Tk):
             if not self.engine.autologin_generic_user():
                 log_to_file("Autologin failed: generic user authentication failed", "WARNING")
                 return False
+
+            # Initialize context from autologin user's lab_id
+            user_lab_id = self.engine.log_user.get("lab_id")
+            if user_lab_id:
+                self.engine.init_current_ids_from_user(user_lab_id)
+            else:
+                log_to_file("Autologin user has no lab_id assigned", "WARNING")
 
             # Autologin successful - simulate successful login
             login_frame.hide()

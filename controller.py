@@ -694,6 +694,58 @@ class Controller:
         row = self.read(False, sql, args)
         return row
 
+    def get_idd_by_lab_id(self, lab_id: int) -> Optional[Dict[str, int]]:
+        """
+        Return the hierarchical IDs for a given lab_id as a dict:
+
+            {
+                "site_id": ...,
+                "supplier_id": ...,
+                "comp_id": ...,
+                "lab_id": ...
+            }
+
+        Returns None if no row is found.
+        """
+        sql = """
+            SELECT
+                sites.site_id,
+                sites.supplier_id,
+                sites.comp_id,
+                labs.lab_id
+            FROM
+                sites
+            INNER JOIN
+                labs ON sites.site_id = labs.site_id
+            WHERE
+                labs.lab_id = ?
+            LIMIT 1;
+        """
+        args = (lab_id,)
+        row = self.read(False, sql, args)
+        return row
+
+    def get_first_section_by_lab(self, lab_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Return the first active section for a given lab_id.
+
+        Used to set a default section_id when initializing context from lab_id.
+
+        Args:
+            lab_id: The laboratory identifier
+
+        Returns:
+            Dict with section_id, or None if no sections found
+        """
+        sql = """
+            SELECT section_id
+            FROM sections
+            WHERE lab_id = ?
+              AND status = 1
+            ORDER BY section_id
+            LIMIT 1;
+        """
+        return self.read(False, sql, (lab_id,))
 
     def get_lab_id_by_section_id(self, section_id: int) -> Optional[int]:
         """
@@ -770,7 +822,7 @@ class Controller:
 
     def get_mandatory(self) -> List[str]:
         """
-        Return list of mandatory test descriptions for current section.
+        Return list of mandatory test descriptions for current lab.
 
         Returns:
             List of test description strings (may be empty)
@@ -782,14 +834,12 @@ class Controller:
             FROM tests
             INNER JOIN test_methods ON tests.test_id = test_methods.test_id
             INNER JOIN sections ON test_methods.section_id = sections.section_id
-            INNER JOIN labs ON sections.lab_id = labs.lab_id
-            INNER JOIN sites ON labs.site_id = sites.site_id
-            WHERE sections.section_id = ?
+            WHERE sections.lab_id = ?
               AND test_methods.is_mandatory = 1
               AND test_methods.status = 1;
         """
 
-        rows = self.read(True, sql, (self.get_section_id(),))
+        rows = self.read(True, sql, (self.get_lab_id(),))
 
         if rows:
             mandatory_tests = [row["description"] for row in rows]

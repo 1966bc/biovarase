@@ -306,7 +306,15 @@ class UI(ChildView):
                 # INSERT
                 sql = self.engine.build_sql(self.parent.table, op="insert")
 
-            self.engine.write(sql, args)
+            last_id = self.engine.write(sql, args)
+            if last_id is None:
+                err = self.engine.last_write_error
+                if err:
+                    msg = self.engine.get_user_friendly_db_error(err)
+                else:
+                    msg = _("Save failed.")
+                messagebox.showerror(self.engine.app_title, msg, parent=self)
+                return
 
             # Reload master Treeview
             if hasattr(self.parent, "_set_values"):
@@ -317,7 +325,7 @@ class UI(ChildView):
                 try:
                     self.parent.lstItems.selection_set(self.index)
                     self.parent.lstItems.see(self.index)
-                except Exception as e:
+                except Exception:
                     pass
 
             self.on_cancel()

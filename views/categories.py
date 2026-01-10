@@ -104,8 +104,8 @@ class UI(ParentView):
                          l.description, c.description
             """
             args = (self.engine.current_ids.get("site_id"),)
-        elif role == 1:
-            # Superuser: categories in their lab + unassigned
+        else:
+            # All non-admin users: categories in their lab + unassigned
             sql = """
                 SELECT c.category_id AS pk,
                        c.description,
@@ -119,22 +119,6 @@ class UI(ParentView):
                          c.description
             """
             args = (self.engine.get_lab_id(),)
-        else:
-            # Technician: categories used in their section + unassigned
-            sql = """
-                SELECT DISTINCT c.category_id AS pk,
-                       c.description,
-                       c.status,
-                       c.lab_id,
-                       l.description AS lab_name
-                FROM categories c
-                LEFT JOIN labs l ON l.lab_id = c.lab_id
-                LEFT JOIN test_methods tm ON tm.category_id = c.category_id
-                WHERE tm.section_id = ? OR c.lab_id IS NULL
-                ORDER BY CASE WHEN c.lab_id IS NULL THEN 1 ELSE 0 END,
-                         c.description
-            """
-            args = (self.engine.get_section_id(),)
 
         rows = self.engine.read(True, sql, args) or []
 

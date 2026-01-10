@@ -260,14 +260,16 @@ class UI(ChildView):
                 VALUES (?, ?, ?)
             """
 
-        try:
-            self.engine.write(sql, args)
-            self.parent._set_values()
-            self.engine.notify("categories_changed")
-            self.on_cancel()
-        except Exception as exc:
-            messagebox.showerror(
-                self.engine.app_title,
-                f"{_('Save error:')}\n{exc}",
-                parent=self
-            )
+        last_id = self.engine.write(sql, args)
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
+
+        self.parent._set_values()
+        self.engine.notify("categories_changed")
+        self.on_cancel()

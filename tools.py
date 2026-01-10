@@ -307,6 +307,39 @@ class Tools:
         if len(v.get()) > c:
             v.set(v.get()[:-1])
 
+    def get_user_friendly_db_error(self, error: Exception) -> str:
+        """
+        Convert database error to user-friendly message.
+
+        Args:
+            error: The database exception
+
+        Returns:
+            A translated, user-friendly error message
+        """
+        from i18n import _
+
+        msg = str(error)
+
+        # Data too long for column
+        if "Data too long for column" in msg:
+            return _("The entered value is too long.")
+
+        # NULL constraint
+        if "cannot be null" in msg.lower():
+            return _("A required field is empty.")
+
+        # Duplicate entry
+        if "Duplicate entry" in msg:
+            return _("A record with this value already exists.")
+
+        # Foreign key constraint
+        if "foreign key constraint" in msg.lower():
+            return _("Cannot delete: this record is referenced by other data.")
+
+        # Generic fallback
+        return msg
+
     def _iter_widgets(self, container: Any):
         """Recursively iterate over all descendant widgets."""
         stack = [container]

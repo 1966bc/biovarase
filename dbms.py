@@ -101,6 +101,7 @@ class DBMS:
         self.host = host
         self.port = port
         self.autocommit = autocommit
+        self.last_write_error = None
         self.con = self._set_connection()
 
     def __str__(self) -> str:
@@ -238,10 +239,11 @@ class DBMS:
         Returns:
           - lastrowid when available and non-zero,
           - otherwise the affected rowcount,
-          - None on error.
+          - None on error (error stored in last_write_error).
         Commits only if autocommit is disabled.
         """
         cursor = None
+        self.last_write_error = None
         try:
 
             self._ensure_connection()
@@ -268,6 +270,7 @@ class DBMS:
             except Exception:
                 pass
 
+            self.last_write_error = e
             f = inspect.currentframe()
             function = f.f_code.co_name
             caller = f.f_back.f_code.co_name if f and f.f_back else "<top>"

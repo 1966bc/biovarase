@@ -330,6 +330,14 @@ class UI(ChildView):
             sql = self.engine.build_sql(self.parent.table, op="insert")
 
         last_id = self.engine.write(sql, args)
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
 
         if self.selected_section:
             section_id = self.selected_section.get("section_id")

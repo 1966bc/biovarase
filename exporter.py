@@ -83,14 +83,14 @@ class Exporter:
                 INNER JOIN results      AS r  ON b.batch_id = r.batch_id
                 WHERE t.status = 1
                   AND tm.status = 1
-                  AND se.section_id = ?
+                  AND se.lab_id = ?
                   AND DATE(r.received) >= ?
                   AND r.is_delete = 0
                 GROUP BY tm.test_method_id
                 ORDER BY t.description;
             """
 
-            args = (self.get_section_id(), selected_date)
+            args = (self.get_lab_id(), selected_date)
             rows = self.read(True, sql, args)
 
             workbook, worksheet = self.create_workbook("Biovarase")
@@ -127,7 +127,7 @@ class Exporter:
 
     def get_notes(self, args):
         """
-        Export notes data (date ≥ selected_date, filtered by section_id).
+        Export notes data (date ≥ selected_date, filtered by lab_id).
 
         Fully compliant with PROJECT_RULES:
         - uses read_dict() → dictionary rows
@@ -162,7 +162,7 @@ class Exporter:
             INNER JOIN notes ON results.result_id = notes.result_id
             INNER JOIN actions ON notes.action_id = actions.action_id
             WHERE DATE(results.received) >= ?
-              AND sections.section_id = ?
+              AND sections.lab_id = ?
               AND tests.status  = 1
               AND batches.status = 1
               AND results.is_delete = 0
@@ -490,15 +490,11 @@ class Exporter:
         checked_tests = []
         mandatory_tests = self.get_mandatory()
 
-        # 4) Lab id (no positional indexing, use hierarchical context)
+        # 4) Lab id from user context
         lab_id = self.get_lab_id()
         if lab_id is None:
-            # Fallback: derive lab_id from section_id using a dict result
-            row = self.get_idd_by_section_id(self.get_section_id())
-            if not row:
-                # No valid context → nothing to export
-                return
-            lab_id = row["lab_id"]
+            # No valid lab context → nothing to export
+            return
 
         # 5) Fetch test methods (with optional category filter)
         for row in self._fetch_test_methods(lab_id, category_id):

@@ -83,6 +83,7 @@ import views.zscore
 import views.daily_validation
 import views.bland_altman
 import views.bland_altman_alert
+import views.qc_report
 
 
 NO_DATA = "No data"
@@ -220,10 +221,12 @@ class Main(tk.Toplevel):
                            underline=0,
                            accelerator="Ctrl+U",
                            command=self.on_change_user)
-        m_file.add_command(label=_("Change Section"),
-                           underline=0,
-                           accelerator="Ctrl+E",
-                           command=self.on_change_section)
+        # Change Laboratory - admin only
+        if self.engine.log_user["role"] == 0:
+            m_file.add_command(label=_("Change Laboratory"),
+                               underline=7,
+                               accelerator="Ctrl+E",
+                               command=self.on_change_lab)
         m_file.add_separator()
         m_file.add_command(label=_("Change Password"),
                            underline=0,
@@ -264,7 +267,8 @@ class Main(tk.Toplevel):
                  (_("Youden"), 0, self.on_youden),
                  (_("Tea"), 0, self.on_tea),
                  (_("Bland-Altman"), 0, self.on_bland_altman),
-                 (_("Bland-Altman Scanner"), 0, self.on_bland_altman_alert),)
+                 (_("Bland-Altman Scanner"), 0, self.on_bland_altman_alert),
+                 (_("QC Report"), 0, self.on_qc_report),)
 
         for i in items:
             m_plots.add_command(label=i[0], underline=i[1], command=i[2])
@@ -331,9 +335,11 @@ class Main(tk.Toplevel):
 
         self.config(menu=m_main)
 
-        # Keyboard shortcuts for Change User/Section
+        # Keyboard shortcuts
         self.bind("<Control-u>", self.on_change_user)
-        self.bind("<Control-e>", self.on_change_section)
+        # Ctrl+E for Change Laboratory (admin only)
+        if self.engine.log_user["role"] == 0:
+            self.bind("<Control-e>", self.on_change_lab)
 
     def _rebuild_menu(self) -> None:
         """Rebuild menu after user change (menu items depend on user role)."""
@@ -562,7 +568,7 @@ class Main(tk.Toplevel):
                   textvariable=self.status_bar_site_description,
                   relief=tk.FLAT,
                   anchor=tk.W).pack(side=tk.RIGHT, fill=tk.X)
-        ttk.Label(frm_status_bar, text=_("Site:")).pack(side=tk.RIGHT, fill=tk.X)
+        ttk.Label(frm_status_bar, text=_("Lab:")).pack(side=tk.RIGHT, fill=tk.X)
 
         ttk.Label(frm_status_bar, font=f,
                   textvariable=self.observations,
@@ -605,7 +611,7 @@ class Main(tk.Toplevel):
 
     def get_status_bar_site_description(self, company: dict) -> str:
         """
-        Build a short label for the status bar using lab and section names.
+        Build a short label for the status bar using lab name.
 
         Args:
             company (dict): Dictionary returned by get_company_data(), e.g.
@@ -618,18 +624,14 @@ class Main(tk.Toplevel):
                             }
 
         Returns:
-            str: A short formatted string, max 80 chars, like
-                 "Chimica Clinica - Ematologia"
+            str: Lab name, max 80 chars
         """
         if not company:
             return ""
 
-        # Safely extract lab and section with defaults
+        # Show only lab name (section filtering removed)
         lab = company.get("lab", "")
-        section = company.get("section", "")
-
-        s = f"{lab} - {section}"
-        return s[:80]
+        return lab[:80]
 
     def refresh_context_from_section(self):
         """Re-read section-dependent data and update title, status bar and lists."""
@@ -838,8 +840,8 @@ class Main(tk.Toplevel):
                     ORDER BY categories.description;
                 """
             args = (self.engine.current_ids.get("site_id"),)
-        elif role == 1:
-            # Superuser: categories belonging to their lab
+        else:
+            # All non-admin users: categories belonging to their lab
             sql = """
                     SELECT DISTINCT categories.category_id,
                                     categories.description
@@ -853,21 +855,6 @@ class Main(tk.Toplevel):
                     ORDER BY categories.description;
                 """
             args = (self.engine.get_lab_id(),)
-        else:
-            # Technician/Autologin: categories belonging to their lab
-            sql = """
-                    SELECT DISTINCT categories.category_id,
-                                    categories.description
-                    FROM test_methods
-                    INNER JOIN sections ON sections.section_id = test_methods.section_id
-                    INNER JOIN categories ON categories.category_id = test_methods.category_id
-                                          AND categories.lab_id = sections.lab_id
-                    WHERE sections.section_id = ?
-                    AND test_methods.status = 1
-                    AND categories.status = 1
-                    ORDER BY categories.description;
-                """
-            args = (self.engine.get_section_id(),)
             
         rs = self.engine.read(True, sql, args)
 
@@ -902,8 +889,8 @@ class Main(tk.Toplevel):
 
         role = self.engine.log_user["role"]
 
-        if role == 0 or role == 1:
-            # Admin/Superuser: filter by category's lab_id
+        if role == 0:
+            # Admin: filter by category's lab_id
             sql = """
                   SELECT test_methods.test_method_id,
                          tests.description
@@ -918,19 +905,20 @@ class Main(tk.Toplevel):
                   """
             args = (category_id, category_lab_id)
         else:
-            # Technician/Autologin: only their section
+            # All non-admin users: filter by their lab_id
             sql = """
                   SELECT test_methods.test_method_id,
                          tests.description
                   FROM test_methods
                   JOIN tests ON tests.test_id = test_methods.test_id
+                  JOIN sections ON sections.section_id = test_methods.section_id
                   WHERE test_methods.category_id = ?
-                  AND test_methods.section_id = ?
+                  AND sections.lab_id = ?
                   AND tests.status = 1
                   AND test_methods.status = 1
                   ORDER BY tests.description;
                   """
-            args = (category_id, self.engine.get_section_id())
+            args = (category_id, self.engine.get_lab_id())
 
         rs = self.engine.read(True, sql, args)
         if rs:
@@ -962,8 +950,8 @@ class Main(tk.Toplevel):
         role = self.engine.log_user["role"]
         test_method_id = self.selected_test_method["test_method_id"]
 
-        if role == 0 or role == 1:
-            # Admin/Superuser: filter by category's lab_id
+        if role == 0:
+            # Admin: filter by category's lab_id
             sql = """
                     SELECT workstations.workstation_id,
                            workstations.description,
@@ -983,7 +971,7 @@ class Main(tk.Toplevel):
                  """
             args = (test_method_id, category_lab_id)
         else:
-            # Technician/Autologin: only their section
+            # All non-admin users: filter by their lab_id
             sql = """
                     SELECT workstations.workstation_id,
                            workstations.description,
@@ -991,15 +979,17 @@ class Main(tk.Toplevel):
                     FROM workstation_test_methods
                     JOIN workstations
                       ON workstation_test_methods.workstation_id = workstations.workstation_id
+                    JOIN sections
+                      ON sections.section_id = workstations.section_id
                     JOIN equipments
                       ON equipments.equipment_id = workstations.equipment_id
                     WHERE workstation_test_methods.test_method_id = ?
-                      AND workstations.section_id = ?
+                      AND sections.lab_id = ?
                       AND workstations.status = 1
                       AND equipments.status = 1
                     ORDER BY workstations.rank ASC;
                  """
-            args = (test_method_id, self.engine.get_section_id())
+            args = (test_method_id, self.engine.get_lab_id())
 
         rs = self.engine.read(True, sql, args)
 
@@ -2004,6 +1994,10 @@ class Main(tk.Toplevel):
         """Open Bland-Altman alert scanner view."""
         views.bland_altman_alert.UI(self).on_open()
 
+    def on_qc_report(self):
+        """Open QC Report generator window."""
+        views.qc_report.UI(self).on_open()
+
     def on_export_notes(self) -> None:
         views.export_notes.UI(self).on_open()
 
@@ -2498,8 +2492,75 @@ class Main(tk.Toplevel):
 
         messagebox.showinfo(_("Section Changed"), f"{_('Now working in:')} {display_name}", parent=self)
 
+    def on_change_lab(self, _evt=None):
+        """Change Laboratory - Admin only. Switch to different laboratory without logout."""
+        from views.lab_selector import LabSelectorDialog
+
+        if self.engine.get_user_role() != 0:
+            messagebox.showwarning(
+                _("Permission Denied"),
+                _("Only administrators can change laboratory."),
+                parent=self
+            )
+            return
+
+        try:
+            current_lab_id = self.engine.get_lab_id()
+
+            # Show lab selector dialog with current lab pre-selected
+            dialog = LabSelectorDialog(self, default_lab_id=current_lab_id)
+            self.wait_window(dialog)
+            selected_lab_id = dialog.get_selected_lab_id()
+
+            if selected_lab_id is None:
+                # User cancelled
+                return
+
+            if selected_lab_id == current_lab_id:
+                messagebox.showinfo(
+                    _("Same Laboratory"),
+                    _("Already in this laboratory."),
+                    parent=self
+                )
+                return
+
+            # Apply lab change
+            self.engine.init_current_ids_from_user(selected_lab_id)
+
+            # Close all child windows and refresh
+            self._close_all_windows()
+            self.set_categories()
+
+            # Get lab name for confirmation message
+            lab_row = self.engine.read(
+                False,
+                "SELECT description FROM labs WHERE lab_id = ?",
+                (selected_lab_id,)
+            )
+            lab_name = lab_row["description"] if lab_row else str(selected_lab_id)
+
+            messagebox.showinfo(
+                _("Laboratory Changed"),
+                f"{_('Now working in:')} {lab_name}",
+                parent=self
+            )
+
+        except Exception as exc:
+            self.engine.on_log(
+                "on_change_lab",
+                str(exc),
+                type(exc).__name__,
+                sys.modules[__name__],
+                inspect.currentframe()
+            )
+            messagebox.showerror(
+                _("Error"),
+                f"{_('Failed to change laboratory:')} {exc}",
+                parent=self
+            )
+
     def on_change_section(self, _evt=None):
-        """Change Section - Switch to different section without logout."""
+        """Change Section - Switch to different section without logout. DEPRECATED."""
         role = self.engine.get_user_role()
 
         if role == 3:

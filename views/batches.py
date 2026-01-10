@@ -351,8 +351,8 @@ class UI(ParentView):
             """
             args = ()
 
-        elif role == ROLE_SUPERUSER:
-            # Superuser: See all sections in their laboratory (QC validation)
+        else:
+            # All non-admin users: See all sections in their laboratory
             sql = """
                 SELECT
                     sites.site_id,
@@ -376,35 +376,6 @@ class UI(ParentView):
             except (AttributeError, TypeError) as e:
                 lab_id = -1
             args = (lab_id,)
-
-        else:  # TECHNICIAN (role=2) or AUTOLOGIN (role=3)
-            # Technician/Autologin: See only their section
-            sql = """
-                SELECT
-                    sites.site_id,
-                    suppliers.description AS site_name
-                FROM
-                    sections
-                JOIN
-                    labs
-                        ON labs.lab_id = sections.lab_id
-                JOIN
-                    sites
-                        ON sites.site_id = labs.site_id
-                JOIN
-                    suppliers
-                        ON suppliers.supplier_id = sites.comp_id
-                WHERE
-                    sections.section_id = ?
-                    AND sites.status = 1
-                ORDER BY
-                    suppliers.description ASC;
-            """
-            try:
-                section_id = int(self.engine.get_section_id())
-            except (ValueError, TypeError) as e:
-                section_id = -1
-            args = (section_id,)
 
         try:
             site_rows = self.engine.read(True, sql, args) or []

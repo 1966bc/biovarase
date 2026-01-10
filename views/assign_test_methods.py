@@ -387,7 +387,15 @@ class UI(ChildView):
                 VALUES (?, ?)
             """
             args = (workstation_id, test_method_id)
-            self.engine.write(sql, args)
+            last_id = self.engine.write(sql, args)
+            if last_id is None:
+                err = self.engine.last_write_error
+                if err:
+                    msg = self.engine.get_user_friendly_db_error(err)
+                else:
+                    msg = _("Save failed.")
+                messagebox.showerror(self.engine.app_title, msg, parent=self)
+                return
 
             # Refresh parent (workstation methods list) if it exposes a loader
             if hasattr(self.parent, "_set_tests_methods"):

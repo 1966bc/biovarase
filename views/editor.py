@@ -257,29 +257,30 @@ class Editor(ChildView):
             sql = self.engine.build_sql(self.table, op="insert")
 
         # Execute and refresh
-        try:
-            last_id = self.engine.write(sql, args)
-            self.parent._set_values()  # Refresh parent list
-
-            # Reselect appropriate item
-            if self.index is None:
-                # INSERT: select newly added item
-                self._reselect_in_parent(last_id)
+        last_id = self.engine.write(sql, args)
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
             else:
-                # UPDATE: reselect same item
-                self._reselect_in_parent()
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
 
-            # Notify observers for cross-window refresh
-            self.engine.notify(f"{self.table}_changed")
+        self.parent._set_values()  # Refresh parent list
 
-            self.on_cancel()  # Close window
+        # Reselect appropriate item
+        if self.index is None:
+            # INSERT: select newly added item
+            self._reselect_in_parent(last_id)
+        else:
+            # UPDATE: reselect same item
+            self._reselect_in_parent()
 
-        except Exception as exc:
-            messagebox.showerror(
-                self.engine.app_title,
-                f"{_('Save error:')}\n{exc}",
-                parent=self,
-            )
+        # Notify observers for cross-window refresh
+        self.engine.notify(f"{self.table}_changed")
+
+        self.on_cancel()  # Close window
 
     # ------------------------------------------------------------------
     # VALIDATION

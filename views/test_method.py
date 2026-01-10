@@ -433,14 +433,20 @@ class UI(ParentView):
             # INSERT
             sql = self.engine.build_sql("test_methods", op="insert")
 
-        try:
-            last_id = self.engine.write(sql, args)
-            # refresh parent view and reselect
-            self.parent._load_methods_for_selected_test()
-            self._reselect_in_parent(last_id)
-            self.on_cancel()
-        except Exception as exc:
-            messagebox.showerror(self.engine.app_title, f"{_('Save error:')}\n{exc}", parent=self)
+        last_id = self.engine.write(sql, args)
+        if last_id is None:
+            err = self.engine.last_write_error
+            if err:
+                msg = self.engine.get_user_friendly_db_error(err)
+            else:
+                msg = _("Save failed.")
+            messagebox.showerror(self.engine.app_title, msg, parent=self)
+            return
+
+        # refresh parent view and reselect
+        self.parent._load_methods_for_selected_test()
+        self._reselect_in_parent(last_id)
+        self.on_cancel()
 
     def _reselect_in_parent(self, last_id=None):
         """
