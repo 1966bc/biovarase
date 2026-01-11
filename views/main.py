@@ -310,7 +310,6 @@ class Main(tk.Toplevel):
                 (_("Test Methods"), 0, self.on_test_methods),
                 (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
                 (_("Workstations"), 0, self.on_workstations),
-                (_("Controls"), 0, self.on_controls),
             ]
             # Settings only for lab admins+
             if is_lab_admin:
@@ -346,19 +345,22 @@ class Main(tk.Toplevel):
             m_documents.add_command(label=i[0], underline=i[1], command=i[2])
 
         # === ADMIN MENU (admin only) ===
+        # Global master data: controls, tests, units, methods, samples, equipments, suppliers
+        # These must be managed centrally for peer lab comparison
         if m_adm:
-            items = ((_("Suppliers"), 0, self.on_suppliers),
-                     (_("Organizations"), 0, self.on_organizations),
-                     (_("Sites"), 0, self.on_sites),
-                     (_("Labs"), 0, self.on_labs),
-                     (_("Sections"), 0, self.on_sections),
-                     (_("Users"), 0, self.on_users),
-                     (_("Tests"), 0, self.on_tests),
+            items = ((_("Actions"), 0, self.on_actions),
+                     (_("Controls"), 0, self.on_controls),
                      (_("Equipments"), 0, self.on_equipments),
-                     (_("Samples"), 0, self.on_samples),
-                     (_("Units"), 0, self.on_units),
+                     (_("Labs"), 0, self.on_labs),
                      (_("Methods"), 0, self.on_methods),
-                     (_("Actions"), 0, self.on_actions),)
+                     (_("Organizations"), 0, self.on_organizations),
+                     (_("Samples"), 0, self.on_samples),
+                     (_("Sections"), 0, self.on_sections),
+                     (_("Sites"), 0, self.on_sites),
+                     (_("Suppliers"), 0, self.on_suppliers),
+                     (_("Tests"), 0, self.on_tests),
+                     (_("Units"), 0, self.on_units),
+                     (_("Users"), 0, self.on_users),)
 
             for i in sorted(items, key=operator.itemgetter(0)):
                 m_adm.add_command(label=i[0], underline=i[1], command=i[2])
