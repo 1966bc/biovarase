@@ -607,8 +607,9 @@ class Main(tk.Toplevel):
         #print(self.engine.current_ids)
         company = self.engine.get_company_data()
         if company:
-            # Use lab name (hospital/site)
-            self.title(f"Biovarase {company.get('lab', '')}")
+            # Use site name (hospital) - fallback to lab if site not defined
+            site_name = company.get('site', company.get('lab', ''))
+            self.title(f"Biovarase {site_name}")
         else:
             self.title("Biovarase")
 
@@ -646,8 +647,9 @@ class Main(tk.Toplevel):
         """Re-read section-dependent data and update title, status bar and lists."""
         company = self.engine.get_company_data()
         if company:
-            # Use lab name (hospital/site)
-            self.title(f"Biovarase {company.get('lab', '')}")
+            # Use site name (hospital) - fallback to lab if site not defined
+            site_name = company.get('site', company.get('lab', ''))
+            self.title(f"Biovarase {site_name}")
             self.status_bar_site_description.set(
                 self.get_status_bar_site_description(company)
             )
