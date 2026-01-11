@@ -617,13 +617,13 @@ class TestOnLogin:
 class TestGetNewPassword:
     """Test get_new_password() method."""
 
-    def test_returns_hashed_bytes(self, controller_instance):
-        """Returns bcrypt hashed password as bytes."""
+    def test_returns_hashed_string(self, controller_instance):
+        """Returns bcrypt hashed password as string (for DB storage)."""
         result = controller_instance.get_new_password()
 
-        assert isinstance(result, bytes)
+        assert isinstance(result, str)
         # Bcrypt hashes start with $2b$
-        assert result.startswith(b"$2")
+        assert result.startswith("$2")
 
     def test_can_verify_password(self, controller_instance):
         """Generated hash can verify original password."""
@@ -631,5 +631,5 @@ class TestGetNewPassword:
 
         hashed = controller_instance.get_new_password()
 
-        # Default password is 'pass'
-        assert bcrypt.checkpw(b"pass", hashed)
+        # Default password is 'pass', hash is str so encode it
+        assert bcrypt.checkpw(b"pass", hashed.encode('utf-8'))
