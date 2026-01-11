@@ -1050,6 +1050,15 @@ TRANSLATIONS = {
     "Global Master Data": {"it": "Dati Master Globali", "en": "Global Master Data"},
     "Action": {"it": "Azione", "en": "Action"},
 
+    # Role hints for user editor
+    "App Admin - Global access": {"it": "App Admin - Accesso globale", "en": "App Admin - Global access"},
+    "Country Admin - Assign to country": {"it": "Country Admin - Assegna a paese", "en": "Country Admin - Assign to country"},
+    "Regional Admin - Assign to region/site": {"it": "Regional Admin - Assegna a regione/sito", "en": "Regional Admin - Assign to region/site"},
+    "Lab Admin - Assign to lab": {"it": "Lab Admin - Assegna a laboratorio", "en": "Lab Admin - Assign to lab"},
+    "Superuser - Assign to lab": {"it": "Superuser - Assegna a laboratorio", "en": "Superuser - Assign to lab"},
+    "Technician - Assign to lab": {"it": "Tecnico - Assegna a laboratorio", "en": "Technician - Assign to lab"},
+    "Viewer - Assign to lab": {"it": "Viewer - Assegna a laboratorio", "en": "Viewer - Assign to lab"},
+
     # ==========================================================================
     # Lab Selector
     # ==========================================================================
