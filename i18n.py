@@ -1039,6 +1039,18 @@ TRANSLATIONS = {
     "Result excluded": {"it": "Risultato escluso", "en": "Result excluded"},
     "Instrument restart": {"it": "Riavvio strumento", "en": "Instrument restart"},
 
+    # Action editor help
+    "Code: English uppercase (e.g., CALIBRATION)": {
+        "it": "Codice: inglese maiuscolo (es. CALIBRATION)",
+        "en": "Code: English uppercase (e.g., CALIBRATION)"
+    },
+    "Description: English text (translated via i18n)": {
+        "it": "Descrizione: testo inglese (tradotto via i18n)",
+        "en": "Description: English text (translated via i18n)"
+    },
+    "Global Master Data": {"it": "Dati Master Globali", "en": "Global Master Data"},
+    "Action": {"it": "Azione", "en": "Action"},
+
     # ==========================================================================
     # Lab Selector
     # ==========================================================================
