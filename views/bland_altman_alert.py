@@ -325,8 +325,6 @@ class UI(ParentView):
     def _compare_workstations(self, test_id, level, ws1_id, ws1_name, ws2_id, ws2_name,
                                bias_threshold, out_threshold):
         """Compare two workstations and return statistics."""
-        lab_id = self.engine.get_lab_id()
-
         # Get results for each workstation separately (faster than self-join)
         sql = """
             SELECT DATE(r.received) AS result_date, r.result
@@ -335,12 +333,11 @@ class UI(ParentView):
             JOIN test_methods tm ON tm.test_method_id = b.test_method_id
             WHERE tm.test_id = ?
               AND b.description = ?
-              AND b.lab_id = ?
               AND r.workstation_id = ?
             ORDER BY result_date
         """
-        rows1 = self.engine.read(True, sql, (test_id, level, lab_id, ws1_id)) or []
-        rows2 = self.engine.read(True, sql, (test_id, level, lab_id, ws2_id)) or []
+        rows1 = self.engine.read(True, sql, (test_id, level, ws1_id)) or []
+        rows2 = self.engine.read(True, sql, (test_id, level, ws2_id)) or []
 
         # Group by date and match pairs in Python (much faster)
         data1 = {}

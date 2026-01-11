@@ -435,7 +435,6 @@ class UI(ParentView):
                         AND r.status = 1
                         AND r.is_delete = 0
                     LEFT JOIN batches b ON r.batch_id = b.batch_id
-                        AND b.lab_id = ?
                     LEFT JOIN daily_approvals da ON da.workstation_id = w.workstation_id
                         AND da.approval_date = ?
                     LEFT JOIN users u ON da.approved_by = u.user_id
@@ -450,7 +449,7 @@ class UI(ParentView):
                 """
 
                 lab_id = self.engine.current_ids.get("lab_id")
-                args = (selected_date.isoformat(), lab_id, selected_date.isoformat(), lab_id)
+                args = (selected_date.isoformat(), selected_date.isoformat(), lab_id)
                 rows = self.engine.read(True, sql, args)
 
                 # Update UI from main thread
@@ -582,12 +581,10 @@ class UI(ParentView):
                   AND DATE(r.received) = ?
                   AND r.status = 1
                   AND r.is_delete = 0
-                  AND b.lab_id = ?
                 ORDER BY t.description, r.received
             """
 
-            lab_id = self.engine.current_ids.get("lab_id")
-            args = (ws_id, self.selected_date.isoformat(), lab_id)
+            args = (ws_id, self.selected_date.isoformat())
             rows = self.engine.read(True, sql, args)
 
             if rows is None:
@@ -826,7 +823,6 @@ class UI(ParentView):
             if pending > 0:
                 sql_validate = """
                     UPDATE results r
-                    INNER JOIN batches b ON r.batch_id = b.batch_id
                     SET r.validated = 1,
                         r.validated_by = ?,
                         r.validated_at = NOW()
@@ -835,9 +831,8 @@ class UI(ParentView):
                       AND r.validated = 0
                       AND r.status = 1
                       AND r.is_delete = 0
-                      AND b.lab_id = ?
                 """
-                result = self.engine.write(sql_validate, (user_id, ws_id, self.selected_date.isoformat(), lab_id))
+                result = self.engine.write(sql_validate, (user_id, ws_id, self.selected_date.isoformat()))
                 if result is None:
                     err = self.engine.last_write_error
                     msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
@@ -953,15 +948,13 @@ class UI(ParentView):
             sql_pending = """
                 SELECT COUNT(*) AS pending
                 FROM results r
-                INNER JOIN batches b ON r.batch_id = b.batch_id
                 WHERE r.workstation_id = ?
                   AND DATE(r.received) = ?
                   AND r.validated = 0
                   AND r.status = 1
                   AND r.is_delete = 0
-                  AND b.lab_id = ?
             """
-            result = self.engine.read(True, sql_pending, (ws_id, self.selected_date.isoformat(), lab_id))
+            result = self.engine.read(True, sql_pending, (ws_id, self.selected_date.isoformat()))
             pending = result[0]["pending"] if result else 0
 
             if pending > 0:
@@ -1228,10 +1221,12 @@ class UI(ParentView):
                 INNER JOIN tests t ON tm.test_id = t.test_id
                 INNER JOIN samples s ON tm.sample_id = s.sample_id
                 INNER JOIN workstations w ON r.workstation_id = w.workstation_id
+                INNER JOIN organizations section ON section.org_id = w.org_id
                 LEFT JOIN users u ON ar.validated_by = u.user_id
                 WHERE DATE(ar.log_time) = ?
                   AND ar.validated_by IS NOT NULL
-                  AND b.lab_id = ?
+                  AND section.parent_id = ?
+                  AND section.org_type = 'section'
                 ORDER BY ar.log_time DESC
             """
 
@@ -1370,10 +1365,13 @@ class UI(ParentView):
                 INNER JOIN batches b ON r.batch_id = b.batch_id
                 INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
                 INNER JOIN tests t ON tm.test_id = t.test_id
+                INNER JOIN workstations w ON r.workstation_id = w.workstation_id
+                INNER JOIN organizations section ON section.org_id = w.org_id
                 WHERE DATE(r.received) = ?
                   AND r.status = 1
                   AND r.is_delete = 0
-                  AND b.lab_id = ?
+                  AND section.parent_id = ?
+                  AND section.org_type = 'section'
             """
             rows = self.engine.read(True, sql, (self.selected_date.isoformat(), lab_id))
 
