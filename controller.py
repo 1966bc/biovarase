@@ -864,8 +864,9 @@ class Controller:
             SELECT tests.description
             FROM tests
             INNER JOIN test_methods ON tests.test_id = test_methods.test_id
-            INNER JOIN sections ON test_methods.section_id = sections.section_id
-            WHERE sections.lab_id = ?
+            INNER JOIN organizations section ON test_methods.org_id = section.org_id
+            WHERE section.parent_id = ?
+              AND section.org_type = 'section'
               AND test_methods.is_mandatory = 1
               AND test_methods.status = 1;
         """
