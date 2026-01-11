@@ -13,6 +13,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Author** | Giuseppe Costanzi (1966bc) - giuseppecostanzi@gmail.com |
 | **Standards** | ISO 15189:2022, ISO/TS 20914:2019, Westgard QC |
 
+## Development Notes (January 2026)
+
+Note for future Claude instances working on this codebase:
+
+**Recent changes:**
+- Migration 013 added `org_id` to all tenant-scoped tables (results, batches, test_methods, workstations, categories)
+- All views now include `org_id` in INSERT/UPDATE operations via `_get_values()` or explicit SQL
+- Observer pattern implemented: `daily_validation` auto-refreshes when results change (`engine.notify("result_changed")`)
+- Window management: utility windows (daily_validation, bland_altman, result, batch) use `-topmost` attribute
+
+**Testing:**
+- Run tests with venv: `/home/bc/Documents/projects/biovarase/venv/bin/pytest tests/ -v`
+- 721 tests passing, 11 skipped (empty test DB tables)
+
+**Key patterns to follow:**
+- `org_id` = `lab_id` for lab-level data (results, batches, categories)
+- `org_id` = `section_id` for section-level data (test_methods, workstations)
+- Use `self.engine.get_lab_id()` to get current lab's org_id
+- Use `build_sql()` for dynamic INSERT/UPDATE (reads columns from DB schema)
+
 ## Language Policy
 
 - **Communication:** Italian
