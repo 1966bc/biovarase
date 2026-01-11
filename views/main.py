@@ -608,10 +608,27 @@ class Main(tk.Toplevel):
 
         frm_status_bar = ttk.Frame(self.frm_main,  style="StatusBar.TFrame",)
 
-        self.status = ttk.Label(frm_status_bar,
-                                style="LoggedUser.TLabel",
-                                textvariable=self.status_bar_text,
-                                anchor=tk.W)
+        # Role-based color for user display
+        role = self.engine.log_user.get("role", ROLE_VIEWER)
+        role_colors = {
+            ROLE_APP_ADMIN: "#FF0000",      # Red - God mode
+            1: "#FF6600",                    # Orange - Country Admin
+            2: "#FF9900",                    # Light Orange - Regional Admin
+            ROLE_LAB_ADMIN: "#0066CC",       # Blue - Lab Admin
+            ROLE_SUPERUSER: "#009900",       # Green - Superuser
+            ROLE_TECHNICIAN: "#666666",      # Gray - Technician
+            ROLE_VIEWER: "#999999",          # Light Gray - Viewer
+        }
+        user_color = role_colors.get(role, "#000000")
+
+        self.status = tk.Label(
+            frm_status_bar,
+            textvariable=self.status_bar_text,
+            anchor=tk.W,
+            fg=user_color,
+            bg=self.engine.get_rgb(240, 240, 237),
+            font=("TkDefaultFont", 10, "bold")
+        )
 
         ttk.Label(frm_status_bar, font=f,
                   textvariable=self.status_bar_site_description,
