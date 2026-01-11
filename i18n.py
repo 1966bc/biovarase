@@ -220,6 +220,7 @@ TRANSLATIONS = {
     "Observations:": {"it": "Osservazioni:", "en": "Observations:"},
     "Z Score:": {"it": "Z Score:", "en": "Z Score:"},
     "Delta Degree of Freedom": {"it": "Delta Gradi di Libertà", "en": "Delta Degree of Freedom"},
+    "Show Expired": {"it": "Mostra Scaduti", "en": "Show Expired"},
 
     # ==========================================================================
     # Main Window
