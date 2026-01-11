@@ -36,6 +36,10 @@ DB_CONNECTION_TIMEOUT = 5  # seconds
 LOG_MAX_SIZE_MB = 10  # Maximum log file size before rotation
 LOG_KEEP_COUNT = 5  # Number of old log files to keep
 
+# Main window minimum dimensions (UI design constraint)
+MAIN_WINDOW_MIN_WIDTH = 1024
+MAIN_WINDOW_MIN_HEIGHT = 700
+
 
 def log_to_file(message: str, level: str = "INFO") -> None:
     """

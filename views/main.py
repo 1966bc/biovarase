@@ -43,6 +43,7 @@ from ljcanvas import LeveyJenningsCanvas
 from bias_canvas import BiasCanvas
 from i18n import _, set_language
 from westgards import WESTGARD_ACCEPT
+from app_config import MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT
 
 # project frames
 import views.license
@@ -542,11 +543,9 @@ class Main(tk.Toplevel):
 
         self.frm_main.pack(fill=tk.BOTH, expand=1)
 
-        d = self.engine.get_dimensions()
-        window_width = int(d['w'])
-        window_height = int(d['h'])
-
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+        # Set fixed minimum size to prevent resizing based on content
+        # (status bar text, combobox values, etc.)
+        self.minsize(MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT)
 
     def init_status_bar(self) -> None:
 
