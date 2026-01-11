@@ -44,6 +44,10 @@ from bias_canvas import BiasCanvas
 from i18n import _, set_language
 from westgards import WESTGARD_ACCEPT
 from app_config import MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT
+from engine import (
+    ROLE_APP_ADMIN, ROLE_LAB_ADMIN, ROLE_SUPERUSER,
+    ROLE_TECHNICIAN, ROLE_VIEWER
+)
 
 # project frames
 import views.license
@@ -183,53 +187,77 @@ class Main(tk.Toplevel):
         self.geometry('+%d+%d'%(position_right, position_top))
         
     def init_menu(self) -> None:
+        """
+        Build menu bar with role-based visibility.
+
+        Menu visibility by role:
+        - App Admin (0): All menus, all items
+        - Lab Admin (3): Edit, QC, Exports, Documents, Users management
+        - Superuser (4): QC (validation), Batches, view-only access
+        - Technician (5): QC (data entry), Imports, limited Edit
+        - Viewer (6): QC (view only), Exports, Documents
+        """
+        role = self.engine.log_user.get("role", ROLE_VIEWER)
+        is_admin = role == ROLE_APP_ADMIN
+        is_lab_admin = role <= ROLE_LAB_ADMIN  # 0, 1, 2, 3
+        can_modify = role <= ROLE_TECHNICIAN   # 0-5
+        is_viewer = role == ROLE_VIEWER
 
         m_main = tk.Menu(self, bd=1)
 
         m_file = tk.Menu(m_main, tearoff=0, bd=1)
-        m_exports = tk.Menu(m_main, tearoff=0, bd=1)
-        m_imports = tk.Menu(m_main, tearoff=0, bd=1)
         m_plots = tk.Menu(m_main, tearoff=0, bd=1)
-        m_edit = tk.Menu(m_main, tearoff=0, bd=1)
+        m_exports = tk.Menu(m_main, tearoff=0, bd=1)
         m_documents = tk.Menu(m_main, tearoff=0, bd=1)
-        m_adm = tk.Menu(m_main, tearoff=0, bd=1)
         m_about = tk.Menu(m_main, tearoff=0, bd=1)
 
+        # Conditional menus
+        m_edit = tk.Menu(m_main, tearoff=0, bd=1) if can_modify else None
+        m_imports = tk.Menu(m_main, tearoff=0, bd=1) if can_modify else None
+        m_adm = tk.Menu(m_main, tearoff=0, bd=1) if is_admin else None
+
+        # Build main menu bar
         m_main.add_cascade(label=_("File"), underline=0, menu=m_file)
         m_main.add_cascade(label=_("QC"), underline=0, menu=m_plots)
-        m_main.add_cascade(label=_("Edit"), underline=0, menu=m_edit)
-        m_main.add_cascade(label=_("Imports"), underline=1, menu=m_imports)
+
+        if m_edit:
+            m_main.add_cascade(label=_("Edit"), underline=0, menu=m_edit)
+        if m_imports:
+            m_main.add_cascade(label=_("Imports"), underline=1, menu=m_imports)
+
         m_main.add_cascade(label=_("Exports"), underline=1, menu=m_exports)
         m_main.add_cascade(label=_("Documents"), underline=0, menu=m_documents)
-        m_main.add_cascade(label=_("Admin"), underline=0, menu=m_adm)
+
+        if m_adm:
+            m_main.add_cascade(label=_("Admin"), underline=0, menu=m_adm)
+
         m_main.add_cascade(label="?", underline=0, menu=m_about)
 
-        if self.engine.log_user["role"] != 0:
-            items = ((_("Reset"), 0, self.on_reset),
-                     (_("Analytica"), 0, self.on_analitical),
-                     (_("Z Score"), 0, self.on_zscore),)
-        else:
-            items = ((_("Reset"), 0, self.on_reset),
-                     (_("Insert random results"), 0, self.on_insert_demo_result),
-                     (_("Analytica"), 0, self.on_analitical),
-                     (_("Z Score"), 0, self.on_zscore),)
+        # === FILE MENU ===
+        items = [(_("Reset"), 0, self.on_reset)]
+        if is_admin:
+            items.append((_("Insert random results"), 0, self.on_insert_demo_result))
+        items.extend([
+            (_("Analytica"), 0, self.on_analitical),
+            (_("Z Score"), 0, self.on_zscore),
+        ])
 
         for i in items:
             m_file.add_command(label=i[0], underline=i[1], command=i[2])
 
-        
         m_file.add_separator()
 
         m_file.add_command(label=_("Change User"),
                            underline=0,
                            accelerator="Ctrl+U",
                            command=self.on_change_user)
-        # Change Laboratory - admin only
-        if self.engine.log_user["role"] == 0:
+
+        if is_admin:
             m_file.add_command(label=_("Change Laboratory"),
                                underline=7,
                                accelerator="Ctrl+E",
                                command=self.on_change_lab)
+
         m_file.add_separator()
         m_file.add_command(label=_("Change Password"),
                            underline=0,
@@ -238,8 +266,7 @@ class Main(tk.Toplevel):
                            underline=0,
                            command=self.on_log)
 
-        # Language submenu (admin only)
-        if self.engine.log_user["role"] == 0:
+        if is_admin:
             m_file.add_separator()
             m_lang = tk.Menu(m_file, tearoff=0)
             self.lang_var = tk.StringVar(value=self.engine.get_language())
@@ -256,13 +283,12 @@ class Main(tk.Toplevel):
                 command=self._on_language_change
             )
             m_file.add_cascade(label=_("Language"), underline=0, menu=m_lang)
-            m_lang.config(bg=self.engine.get_rgb(240, 240, 237),)
-            m_lang.config(fg="black")
+            m_lang.config(bg=self.engine.get_rgb(240, 240, 237), fg="black")
 
         m_file.add_separator()
         m_file.add_command(label=_("Exit"), underline=0, command=self.on_close)
 
-        # Daily Validation first, then charts
+        # === QC MENU ===
         m_plots.add_command(label=_("Daily Validation"), underline=0, command=self.on_daily_validation)
         m_plots.add_separator()
 
@@ -276,19 +302,33 @@ class Main(tk.Toplevel):
         for i in items:
             m_plots.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = ((_("Batches"), 0, self.on_batches),
-                 (_("Categories"), 0, self.on_categories),
-                 (_("Test Methods"), 0, self.on_test_methods),
-                 (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
-                 (_("Workstations"), 0, self.on_workstations),
-                 (_("Controls"), 0, self.on_controls),
-                 (_("Set Observations"), 0, self.on_observations),
-                 (_("Set Z Score"), 0, self.on_set_zscore),)
+        # === EDIT MENU (if can_modify) ===
+        if m_edit:
+            items = [
+                (_("Batches"), 0, self.on_batches),
+                (_("Categories"), 0, self.on_categories),
+                (_("Test Methods"), 0, self.on_test_methods),
+                (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
+                (_("Workstations"), 0, self.on_workstations),
+                (_("Controls"), 0, self.on_controls),
+            ]
+            # Settings only for lab admins+
+            if is_lab_admin:
+                items.extend([
+                    (_("Set Observations"), 0, self.on_observations),
+                    (_("Set Z Score"), 0, self.on_set_zscore),
+                ])
 
-        for i in sorted(items, key=operator.itemgetter(0)):
-            m_edit.add_command(label=i[0], underline=i[1], command=i[2])
+            for i in sorted(items, key=operator.itemgetter(0)):
+                m_edit.add_command(label=i[0], underline=i[1], command=i[2])
 
+        # === IMPORTS MENU (if can_modify) ===
+        if m_imports:
+            items = ((_("Import"), 0, self.on_import_results),)
+            for i in items:
+                m_imports.add_command(label=i[0], underline=i[1], command=i[2])
 
+        # === EXPORTS MENU ===
         items = ((_("Notes"), 0, self.on_export_notes),
                  (_("Analytical Goals"), 0, self.on_analitycal_goals),
                  (_("Counts"), 0, self.on_export_counts),)
@@ -296,11 +336,7 @@ class Main(tk.Toplevel):
         for i in items:
             m_exports.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = ((_("Import"), 0, self.on_import_results),)
-
-        for i in items:
-            m_imports.add_command(label=i[0], underline=i[1], command=i[2])
-
+        # === DOCUMENTS MENU ===
         items = ((_("User Manual"), 0, self.on_user_manual),
                  (_("QC Technical Manual"), 0, self.on_qc_thecnical_manual),
                  (_("Guidelines"), 0, self.on_get_guidelines),
@@ -309,29 +345,38 @@ class Main(tk.Toplevel):
         for i in items:
             m_documents.add_command(label=i[0], underline=i[1], command=i[2])
 
-        items = ((_("Suppliers"), 0, self.on_suppliers),
-                 (_("Organizations"), 0, self.on_organizations),
-                 (_("Sites"), 0, self.on_sites),
-                 (_("Labs"), 0, self.on_labs),
-                 (_("Sections"), 0, self.on_sections),
-                 (_("Users"), 0, self.on_users),
-                 (_("Tests"), 0, self.on_tests),
-                 (_("Equipments"), 0, self.on_equipments),
-                 (_("Samples"), 0, self.on_samples),
-                 (_("Units"), 0, self.on_units),
-                 (_("Methods"), 0, self.on_methods),
-                 (_("Actions"), 0, self.on_actions),)
+        # === ADMIN MENU (admin only) ===
+        if m_adm:
+            items = ((_("Suppliers"), 0, self.on_suppliers),
+                     (_("Organizations"), 0, self.on_organizations),
+                     (_("Sites"), 0, self.on_sites),
+                     (_("Labs"), 0, self.on_labs),
+                     (_("Sections"), 0, self.on_sections),
+                     (_("Users"), 0, self.on_users),
+                     (_("Tests"), 0, self.on_tests),
+                     (_("Equipments"), 0, self.on_equipments),
+                     (_("Samples"), 0, self.on_samples),
+                     (_("Units"), 0, self.on_units),
+                     (_("Methods"), 0, self.on_methods),
+                     (_("Actions"), 0, self.on_actions),)
 
-        for i in sorted(items, key=operator.itemgetter(0)):
-            m_adm.add_command(label=i[0], underline=i[1], command=i[2])
+            for i in sorted(items, key=operator.itemgetter(0)):
+                m_adm.add_command(label=i[0], underline=i[1], command=i[2])
 
+        # === ABOUT MENU ===
         m_about.add_command(label=_("About"), underline=0, command=self.on_about)
         m_about.add_command(label=_("License"), underline=0, command=self.on_license)
         m_about.add_command(label=_("Python"), underline=0, command=self.on_python_version)
         m_about.add_command(label=_("Tkinter"), underline=0, command=self.on_tkinter_version)
 
-        all_menus = [m_main, m_file, m_plots, m_edit, m_imports, m_exports,
-                     m_documents, m_adm, m_about]
+        # Apply styling to all menus
+        all_menus = [m_main, m_file, m_plots, m_exports, m_documents, m_about]
+        if m_edit:
+            all_menus.append(m_edit)
+        if m_imports:
+            all_menus.append(m_imports)
+        if m_adm:
+            all_menus.append(m_adm)
 
         for m in all_menus:
             m.config(bg=self.engine.get_rgb(240, 240, 237),)
