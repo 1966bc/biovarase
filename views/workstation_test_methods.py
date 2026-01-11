@@ -173,7 +173,9 @@ class UI(ParentView):
 
         Role-based filtering:
             - App Admin (role=0): See all organizations
-            - Other roles: Filtered by user's org_id scope
+            - Country Admin (role=1): See their country and descendants
+            - Regional Admin (role=2): See their region and descendants
+            - Lab Admin+ (role>=3): See ONLY their assigned lab and sections
         """
         # 1) Clear any existing nodes
         for iid in self.Sites.get_children():
@@ -191,77 +193,143 @@ class UI(ParentView):
 
         user_org_id = self.engine.log_user.get("org_id")
 
-        # 4) Load countries (root level organizations)
-        if role == ROLE_ADMIN:
-            # Admin sees all countries
-            countries = self._load_orgs_by_type(None, "country")
-        else:
-            # Non-admin: find the country ancestor of user's org
-            countries = self._get_user_country_scope(user_org_id)
+        # 4) Build tree based on role
+        if role == ROLE_APP_ADMIN:  # App Admin - full tree
+            self._build_full_tree(root)
+        elif role >= ROLE_LAB_ADMIN:  # Lab Admin, Superuser, Technician, Viewer - only their lab
+            self._build_lab_only_tree(root, user_org_id)
+        else:  # Country/Regional Admin (role 1-2) - their scope and descendants
+            self._build_scoped_tree(root, user_org_id, role)
 
-        # 5) Build the tree: Country → Region → Site → Lab → Section → Workstation
+        # 5) Expand all nodes for better UX
+        self.Sites.item(root_iid, open=True)
+        self._expand_all(root_iid)
+
+    def _expand_all(self, parent_iid):
+        """Recursively expand all tree nodes."""
+        for child in self.Sites.get_children(parent_iid):
+            self.Sites.item(child, open=True)
+            self._expand_all(child)
+
+    def _build_full_tree(self, root):
+        """Build full organization tree (App Admin only)."""
+        countries = self._load_orgs_by_type(None, "country")
         for country_id, country_name in countries:
             country_iid = f"country_{country_id}"
-            self.Sites.insert(
-                root, tk.END, iid=country_iid,
-                text=country_name,
-                values=(country_id, NODE_TYPE_COUNTRY),
-            )
+            self.Sites.insert(root, tk.END, iid=country_iid, text=country_name,
+                              values=(country_id, NODE_TYPE_COUNTRY))
+            self._build_regions(country_iid, country_id)
 
-            # Load regions under this country
-            regions = self._load_orgs_by_type(country_id, "region")
-            for region_id, region_name in regions:
-                region_iid = f"region_{region_id}"
-                self.Sites.insert(
-                    country_iid, tk.END, iid=region_iid,
-                    text=region_name,
-                    values=(region_id, NODE_TYPE_REGION),
-                )
+    def _build_regions(self, parent_iid, country_id):
+        """Build regions under a country."""
+        regions = self._load_orgs_by_type(country_id, "region")
+        for region_id, region_name in regions:
+            region_iid = f"region_{region_id}"
+            self.Sites.insert(parent_iid, tk.END, iid=region_iid, text=region_name,
+                              values=(region_id, NODE_TYPE_REGION))
+            self._build_sites(region_iid, region_id)
 
-                # Load sites (hospitals) under this region
-                sites = self._load_orgs_by_type(region_id, "site")
-                for site_id, site_name in sites:
-                    site_iid = f"site_{site_id}"
-                    self.Sites.insert(
-                        region_iid, tk.END, iid=site_iid,
-                        text=site_name,
-                        values=(site_id, NODE_TYPE_SITE),
-                    )
+    def _build_sites(self, parent_iid, region_id):
+        """Build sites under a region."""
+        sites = self._load_orgs_by_type(region_id, "site")
+        for site_id, site_name in sites:
+            site_iid = f"site_{site_id}"
+            self.Sites.insert(parent_iid, tk.END, iid=site_iid, text=site_name,
+                              values=(site_id, NODE_TYPE_SITE))
+            self._build_labs(site_iid, site_id)
 
-                    # Load labs under this site
-                    labs = self._load_orgs_by_type(site_id, "lab")
-                    for lab_id, lab_name in labs:
-                        lab_iid = f"lab_{lab_id}"
-                        self.Sites.insert(
-                            site_iid, tk.END, iid=lab_iid,
-                            text=lab_name,
-                            values=(lab_id, NODE_TYPE_LAB),
-                        )
+    def _build_labs(self, parent_iid, site_id):
+        """Build labs under a site."""
+        labs = self._load_orgs_by_type(site_id, "lab")
+        for lab_id, lab_name in labs:
+            lab_iid = f"lab_{lab_id}"
+            self.Sites.insert(parent_iid, tk.END, iid=lab_iid, text=lab_name,
+                              values=(lab_id, NODE_TYPE_LAB))
+            self._build_sections(lab_iid, lab_id)
 
-                        # Load sections under this lab
-                        sections = self._load_orgs_by_type(lab_id, "section")
-                        for section_id, section_name in sections:
-                            sec_iid = f"sec_{section_id}"
-                            self.Sites.insert(
-                                lab_iid, tk.END, iid=sec_iid,
-                                text=section_name,
-                                values=(section_id, NODE_TYPE_SECTION),
-                            )
+    def _build_sections(self, parent_iid, lab_id):
+        """Build sections under a lab, including workstations."""
+        sections = self._load_orgs_by_type(lab_id, "section")
+        for section_id, section_name in sections:
+            sec_iid = f"sec_{section_id}"
+            self.Sites.insert(parent_iid, tk.END, iid=sec_iid, text=section_name,
+                              values=(section_id, NODE_TYPE_SECTION))
+            # Load workstations under this section
+            workstations = self._load_workstations(section_id)
+            for ws_id, ws_descr in workstations:
+                ws_iid = f"ws_{ws_id}"
+                self.Sites.insert(sec_iid, tk.END, iid=ws_iid, text=ws_descr,
+                                  values=(ws_id, NODE_TYPE_WORKSTATION))
 
-                            # Load workstations under this section (by org_id)
-                            workstations = self._load_workstations(section_id)
-                            for ws_id, ws_descr in workstations:
-                                ws_iid = f"ws_{ws_id}"
-                                self.Sites.insert(
-                                    sec_iid, tk.END, iid=ws_iid,
-                                    text=ws_descr,
-                                    values=(ws_id, NODE_TYPE_WORKSTATION),
-                                )
+    def _build_lab_only_tree(self, root, user_org_id):
+        """Build tree showing only user's assigned lab (role >= 3)."""
+        if user_org_id is None:
+            return
 
-        # 6) Expand root and first levels for better UX
-        self.Sites.item(root_iid, open=True)
-        for child in self.Sites.get_children(root_iid):
-            self.Sites.item(child, open=True)
+        # Get user's org info
+        sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
+        org = self.engine.read(False, sql, (user_org_id,))
+        if not org:
+            return
+
+        org_type = org["org_type"]
+
+        # Find the lab_id based on org_type
+        if org_type == "lab":
+            lab_id = user_org_id
+        elif org_type == "section":
+            # Get parent lab
+            sql = "SELECT parent_id FROM organizations WHERE org_id = ?"
+            parent = self.engine.read(False, sql, (user_org_id,))
+            lab_id = parent["parent_id"] if parent else None
+        else:
+            lab_id = None
+
+        if lab_id is None:
+            return
+
+        # Get lab info
+        sql = "SELECT org_id, description FROM organizations WHERE org_id = ?"
+        lab = self.engine.read(False, sql, (lab_id,))
+        if not lab:
+            return
+
+        # Insert lab node
+        lab_iid = f"lab_{lab_id}"
+        self.Sites.insert(root, tk.END, iid=lab_iid, text=lab["description"],
+                          values=(lab_id, NODE_TYPE_LAB))
+
+        # Build sections under this lab (with workstations)
+        self._build_sections(lab_iid, lab_id)
+
+    def _build_scoped_tree(self, root, user_org_id, role):
+        """Build tree for Country/Regional Admin (role 1-2)."""
+        if user_org_id is None:
+            return
+
+        # Get user's org info
+        sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
+        org = self.engine.read(False, sql, (user_org_id,))
+        if not org:
+            return
+
+        org_type = org["org_type"]
+
+        if org_type == "country":
+            # Country admin - show country and all descendants
+            country_iid = f"country_{user_org_id}"
+            self.Sites.insert(root, tk.END, iid=country_iid, text=org["description"],
+                              values=(user_org_id, NODE_TYPE_COUNTRY))
+            self._build_regions(country_iid, user_org_id)
+        elif org_type == "region":
+            # Regional admin - show region and all descendants
+            region_iid = f"region_{user_org_id}"
+            self.Sites.insert(root, tk.END, iid=region_iid, text=org["description"],
+                              values=(user_org_id, NODE_TYPE_REGION))
+            self._build_sites(region_iid, user_org_id)
+        else:
+            # Fallback to lab-only view
+            self._build_lab_only_tree(root, user_org_id)
 
 
     def _load_orgs_by_type(self, parent_id, org_type):
@@ -294,41 +362,6 @@ class UI(ParentView):
 
         rows = self.engine.read(True, sql, args) or []
         return [(r["org_id"], r["description"]) for r in rows]
-
-    def _get_user_country_scope(self, user_org_id):
-        """
-        Get the country scope for a non-admin user based on their org_id.
-
-        Traverses up the organization hierarchy to find the country.
-
-        Args:
-            user_org_id: User's assigned org_id
-
-        Returns:
-            List containing the user's country (org_id, description)
-        """
-        if user_org_id is None:
-            # No org assigned, return all countries (shouldn't happen for non-admin)
-            return self._load_orgs_by_type(None, "country")
-
-        # Traverse up to find the country using recursive CTE
-        sql = """
-            WITH RECURSIVE ancestors AS (
-                SELECT org_id, parent_id, org_type, description
-                FROM organizations WHERE org_id = ?
-                UNION ALL
-                SELECT o.org_id, o.parent_id, o.org_type, o.description
-                FROM organizations o
-                JOIN ancestors a ON o.org_id = a.parent_id
-            )
-            SELECT org_id, description FROM ancestors WHERE org_type = 'country'
-        """
-        row = self.engine.read(False, sql, (user_org_id,))
-        if row:
-            return [(row["org_id"], row["description"])]
-
-        # Fallback: return all countries
-        return self._load_orgs_by_type(None, "country")
 
     def _load_workstations(self, section_org_id):
         """

@@ -105,7 +105,10 @@ class TestDatabaseConnection:
     def test_connection_successful(self, db_connection):
         """Verify connection to test database works."""
         assert db_connection is not None
-        assert db_connection.open
+        # mariadb connector doesn't have .open attribute, check connection works
+        cursor = db_connection.cursor(dictionary=True)
+        cursor.execute("SELECT 1")
+        cursor.close()
 
     def test_can_execute_query(self, cursor):
         """Verify we can execute a simple query."""
@@ -336,24 +339,24 @@ class TestOrganizationsTable:
 class TestLabFiltering:
     """Test multi-tenant data isolation."""
 
-    def test_batches_have_lab_id(self, cursor):
-        """All batches should have lab_id."""
+    def test_batches_have_org_id(self, cursor):
+        """All batches should have org_id."""
         cursor.execute("""
             SELECT COUNT(*) as cnt FROM batches
-            WHERE lab_id IS NULL OR lab_id = 0
+            WHERE org_id IS NULL OR org_id = 0
         """)
         row = cursor.fetchone()
-        # May have some without lab_id during migration
+        # May have some without org_id during migration
         # Just verify the column exists and query works
         assert row is not None
 
-    def test_filter_batches_by_lab(self, cursor):
-        """Can filter batches by lab_id."""
+    def test_filter_batches_by_org(self, cursor):
+        """Can filter batches by org_id."""
         cursor.execute("""
-            SELECT lab_id, COUNT(*) as batch_count
+            SELECT org_id, COUNT(*) as batch_count
             FROM batches
-            WHERE lab_id > 0
-            GROUP BY lab_id
+            WHERE org_id > 0
+            GROUP BY org_id
         """)
         rows = cursor.fetchall()
         # Should work even if empty

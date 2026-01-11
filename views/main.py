@@ -211,7 +211,7 @@ class Main(tk.Toplevel):
         # Conditional menus
         m_edit = tk.Menu(m_main, tearoff=0, bd=1) if can_modify else None
         m_imports = tk.Menu(m_main, tearoff=0, bd=1) if can_modify else None
-        m_adm = tk.Menu(m_main, tearoff=0, bd=1) if is_admin else None
+        m_adm = tk.Menu(m_main, tearoff=0, bd=1) if is_lab_admin else None
 
         # Build main menu bar
         m_main.add_cascade(label=_("File"), underline=0, menu=m_file)
@@ -341,23 +341,26 @@ class Main(tk.Toplevel):
         for i in items:
             m_documents.add_command(label=i[0], underline=i[1], command=i[2])
 
-        # === ADMIN MENU (admin only) ===
-        # Global master data: controls, tests, units, methods, samples, equipments, suppliers
-        # These must be managed centrally for peer lab comparison
+        # === ADMIN MENU ===
+        # Global master data (App Admin only): controls, tests, units, methods, samples, equipments, suppliers
+        # Users management: available to Lab Admin and above (role <= 3)
         if m_adm:
-            items = ((_("Actions"), 0, self.on_actions),
-                     (_("Controls"), 0, self.on_controls),
-                     (_("Equipments"), 0, self.on_equipments),
-                     (_("Methods"), 0, self.on_methods),
-                     (_("Organizations"), 0, self.on_organizations),
-                     (_("Samples"), 0, self.on_samples),
-                     (_("Suppliers"), 0, self.on_suppliers),
-                     (_("Tests"), 0, self.on_tests),
-                     (_("Units"), 0, self.on_units),
-                     (_("Users"), 0, self.on_users),)
+            # Items: (label, underline, command, max_role)
+            # max_role: maximum role that can see this item (0 = App Admin only, 3 = Lab Admin and above)
+            items = ((_("Actions"), 0, self.on_actions, ROLE_APP_ADMIN),
+                     (_("Controls"), 0, self.on_controls, ROLE_APP_ADMIN),
+                     (_("Equipments"), 0, self.on_equipments, ROLE_APP_ADMIN),
+                     (_("Methods"), 0, self.on_methods, ROLE_APP_ADMIN),
+                     (_("Organizations"), 0, self.on_organizations, ROLE_APP_ADMIN),
+                     (_("Samples"), 0, self.on_samples, ROLE_APP_ADMIN),
+                     (_("Suppliers"), 0, self.on_suppliers, ROLE_APP_ADMIN),
+                     (_("Tests"), 0, self.on_tests, ROLE_APP_ADMIN),
+                     (_("Units"), 0, self.on_units, ROLE_APP_ADMIN),
+                     (_("Users"), 0, self.on_users, ROLE_LAB_ADMIN),)
 
             for i in sorted(items, key=operator.itemgetter(0)):
-                m_adm.add_command(label=i[0], underline=i[1], command=i[2])
+                if role <= i[3]:  # User role must be <= max_role to see item
+                    m_adm.add_command(label=i[0], underline=i[1], command=i[2])
 
         # === ABOUT MENU ===
         m_about.add_command(label=_("About"), underline=0, command=self.on_about)
@@ -1818,9 +1821,9 @@ class Main(tk.Toplevel):
         views.workstation_test_methods.UI(self).on_open()
 
     def on_categories(self):
-        # Admin and Superuser can manage categories
+        # App Admin, Country/Regional/Lab Admin can manage categories
         role = self.engine.log_user.get("role", 99)
-        if role > 1:
+        if role > 3:  # Only role 0-3 can manage categories
             msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
@@ -1922,11 +1925,13 @@ class Main(tk.Toplevel):
         views.actions.UI(self).on_open()
 
     def on_users(self,):
-        if not self.engine.is_admin():
+        # App Admin, Country/Regional/Lab Admin can manage users
+        role = self.engine.log_user.get("role", 99)
+        if role > 3:  # Only role 0-3 can manage users
             msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return
-        
+
         views.users.UI(self).on_open()
 
     def on_zscore(self,):

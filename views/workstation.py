@@ -263,7 +263,6 @@ class UI(ChildView):
             self.device_id.get(),
             self.description.get(),
             self.serial.get(),
-            section_org_id,  # section_id (legacy, now same as org_id)
             section_org_id,  # org_id (organizations FK)
             self.rank.get(),
             self.status.get(),

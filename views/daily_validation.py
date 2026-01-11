@@ -699,10 +699,12 @@ class UI(ParentView):
 
         tags = self.tree.item(item_id, "tags")
         if TAG_RESULT not in tags:
+            # Double-click on workstation - just expand/collapse
             return
 
         row = self.dict_results.get(item_id)
         if not row:
+            messagebox.showwarning(_("Error"), _("Result data not found."))
             return
 
         # Calculate z-score
@@ -718,6 +720,7 @@ class UI(ParentView):
 
         # If OK and can validate: validate directly
         if not self.can_validate:
+            messagebox.showinfo(_("Validation"), _("You don't have permission to validate."))
             return
 
         if row["validated"] == 1:
@@ -738,6 +741,7 @@ class UI(ParentView):
             """
             batch_row = self.engine.read(False, sql_batch, (batch_id,))
             if not batch_row:
+                messagebox.showwarning(_("Error"), _("Batch not found: {0}").format(batch_id))
                 return
 
             test_method_id = batch_row["test_method_id"]
@@ -747,6 +751,7 @@ class UI(ParentView):
                 "test_methods", "test_method_id", test_method_id
             )
             if not selected_test_method:
+                messagebox.showwarning(_("Error"), _("Test method not found: {0}").format(test_method_id))
                 return
 
             # Get workstation details (legacy tuple format)
@@ -756,6 +761,7 @@ class UI(ParentView):
             """
             ws_row = self.engine.read(False, sql_ws, (workstation_id,))
             if not ws_row:
+                messagebox.showwarning(_("Error"), _("Workstation not found: {0}").format(workstation_id))
                 return
 
             # Convert to tuple for plots.py compatibility
@@ -771,7 +777,8 @@ class UI(ParentView):
             observations = self.engine.get_observations() or 30
 
             # Open plots window
-            views.plots.UI(self).on_open(
+            plots_window = views.plots.UI(self)
+            plots_window.on_open(
                 selected_test_method,
                 selected_workstation,
                 int(observations)
@@ -782,6 +789,7 @@ class UI(ParentView):
                 "_show_lj_chart",
                 e, type(e), sys.modules[__name__]
             )
+            messagebox.showerror(_("Error"), f"{_('Failed to open chart:')}\n{e}")
 
     def _on_approve_workstation(self):
         """Approve selected workstation."""
@@ -892,6 +900,13 @@ class UI(ParentView):
         try:
             user_id = self.engine.log_user.get("user_id")
 
+            # Get ws_id BEFORE notify (which clears dict_results via _on_result_changed)
+            row = self.dict_results.get(item_id)
+            if not row:
+                messagebox.showerror(_("Error"), _("Result data not found."))
+                return
+            ws_id = row["workstation_id"]
+
             sql = """
                 UPDATE results
                 SET validated = 1,
@@ -906,27 +921,13 @@ class UI(ParentView):
                 messagebox.showerror(_("Error"), msg)
                 return
 
-            # Notify observers
-            self.engine.notify("result_changed", result_id)
-
-            # Update tree display
-            row = self.dict_results[item_id]
-            row["validated"] = 1
-            ws_id = row["workstation_id"]
-
-            color = self.engine.get_rgb(200, 255, 200)
-            values = list(self.tree.item(item_id, "values"))
-            # Show validator name
-            validator_name = f"{self.engine.log_user.get('first_name', '')} {self.engine.log_user.get('last_name', '')}".strip()
-            values[4] = f"✓ {validator_name}" if validator_name else "✓"
-            self.tree.item(item_id, values=values, tags=(TAG_RESULT, color))
-            self.tree.tag_configure(color, background=color)
-
             # Check if all results are now validated → auto-approve WS
+            # (must be done before notify, which reloads data)
             self._check_auto_approve_workstation(ws_id, user_id)
 
-            # Refresh parent workstation counts (preserve expansion)
-            self._load_data(preserve_expansion=True)
+            # Notify observers - this calls _on_result_changed which reloads data
+            # No manual tree update needed as _load_data is called by the observer
+            self.engine.notify("result_changed", result_id)
 
         except Exception as e:
             self.engine.on_log(

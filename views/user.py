@@ -14,6 +14,12 @@ from tkinter import messagebox
 from i18n import _
 from views.child_view import ChildView
 
+# Role constants
+ROLE_APP_ADMIN = 0
+ROLE_COUNTRY_ADMIN = 1
+ROLE_REGIONAL_ADMIN = 2
+ROLE_LAB_ADMIN = 3
+
 
 class UI(ChildView):
     def __init__(self, parent, index=None):
@@ -181,15 +187,25 @@ class UI(ChildView):
             - self.parent.selected_item is expected to be a hybrid dict
               (index + column names) returned by engine.get_selected.
         """
+        # Get logged-in user's role to enforce restrictions
+        self.logged_user_role = self.engine.log_user.get("role", 5)
+        self.logged_user_org_id = self.engine.log_user.get("org_id")
+
+        # Restrict role spinbox: user can only create roles >= their own role
+        min_role = max(self.logged_user_role, ROLE_APP_ADMIN)
+        self.spnRole.config(from_=min_role)
+
         if self.index is not None:
             # UPDATE mode - load data first, then orgs based on role
             self.title(_("Update User"))
             self.selected_item = self.parent.selected_item
             self._set_values()
         else:
-            # INSERT mode - default to role 4 (Superuser)
+            # INSERT mode - default to appropriate role based on logged user
             self.title(_("Add User"))
-            self.role.set(4)
+            # Lab Admin creates Superusers by default
+            default_role = max(4, min_role)  # Superuser or higher
+            self.role.set(default_role)
             self.status.set(1)
             self._load_orgs()
             self._update_role_hint()
@@ -227,21 +243,13 @@ class UI(ChildView):
             return ["lab"]
 
     def _load_orgs(self):
-        """Load organizations hierarchy into the combobox, filtered by role."""
+        """
+        Load organizations hierarchy into the combobox, filtered by:
+        1. The role being assigned (determines allowed org_types)
+        2. The logged-in user's role and scope (restricts visible orgs)
+        """
         role = self.role.get()
         allowed_types = self._get_allowed_org_types(role)
-
-        # Fetch all active organizations
-        sql = """
-            SELECT org_id, parent_id, org_type, description
-            FROM organizations
-            WHERE status = 1
-            ORDER BY org_type, description
-        """
-        rows = self.engine.read(True, sql, ()) or []
-
-        # Build parent lookup for path generation
-        org_dict = {row["org_id"]: row for row in rows}
 
         # Build display names with hierarchy path
         self.dict_orgs = {}
@@ -254,6 +262,55 @@ class UI(ChildView):
             self.cbOrg["values"] = values
             self.cbOrg.current(0)
             return
+
+        # Fetch organizations based on logged-in user's scope
+        logged_role = getattr(self, "logged_user_role", 0)
+        logged_org_id = getattr(self, "logged_user_org_id", None)
+
+        if logged_role == ROLE_APP_ADMIN:
+            # App Admin: all organizations
+            sql = """
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations
+                WHERE status = 1
+                ORDER BY org_type, description
+            """
+            args = ()
+        elif logged_role >= ROLE_LAB_ADMIN:
+            # Lab Admin and below: only their own lab
+            sql = """
+                SELECT org_id, parent_id, org_type, description
+                FROM organizations
+                WHERE status = 1 AND org_id = ?
+                ORDER BY org_type, description
+            """
+            args = (logged_org_id,)
+        else:
+            # Country/Regional Admin: organizations in their scope
+            sql = """
+                WITH RECURSIVE org_tree AS (
+                    SELECT org_id, parent_id, org_type, description
+                    FROM organizations WHERE org_id = ?
+                    UNION ALL
+                    SELECT o.org_id, o.parent_id, o.org_type, o.description
+                    FROM organizations o
+                    JOIN org_tree t ON o.parent_id = t.org_id
+                    WHERE o.status = 1
+                )
+                SELECT * FROM org_tree
+                ORDER BY org_type, description
+            """
+            args = (logged_org_id,)
+
+        rows = self.engine.read(True, sql, args) or []
+
+        # Build parent lookup for path generation (need all orgs for path)
+        all_orgs_sql = """
+            SELECT org_id, parent_id, org_type, description
+            FROM organizations WHERE status = 1
+        """
+        all_rows = self.engine.read(True, all_orgs_sql, ()) or []
+        org_dict = {row["org_id"]: row for row in all_rows}
 
         def get_path(org_id):
             """Build full path for an organization."""
@@ -269,22 +326,11 @@ class UI(ChildView):
         filtered_rows = [r for r in rows if r["org_type"] in allowed_types]
         sorted_rows = sorted(filtered_rows, key=lambda r: (type_order.get(r["org_type"], 99), r["description"]))
 
-        # Type labels for display
-        type_labels = {
-            "country": _("Country"),
-            "region": _("Region"),
-            "site": _("Site"),
-            "lab": _("Lab"),
-        }
-
         idx = 0
         for row in sorted_rows:
             org_id = row["org_id"]
-            org_type = row["org_type"]
             path = get_path(org_id)
-            type_label = type_labels.get(org_type, org_type)
-            display = f"{path}"
-            values.append(display)
+            values.append(path)
             self.dict_orgs[idx] = org_id
             idx += 1
 

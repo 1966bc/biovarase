@@ -21,10 +21,14 @@ Note for future Claude instances working on this codebase:
 - Migration 013 added `org_id` to all tenant-scoped tables (results, batches, test_methods, workstations, categories)
 - All views now include `org_id` in INSERT/UPDATE operations via `_get_values()` or explicit SQL
 - Observer pattern implemented: `daily_validation` auto-refreshes when results change (`engine.notify("result_changed")`)
-- Window management: utility windows (daily_validation, bland_altman, result, batch) use `-topmost` attribute
+- Window management: utility windows (daily_validation, bland_altman, result, batch, plots) use `-topmost` attribute
+- **Bug fix:** `notify()` is synchronous - extract needed data BEFORE calling notify if the callback modifies state (e.g., `dict_results.clear()`)
+- **Role-based access control (RBAC):** All list views (users, batches, workstations, categories) now filter data by user's org_id and role
+- **User management:** Lab Admin (role 3) can now manage users in their lab via Admin → Users menu
+- **Schema cleanup:** Removed legacy `lab_id`/`section_id` fields from `_get_values()` methods - only `org_id` is used
 
 **Testing:**
-- Run tests with venv: `/home/bc/Documents/projects/biovarase/venv/bin/pytest tests/ -v`
+- Run tests with venv: `./venv/bin/pytest tests/ -v`
 - 721 tests passing, 11 skipped (empty test DB tables)
 
 **Key patterns to follow:**
@@ -180,6 +184,17 @@ self.engine.unsubscribe("batch_changed", self.on_batch_changed)  # in on_cancel(
 ```
 
 Events: `batch_changed`, `result_changed`, `section_changed`, `supplier_changed`, `equipment_changed`, `test_method_changed`
+
+**IMPORTANT:** `notify()` is **synchronous** - callbacks execute immediately. If a callback clears dictionaries or reloads data, extract any needed values BEFORE calling notify:
+```python
+# WRONG - dict_results cleared by _on_result_changed during notify
+self.engine.notify("result_changed", result_id)
+ws_id = self.dict_results[item_id]["workstation_id"]  # KeyError!
+
+# CORRECT - extract before notify
+ws_id = self.dict_results[item_id]["workstation_id"]
+self.engine.notify("result_changed", result_id)
+```
 
 ### GUI Windows
 
@@ -362,12 +377,18 @@ Role 6: VIEWER
 
 | Menu | Role 0 | Role 1-3 | Role 4-5 | Role 6 |
 |------|--------|----------|----------|--------|
-| Admin | ✅ | ❌ | ❌ | ❌ |
+| Admin | ✅ (all items) | ✅ (Users only) | ❌ | ❌ |
 | Edit | ✅ | ✅ | ✅ | ❌ |
 | Imports | ✅ | ✅ | ✅ | ❌ |
 | QC | ✅ | ✅ | ✅ | ✅ |
 | Exports | ✅ | ✅ | ✅ | ✅ |
 | Documents | ✅ | ✅ | ✅ | ✅ |
+
+**Admin Menu Items by Role:**
+| Item | Role 0 | Role 1-3 |
+|------|--------|----------|
+| Actions, Controls, Equipments, Methods, Organizations, Samples, Suppliers, Tests, Units | ✅ | ❌ |
+| Users | ✅ | ✅ |
 
 ### Data Governance
 
@@ -538,6 +559,9 @@ mysql -u root -p biovarase < migrations/016_create_admin_user.sql
 
 # Site org_type (physical hospital locations)
 mysql -u root -p biovarase < migrations/017_add_site_org_type.sql
+
+# English actions for international peer lab comparison
+mysql -u root -p biovarase < migrations/018_actions_to_english.sql
 ```
 
 ### Production Migration Guide (008-011)

@@ -71,7 +71,7 @@ def db_connection():
 @pytest.fixture
 def cursor(db_connection):
     """Create a dictionary cursor for each test."""
-    cur = db_connection.cursor(dictionary=True)
+    cur = db_connection.cursor(dictionary=True, buffered=True)
     yield cur
     cur.close()
 
@@ -91,7 +91,7 @@ def create_test_controller(conn):
 
         def read(self, fetch_all, sql, args=None):
             """Execute SELECT query."""
-            cur = self.conn.cursor(dictionary=True)
+            cur = self.conn.cursor(dictionary=True, buffered=True)
             try:
                 cur.execute(sql, args or ())
                 if fetch_all:
@@ -371,7 +371,9 @@ class TestGetSeries:
         )
 
         assert isinstance(result, list)
-        assert all(isinstance(x, float) for x in result)
+        # Results can be float or Decimal from database
+        from decimal import Decimal
+        assert all(isinstance(x, (float, Decimal)) for x in result)
 
     def test_empty_series_returns_empty_list(self, controller_instance):
         """Returns empty list for non-existent batch."""

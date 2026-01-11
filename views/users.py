@@ -15,18 +15,11 @@ from views.parent_view import ParentView
 import views.user as ui
 
 
-SQL = """
-    SELECT
-        u.user_id,
-        u.last_name,
-        u.first_name,
-        u.nickname,
-        u.status,
-        o.description AS lab_name
-    FROM users u
-    LEFT JOIN organizations o ON u.org_id = o.org_id
-    ORDER BY u.last_name ASC, u.first_name ASC
-"""
+# Role constants
+ROLE_APP_ADMIN = 0
+ROLE_COUNTRY_ADMIN = 1
+ROLE_REGIONAL_ADMIN = 2
+ROLE_LAB_ADMIN = 3
 
 
 class UI(ParentView):
@@ -123,16 +116,77 @@ class UI(ParentView):
     # ------------------------------------------------------------------ LOAD DATA
     def _load_items(self):
         """
-        Load all users into the treeview.
+        Load users into the treeview filtered by role.
 
         Behavior:
+            - Role 0 (App Admin): sees all users
+            - Role 1-2 (Country/Regional Admin): sees users in their scope
+            - Role >= 3 (Lab Admin and below): sees only users from their lab
             - Inactive users (status=0): grayed out background
         """
         self.engine.clear_treeview(self.lstItems)
         self.dict_items.clear()
         self.selected_item = None
 
-        rows = self.engine.read(True, SQL, ()) or []
+        role = self.engine.log_user.get("role", 5)
+        user_org_id = self.engine.log_user.get("org_id")
+
+        if role == ROLE_APP_ADMIN:
+            # App Admin: all users
+            sql = """
+                SELECT
+                    u.user_id,
+                    u.last_name,
+                    u.first_name,
+                    u.nickname,
+                    u.status,
+                    o.description AS lab_name
+                FROM users u
+                LEFT JOIN organizations o ON u.org_id = o.org_id
+                ORDER BY o.description, u.last_name ASC, u.first_name ASC
+            """
+            args = ()
+        elif role >= ROLE_LAB_ADMIN:
+            # Lab Admin and below: only users in their lab
+            sql = """
+                SELECT
+                    u.user_id,
+                    u.last_name,
+                    u.first_name,
+                    u.nickname,
+                    u.status,
+                    o.description AS lab_name
+                FROM users u
+                LEFT JOIN organizations o ON u.org_id = o.org_id
+                WHERE u.org_id = ?
+                ORDER BY u.last_name ASC, u.first_name ASC
+            """
+            args = (user_org_id,)
+        else:
+            # Country/Regional Admin: users in their hierarchy scope
+            sql = """
+                WITH RECURSIVE org_tree AS (
+                    SELECT org_id FROM organizations WHERE org_id = ?
+                    UNION ALL
+                    SELECT o.org_id
+                    FROM organizations o
+                    JOIN org_tree t ON o.parent_id = t.org_id
+                )
+                SELECT
+                    u.user_id,
+                    u.last_name,
+                    u.first_name,
+                    u.nickname,
+                    u.status,
+                    o.description AS lab_name
+                FROM users u
+                LEFT JOIN organizations o ON u.org_id = o.org_id
+                WHERE u.org_id IN (SELECT org_id FROM org_tree)
+                ORDER BY o.description, u.last_name ASC, u.first_name ASC
+            """
+            args = (user_org_id,)
+
+        rows = self.engine.read(True, sql, args) or []
 
         for row in rows:
             user_id = int(row["user_id"])

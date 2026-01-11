@@ -506,11 +506,12 @@ class Controller:
 
         return None
 
-    def get_new_password(self) -> bytes:
+    def get_new_password(self) -> str:
+        """Generate a bcrypt hash for default password 'pass'."""
         new_password = b'pass'
         # Generate a salt and hash the password
         hashed_password = bcrypt.hashpw(new_password, bcrypt.gensalt())
-        return hashed_password
+        return hashed_password.decode('utf-8')
 
     def get_company_data(self) -> Optional[Dict[str, Any]]:
         """

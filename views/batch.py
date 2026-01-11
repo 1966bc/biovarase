@@ -416,11 +416,9 @@ class UI(ChildView):
         except Exception as e:
             raise ValueError(f"Invalid numeric value: {e}")
 
-        lab_id = getattr(self, "lab_id", 0)
-        org_id = lab_id  # org_id is the same as lab_id (organizations table)
+        org_id = getattr(self, "lab_id", None)  # org_id from lab context
 
         return [
-            lab_id,                          # lab_id
             org_id,                          # org_id (organizations FK)
             control_id,                      # control_id
             self.selected_test_method[0],    # test_method_id
