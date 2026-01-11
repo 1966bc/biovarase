@@ -63,8 +63,6 @@ import views.equipments
 import views.workstations
 import views.controls
 import views.suppliers
-import views.labs
-import views.sections
 import views.batch
 import views.actions
 import views.notes
@@ -82,7 +80,6 @@ import views.analitycal_goals
 import views.tea
 import views.analytical
 import views.change_password
-import views.sites
 import views.organizations
 import views.importer
 import views.zscore
@@ -351,12 +348,9 @@ class Main(tk.Toplevel):
             items = ((_("Actions"), 0, self.on_actions),
                      (_("Controls"), 0, self.on_controls),
                      (_("Equipments"), 0, self.on_equipments),
-                     (_("Labs"), 0, self.on_labs),
                      (_("Methods"), 0, self.on_methods),
                      (_("Organizations"), 0, self.on_organizations),
                      (_("Samples"), 0, self.on_samples),
-                     (_("Sections"), 0, self.on_sections),
-                     (_("Sites"), 0, self.on_sites),
                      (_("Suppliers"), 0, self.on_suppliers),
                      (_("Tests"), 0, self.on_tests),
                      (_("Units"), 0, self.on_units),
@@ -412,24 +406,25 @@ class Main(tk.Toplevel):
 
         frm_data = ttk.Frame(self.frm_main, style="App.TFrame")
 
-        frm_lists = ttk.Frame(frm_data, style="App.TFrame")
+        # Left panel - use grid for fixed width control
+        frm_lists = ttk.Frame(frm_data, style="App.TFrame", width=240)
 
         ttk.Label(frm_lists, text=_('Categories')).pack(side=tk.TOP, fill=tk.X, expand=0)
 
-        self.cbCategories = ttk.Combobox(frm_lists, style="App.TCombobox", state="readonly")
+        self.cbCategories = ttk.Combobox(frm_lists, style="App.TCombobox", state="readonly", width=28)
         self.cbCategories.bind("<<ComboboxSelected>>", self.on_selected_category)
         self.cbCategories.pack(side=tk.TOP, fill=tk.X, pady=5, expand=0)
 
         ttk.Label(frm_lists, text='Tests').pack(side=tk.TOP, fill=tk.X, expand=0)
-        self.cbTests = ttk.Combobox(frm_lists, style="App.TCombobox")
+        self.cbTests = ttk.Combobox(frm_lists, style="App.TCombobox", width=28)
         self.cbTests.bind("<<ComboboxSelected>>", self.on_selected_test)
         self.cbTests.pack(side=tk.TOP, fill=tk.X, pady=5, expand=0)
 
         w = ttk.LabelFrame(frm_lists, text=_('Workstation Data Source'))
         cols_ws = ("description", "serial")
         self.lstWorkstations = ttk.Treeview(w, columns=cols_ws, show="headings", height=4)
-        self.lstWorkstations.column("description", width=100, minwidth=80, anchor=tk.W)
-        self.lstWorkstations.column("serial", width=80, minwidth=60, anchor=tk.W)
+        self.lstWorkstations.column("description", width=120, minwidth=60, anchor=tk.W)
+        self.lstWorkstations.column("serial", width=80, minwidth=40, anchor=tk.W)
         self.lstWorkstations.heading("description", text=_("Workstation"), anchor=tk.W)
         self.lstWorkstations.heading("serial", text=_("Serial"), anchor=tk.W)
         sb_ws = ttk.Scrollbar(w, orient=tk.VERTICAL, command=self.lstWorkstations.yview)
@@ -442,10 +437,10 @@ class Main(tk.Toplevel):
         w = ttk.LabelFrame(frm_lists, text=_("Batches"))
         cols_batch = ("level", "lot", "expiration")
         self.lstBatches = ttk.Treeview(w, columns=cols_batch, show="headings", height=4)
-        self.lstBatches.column("level", width=30, minwidth=25, anchor=tk.W)
-        self.lstBatches.column("lot", width=70, minwidth=60, anchor=tk.W)
-        self.lstBatches.column("expiration", width=80, minwidth=70, anchor=tk.W)
-        self.lstBatches.heading("level", text=_("Lv"), anchor=tk.W)
+        self.lstBatches.column("level", width=30, minwidth=20, anchor=tk.W)
+        self.lstBatches.column("lot", width=90, minwidth=50, anchor=tk.W)
+        self.lstBatches.column("expiration", width=80, minwidth=50, anchor=tk.W)
+        self.lstBatches.heading("level", text=_("Liv"), anchor=tk.W)
         self.lstBatches.heading("lot", text=_("Lot"), anchor=tk.W)
         self.lstBatches.heading("expiration", text=_("Expiration"), anchor=tk.W)
         self.lstBatches.tag_configure("expired", background="red")
@@ -461,64 +456,73 @@ class Main(tk.Toplevel):
         frm_stats = ttk.Frame(frm_lists, style="App.TFrame")
 
         # --- Column 1: Batch data (from lot) ---
-        frm_batch = ttk.LabelFrame(frm_stats, text=_("Batch"), labelanchor="n")
-        frm_batch.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(0, 2))
+        frm_batch = ttk.LabelFrame(frm_stats, text=_("Batch"), labelanchor="n", width=75)
+        frm_batch.pack(side=tk.LEFT, fill=tk.Y, expand=0, padx=(0, 2))
 
-        ttk.Label(frm_batch, text=_("Target"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch, text=_("Target"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_batch,
                   style="Target.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.target).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_batch, text=_("SD"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch, text=_("SD"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_batch,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.sd).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_batch, text=_("TE%"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_batch, text=_("TE%"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_batch,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.te).pack(fill=tk.X, padx=4, pady=1)
 
         # --- Column 2: Computed statistics ---
-        frm_calc = ttk.LabelFrame(frm_stats, text=_("Computed"), labelanchor="n")
-        frm_calc.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=2)
+        frm_calc = ttk.LabelFrame(frm_stats, text=_("Computed"), labelanchor="n", width=75)
+        frm_calc.pack(side=tk.LEFT, fill=tk.Y, expand=0, padx=2)
 
-        ttk.Label(frm_calc, text=_("Mean"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc, text=_("Mean"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_calc,
                   style="Average.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.average).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_calc, text=_("sd"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc, text=_("sd"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_calc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.calculated_sd).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_calc, text=_("CV%"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_calc, text=_("CV%"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_calc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.cva).pack(fill=tk.X, padx=4, pady=1)
 
         # --- Column 3: QC evaluation ---
-        frm_qc = ttk.LabelFrame(frm_stats, text=_("QC"), labelanchor="n")
-        frm_qc.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(2, 0))
+        frm_qc = ttk.LabelFrame(frm_stats, text=_("QC"), labelanchor="n", width=75)
+        frm_qc.pack(side=tk.LEFT, fill=tk.Y, expand=0, padx=(2, 0))
 
-        ttk.Label(frm_qc, text=_("Bias%"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc, text=_("Bias%"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_qc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.bias).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_qc, text=_("U"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc, text=_("U"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         ttk.Label(frm_qc,
                   style="black_and_white.TLabel",
                   anchor=tk.CENTER,
+                  width=8,
                   textvariable=self.uncertainty).pack(fill=tk.X, padx=4, pady=1)
-        ttk.Label(frm_qc, text=_("Westgard"), anchor=tk.CENTER).pack(fill=tk.X)
+        ttk.Label(frm_qc, text=_("Westgard"), anchor=tk.CENTER, width=8).pack(fill=tk.X)
         self.lblWestgard = ttk.Label(
             frm_qc,
             style="black_and_white.TLabel",
             anchor=tk.CENTER,
+            width=8,
             textvariable=self.westgard,
         )
         self.lblWestgard.pack(fill=tk.X, padx=4, pady=1)
@@ -528,9 +532,9 @@ class Main(tk.Toplevel):
         cols = ("date", "result")
         self.lstResults = ttk.Treeview(w, columns=cols, show="headings", height=8)
         self.lstResults.heading("date", text=_("Date"), anchor=tk.W)
-        self.lstResults.heading("result", text=_("Result"), anchor=tk.E)
+        self.lstResults.heading("result", text=_("Value"), anchor=tk.CENTER)
         self.lstResults.column("date", width=90, anchor=tk.W)
-        self.lstResults.column("result", width=80, anchor=tk.E)
+        self.lstResults.column("result", width=80, anchor=tk.CENTER)
         # Tags for row colors
         self.lstResults.tag_configure("disabled", foreground="gray")
         self.lstResults.tag_configure("violation_3s", foreground="red")
@@ -546,7 +550,7 @@ class Main(tk.Toplevel):
 
         # Create graph!
         frm_graphs = ttk.Frame(frm_data, style="App.TFrame")
-        frm_graphs.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1,  padx=5, pady=5)
+        frm_graphs.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 
         # Una sola colonna, due righe:
         # row 0 = Levey–Jennings (si espande)
@@ -583,10 +587,14 @@ class Main(tk.Toplevel):
             pady=(4, 0),
         )
 
+        # Use grid for frm_data to fix left panel width
         frm_data.pack(fill=tk.BOTH, expand=1)
-        frm_lists.pack(side=tk.LEFT, fill=tk.Y, expand=0)
-        frm_stats.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        frm_graphs.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
+        frm_data.columnconfigure(0, weight=0, minsize=250)  # Left column fixed width
+        frm_data.columnconfigure(1, weight=1)  # Right column expands
+        frm_data.rowconfigure(0, weight=1)
+
+        frm_lists.grid(row=0, column=0, sticky="ns", padx=(0, 5))
+        frm_stats.pack(side=tk.TOP, expand=0, anchor=tk.CENTER)
 
         self.frm_main.pack(fill=tk.BOTH, expand=1)
 
@@ -1878,22 +1886,6 @@ class Main(tk.Toplevel):
         else:
             views.suppliers.UI(self).on_open()
 
-    def on_labs(self):
-        if not self.engine.is_admin():
-            msg = self.engine.user_not_enable
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        views.labs.UI(self).on_open()
-
-    def on_sites(self,):
-        if not self.engine.is_admin():
-            msg = self.engine.user_not_enable
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        views.sites.UI(self).on_open()
-
     def on_organizations(self,):
         """Open Organizations management window (App Admin only)."""
         if not self.engine.is_admin():
@@ -1902,14 +1894,6 @@ class Main(tk.Toplevel):
             return
 
         views.organizations.UI(self).on_open()
-
-    def on_sections(self,):
-        if not self.engine.is_admin():
-            msg = self.engine.user_not_enable
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-        
-        views.sections.UI(self).on_open()
 
     def on_observations(self,):
         views.observations.UI(self).on_open()
@@ -2613,7 +2597,7 @@ class Main(tk.Toplevel):
             # Get lab name for confirmation message
             lab_row = self.engine.read(
                 False,
-                "SELECT description FROM labs WHERE lab_id = ?",
+                "SELECT description FROM organizations WHERE org_id = ?",
                 (selected_lab_id,)
             )
             lab_name = lab_row["description"] if lab_row else str(selected_lab_id)
