@@ -608,7 +608,7 @@ class Main(tk.Toplevel):
 
         frm_status_bar = ttk.Frame(self.frm_main,  style="StatusBar.TFrame",)
 
-        # Role-based color for user display
+        # Role-based color indicator
         role = self.engine.log_user.get("role", ROLE_VIEWER)
         role_colors = {
             ROLE_APP_ADMIN: "#FF0000",      # Red - God mode
@@ -619,15 +619,25 @@ class Main(tk.Toplevel):
             ROLE_TECHNICIAN: "#666666",      # Gray - Technician
             ROLE_VIEWER: "#999999",          # Light Gray - Viewer
         }
-        user_color = role_colors.get(role, "#000000")
+        role_color = role_colors.get(role, "#000000")
+        bg_color = self.engine.get_rgb(240, 240, 237)
 
+        # Colored dot indicator
+        tk.Label(
+            frm_status_bar,
+            text="●",
+            fg=role_color,
+            bg=bg_color,
+            font=("TkDefaultFont", 14)
+        ).pack(side=tk.LEFT, padx=(4, 2))
+
+        # Username label
         self.status = tk.Label(
             frm_status_bar,
             textvariable=self.status_bar_text,
             anchor=tk.W,
-            fg=user_color,
-            bg=self.engine.get_rgb(240, 240, 237),
-            font=("TkDefaultFont", 10, "bold")
+            bg=bg_color,
+            font=("TkDefaultFont", 10)
         )
 
         ttk.Label(frm_status_bar, font=f,
