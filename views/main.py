@@ -137,6 +137,7 @@ class Main(tk.Toplevel):
         self.expiration = tk.StringVar()
         self.te = tk.DoubleVar()
         self.ddof = tk.IntVar()
+        self.show_expired = tk.IntVar()
         self.status_bar_site_description = tk.StringVar()
         
         # selection state (all dictionaries, not tuples)
@@ -591,6 +592,12 @@ class Main(tk.Toplevel):
                         variable=self.ddof,
                         command=self.on_ddof).pack(side=tk.RIGHT, fill=tk.X)
 
+        ttk.Checkbutton(frm_status_bar,
+                        text=_("Show Expired"),
+                        onvalue=1,
+                        offvalue=0,
+                        variable=self.show_expired,
+                        command=self.on_show_expired).pack(side=tk.RIGHT, fill=tk.X)
 
         self.status.pack(side=tk.LEFT, fill=tk.X, expand=1)
 
@@ -608,6 +615,7 @@ class Main(tk.Toplevel):
 
         self.status_bar_site_description.set(self.get_status_bar_site_description(company))
         self.ddof.set(self.engine.get_ddof())
+        self.show_expired.set(self.engine.get_show_expired_batches())
         self.observations.set(self.engine.get_observations())
         self.set_categories()
         self.set_zscore()
@@ -1048,6 +1056,7 @@ class Main(tk.Toplevel):
         self.engine.clear_treeview(self.lstBatches)
         self.dict_batches = {}
 
+        # Base query
         sql = """
             SELECT batches.batch_id,
                    batches.description,
@@ -1060,6 +1069,15 @@ class Main(tk.Toplevel):
             WHERE batches.test_method_id  = ?
               AND batches.workstation_id  = ?
               AND batches.status          = 1
+        """
+
+        # Filter expired batches unless show_expired is checked
+        if not self.show_expired.get():
+            sql += """
+              AND (batches.expiration IS NULL OR batches.expiration >= CURDATE())
+            """
+
+        sql += """
             ORDER BY batches.rank ASC;
         """
 
@@ -1992,6 +2010,20 @@ class Main(tk.Toplevel):
             msg = _("Attention please.\nNo batch selected.")
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
+    def on_show_expired(self):
+        """Toggle visibility of expired batches and refresh list."""
+        if self.show_expired.get():
+            self.engine.set_show_expired_batches(1)
+        else:
+            self.engine.set_show_expired_batches(0)
+
+        self.show_expired.set(self.engine.get_show_expired_batches())
+
+        # Refresh batch list with new filter
+        try:
+            self.set_batches()
+        except AttributeError:
+            pass  # No test method/workstation selected
 
     def on_insert_demo_result(self, evt: Optional[tk.Event] = None) -> None:
 

@@ -723,6 +723,38 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         type(e),
                         sys.modules[__name__])
 
+    def get_show_expired_batches(self) -> int:
+        """
+        Read show_expired_batches preference from configuration.
+
+        Returns:
+            int: 1 to show expired batches, 0 to hide them.
+                 Defaults to 0 (hide expired).
+        """
+        try:
+            with open(self.get_file("show_expired_batches"), "r") as f:
+                v = f.readline().strip()
+                return int(v)
+        except (FileNotFoundError, IOError, ValueError):
+            return 0  # default: hide expired batches
+
+    def set_show_expired_batches(self, value: int) -> None:
+        """
+        Save show_expired_batches preference to configuration file.
+
+        Args:
+            value: 1 to show expired, 0 to hide
+        """
+        try:
+            path = self.get_file('show_expired_batches')
+            with open(path, 'w') as f:
+                f.write(str(value))
+        except (FileNotFoundError, IOError) as e:
+            self.on_log(inspect.stack()[0][3],
+                        e,
+                        type(e),
+                        sys.modules[__name__])
+
     def get_section_id(self):
         """
         Return current section_id from context.

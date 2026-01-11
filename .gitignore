@@ -14,6 +14,7 @@ date_format
 remember_batch
 autologin
 correlation_coefficient
+show_expired_batches
 
 # Logs
 log.txt
