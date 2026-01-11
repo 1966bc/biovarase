@@ -211,12 +211,13 @@ class UI(ChildView):
         values.append(_("(Global - App Admin)"))
         self.dict_orgs[0] = None  # NULL org_id
 
-        # Type order and prefixes
+        # Type order and prefixes for visual hierarchy
         type_prefix = {
             "country": "",
             "region": "  ",
-            "lab": "    ",
-            "section": "      ",
+            "site": "    ",
+            "lab": "      ",
+            "section": "        ",
         }
 
         # Sort by hierarchy: country first, then region, site, lab, section
