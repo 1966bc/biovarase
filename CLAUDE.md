@@ -293,6 +293,59 @@ SELECT * FROM tree;
 - `org_id = NULL` → App Admin (sees everything)
 - `org_id = X` → User sees org X and all its descendants
 
+**Visual Role Reference:**
+
+```
+Role 0: APP ADMIN (God mode)
+   ├── Sees ALL organizations worldwide
+   ├── Manages global master data (tests, controls, units, etc.)
+   ├── Full Admin menu access
+   └── org_id = NULL (no restrictions)
+
+Role 1: COUNTRY ADMIN (e.g., Italia)
+   ├── Sees all regions/labs in their country
+   ├── Can create Regional Admins
+   └── org_id = country's org_id
+
+Role 2: REGIONAL ADMIN (e.g., Lazio)
+   ├── Sees all labs/sites in their region
+   ├── Can create Lab Admins
+   └── org_id = region's org_id
+
+Role 3: LAB ADMIN (e.g., Laboratorio Analisi)
+   ├── Manages ONE laboratory
+   ├── Creates users, workstations, test methods
+   ├── Full Edit menu access
+   └── org_id = lab's org_id
+
+Role 4: SUPERUSER
+   ├── Validates QC results
+   ├── Manages batches
+   ├── NO user management
+   └── org_id = lab's org_id
+
+Role 5: TECHNICIAN
+   ├── Enters QC data
+   ├── NO validation permissions
+   └── org_id = lab's org_id
+
+Role 6: VIEWER
+   ├── Read-only access
+   ├── NO Edit/Import menus
+   └── org_id = lab's org_id
+```
+
+**Menu Visibility by Role:**
+
+| Menu | Role 0 | Role 1-3 | Role 4-5 | Role 6 |
+|------|--------|----------|----------|--------|
+| Admin | ✅ | ❌ | ❌ | ❌ |
+| Edit | ✅ | ✅ | ✅ | ❌ |
+| Imports | ✅ | ✅ | ✅ | ❌ |
+| QC | ✅ | ✅ | ✅ | ✅ |
+| Exports | ✅ | ✅ | ✅ | ✅ |
+| Documents | ✅ | ✅ | ✅ | ✅ |
+
 ### Data Governance
 
 **Global Master Data (App Admin only):**
@@ -304,6 +357,8 @@ SELECT * FROM tree;
 | `samples` | Global | Sample types |
 | `equipments` | Global | Instrument manufacturers/models |
 | `controls` | Global | QC materials (Bio-Rad, Roche, etc.) |
+| `actions` | Global | QC corrective actions (peer lab comparison) |
+| `suppliers` | Global | Control/reagent manufacturers |
 
 **Local Data (Lab Admin can manage):**
 | Table | Scope | Reason |
