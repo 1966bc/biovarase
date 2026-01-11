@@ -362,26 +362,15 @@ class Controller:
             return
 
         # ------------------------- MAPPING -------------------------
+        # Maps table changes to dependent views that need refresh
         mapping = {
             "suppliers": (
-                "sites",
-                "labs",
-                "sections",
+                "organizations",
                 "workstation_test_methods",
                 "test_methods",
             ),
-            "sites": (
-                "labs",
-                "sections",
-                "workstation_test_methods",
-                "test_methods",
-            ),
-            "labs": (
-                "sections",
-                "workstation_test_methods",
-                "test_methods",
-            ),
-            "sections": (
+            "organizations": (
+                "organizations",
                 "workstation_test_methods",
                 "test_methods",
                 "batches",
@@ -406,15 +395,13 @@ class Controller:
 
         # ------------------------- DEFAULT METHODS -------------------------
         refresh_methods = {
-            "sites": "set_values",
-            "labs": "_load_tree",
-            "sections": "_load_tree",
+            "organizations": "_load_tree",
             "workstation_test_methods": "_load_tree",
             "main": "set_batches",
-            "tests": "set_values",                  # lookup sui tests
+            "tests": "set_values",
             "test_methods": "refresh_context_from_section",
             "batches": "_load_tree",
-            "workstations": "refresh_workstations", 
+            "workstations": "refresh_workstations",
         }
 
         targets = mapping.get(table_name, ())

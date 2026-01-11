@@ -149,6 +149,7 @@ class Exporter:
                 equipments.description          AS equipment_description,
                 workstations.description        AS workstation_description,
                 workstations.serial             AS workstation_serial,
+                lab.description                 AS lab_description,
                 section.description             AS section_description
             FROM tests
             INNER JOIN test_methods ON tests.test_id = test_methods.test_id
@@ -157,6 +158,7 @@ class Exporter:
             INNER JOIN workstations ON results.workstation_id = workstations.workstation_id
             INNER JOIN equipments ON workstations.equipment_id = equipments.equipment_id
             INNER JOIN organizations section ON section.org_id = workstations.org_id
+            INNER JOIN organizations lab ON lab.org_id = section.parent_id
             INNER JOIN notes ON results.result_id = notes.result_id
             INNER JOIN actions ON notes.action_id = actions.action_id
             WHERE DATE(results.received) >= ?

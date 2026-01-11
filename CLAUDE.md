@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **Log all exceptions** via `self.on_log()`
 4. **Specific exceptions** - No bare `except:`
 5. **File I/O via Engine** - `self.get_file("filename")` for paths
-6. **Multi-site filtering** - Filter by site_id, lab_id, section_id
+6. **Multi-tenant filtering** - Filter by org_id using organizations table
 
 ### MUST NOT
 - Positional tuple indexing on DB results
@@ -93,7 +93,9 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 - **Logging:** `on_log()`
 
 ### Data Hierarchy
-**Site → Lab → Section → Workstation → Batch → Result**
+**Country → Region → Site → Lab → Section → Workstation → Batch → Result**
+
+All hierarchy levels are stored in the `organizations` table with `org_type` field.
 
 ### Multi-Tenant Architecture
 

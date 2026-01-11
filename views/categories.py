@@ -90,20 +90,19 @@ class UI(ParentView):
         role = self.engine.log_user["role"]
 
         if role == 0:
-            # Admin: all categories (assigned to site labs + unassigned)
+            # Admin: all categories
             sql = """
                 SELECT c.category_id AS pk,
                        c.description,
                        c.status,
                        c.lab_id,
-                       l.description AS lab_name
+                       o.description AS lab_name
                 FROM categories c
-                LEFT JOIN labs l ON l.lab_id = c.lab_id
-                WHERE l.site_id = ? OR c.lab_id IS NULL
+                LEFT JOIN organizations o ON o.org_id = c.lab_id
                 ORDER BY CASE WHEN c.lab_id IS NULL THEN 1 ELSE 0 END,
-                         l.description, c.description
+                         o.description, c.description
             """
-            args = (self.engine.current_ids.get("site_id"),)
+            args = ()
         else:
             # All non-admin users: categories in their lab + unassigned
             sql = """
@@ -111,9 +110,9 @@ class UI(ParentView):
                        c.description,
                        c.status,
                        c.lab_id,
-                       l.description AS lab_name
+                       o.description AS lab_name
                 FROM categories c
-                LEFT JOIN labs l ON l.lab_id = c.lab_id
+                LEFT JOIN organizations o ON o.org_id = c.lab_id
                 WHERE c.lab_id = ? OR c.lab_id IS NULL
                 ORDER BY CASE WHEN c.lab_id IS NULL THEN 1 ELSE 0 END,
                          c.description

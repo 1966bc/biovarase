@@ -5,6 +5,9 @@ Lab Selector Dialog - Select laboratory for admin users.
 Shows a list of available laboratories for admin users (role=0)
 at login. Optionally pre-selects the user's default lab.
 
+For Regional/Country Admins (roles 1-2), shows only labs under
+their assigned organization.
+
 Author: 1966bc (Giuseppe Costanzi)
 License: GNU GPL v3
 """
@@ -17,12 +20,21 @@ from i18n import _
 class LabSelectorDialog(tk.Toplevel):
     """Dialog for selecting a laboratory."""
 
-    def __init__(self, parent, default_lab_id=None):
+    def __init__(self, parent, default_lab_id=None, parent_org_id=None):
+        """
+        Initialize lab selector dialog.
+
+        Args:
+            parent: Parent window
+            default_lab_id: Lab to pre-select (optional)
+            parent_org_id: Filter to labs under this org (for Regional Admins)
+        """
         super().__init__(parent)
         self.parent = parent
         self.engine = parent.engine
         self.selected_lab_id = None
         self.default_lab_id = default_lab_id
+        self.parent_org_id = parent_org_id
 
         self.title(_("Select Laboratory"))
         self.transient(parent)
@@ -69,6 +81,8 @@ class LabSelectorDialog(tk.Toplevel):
         sb.config(command=self.listbox.yview)
 
         self.listbox.bind("<Double-1>", self._on_select)
+        self.listbox.bind("<Return>", self._on_select)
+        self.listbox.bind("<KP_Enter>", self._on_select)
 
         # Buttons
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
@@ -77,35 +91,64 @@ class LabSelectorDialog(tk.Toplevel):
         btn_select = ttk.Button(
             frm_buttons,
             text=_("Select"),
+            underline=0,
             command=self._on_select,
         )
         btn_select.pack(side=tk.LEFT, **padd)
+        self.bind("<Alt-s>", self._on_select)
 
         btn_cancel = ttk.Button(
             frm_buttons,
             text=_("Cancel"),
+            underline=0,
             command=self._on_cancel,
         )
         btn_cancel.pack(side=tk.RIGHT, **padd)
+        self.bind("<Alt-c>", self._on_cancel)
 
         # Store lab_ids for selection
         self.lab_ids = []
 
     def _load_labs(self):
-        """Load available laboratories with region names from organizations."""
-        # Get labs from organizations table (org_type='lab')
-        # Join with parent organization (region) for context
-        sql = """
-            SELECT
-                lab.org_id AS lab_id,
-                lab.description AS lab_name,
-                COALESCE(region.description, 'N/A') AS region_name
-            FROM organizations lab
-            LEFT JOIN organizations region ON lab.parent_id = region.org_id
-            WHERE lab.org_type = 'lab' AND lab.status = 1
-            ORDER BY region.description, lab.description
+        """Load available laboratories with region names from organizations.
+
+        If parent_org_id is set, only shows labs that are descendants
+        of that organization (for Regional/Country Admins).
         """
-        rows = self.engine.read(True, sql, ()) or []
+        if self.parent_org_id:
+            # Filter: only labs under the specified parent organization
+            sql = """
+                WITH RECURSIVE descendants AS (
+                    SELECT org_id, org_type, description, parent_id, status
+                    FROM organizations WHERE org_id = ?
+                    UNION ALL
+                    SELECT o.org_id, o.org_type, o.description, o.parent_id, o.status
+                    FROM organizations o
+                    JOIN descendants d ON o.parent_id = d.org_id
+                )
+                SELECT
+                    lab.org_id AS lab_id,
+                    lab.description AS lab_name,
+                    COALESCE(region.description, 'N/A') AS region_name
+                FROM descendants lab
+                LEFT JOIN organizations region ON lab.parent_id = region.org_id
+                WHERE lab.org_type = 'lab' AND lab.status = 1
+                ORDER BY region.description, lab.description
+            """
+            rows = self.engine.read(True, sql, (self.parent_org_id,)) or []
+        else:
+            # No filter: show all labs (for App Admin)
+            sql = """
+                SELECT
+                    lab.org_id AS lab_id,
+                    lab.description AS lab_name,
+                    COALESCE(region.description, 'N/A') AS region_name
+                FROM organizations lab
+                LEFT JOIN organizations region ON lab.parent_id = region.org_id
+                WHERE lab.org_type = 'lab' AND lab.status = 1
+                ORDER BY region.description, lab.description
+            """
+            rows = self.engine.read(True, sql, ()) or []
 
         self.listbox.delete(0, tk.END)
         self.lab_ids = []

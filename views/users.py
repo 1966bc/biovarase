@@ -22,9 +22,9 @@ SQL = """
         u.first_name,
         u.nickname,
         u.status,
-        l.description AS lab_name
+        o.description AS lab_name
     FROM users u
-    LEFT JOIN labs l ON u.lab_id = l.lab_id
+    LEFT JOIN organizations o ON u.org_id = o.org_id
     ORDER BY u.last_name ASC, u.first_name ASC
 """
 

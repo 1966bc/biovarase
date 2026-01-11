@@ -487,7 +487,12 @@ class TestGetMandatory:
     def test_returns_list(self, controller_instance, cursor):
         """Returns list of test descriptions."""
         # Set a lab_id context
-        cursor.execute("SELECT lab_id FROM labs LIMIT 1")
+        cursor.execute("""
+            SELECT org_id AS lab_id
+            FROM organizations
+            WHERE org_type = 'lab' AND status = 1
+            LIMIT 1
+        """)
         row = cursor.fetchone()
 
         if not row:

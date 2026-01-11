@@ -144,24 +144,24 @@ class UI(ChildView):
         self.txDescription.focus_set()
 
     def _load_labs(self):
-        """Load laboratories for combobox."""
+        """Load laboratories for combobox from organizations table."""
         role = self.engine.log_user["role"]
 
         if role == 0:
-            # Admin: all labs in site
+            # Admin: all labs
             sql = """
-                SELECT lab_id, description
-                FROM labs
-                WHERE site_id = ? AND status = 1
+                SELECT org_id AS lab_id, description
+                FROM organizations
+                WHERE org_type = 'lab' AND status = 1
                 ORDER BY description
             """
-            args = (self.engine.current_ids.get("site_id"),)
+            args = ()
         else:
             # Others: only their lab
             sql = """
-                SELECT lab_id, description
-                FROM labs
-                WHERE lab_id = ? AND status = 1
+                SELECT org_id AS lab_id, description
+                FROM organizations
+                WHERE org_id = ? AND org_type = 'lab' AND status = 1
             """
             args = (self.engine.get_lab_id(),)
 

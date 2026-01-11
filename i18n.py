@@ -230,7 +230,7 @@ TRANSLATIONS = {
     "Batches": {"it": "Lotti", "en": "Batches"},
     "Results": {"it": "Risultati", "en": "Results"},
     "Workstation Data Source": {"it": "Sorgente Dati Postazione", "en": "Workstation Data Source"},
-    "Lv": {"it": "Lv", "en": "Lv"},
+    "Liv": {"it": "Liv", "en": "Lv"},
     "SD": {"it": "DS", "en": "SD"},
     "TE%": {"it": "TE%", "en": "TE%"},
     "sd": {"it": "ds", "en": "sd"},

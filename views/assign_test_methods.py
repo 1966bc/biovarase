@@ -121,23 +121,22 @@ class UI(ChildView):
         ids = getattr(self.engine, "current_ids", {}) or {}
         self.site_context = dict(ids)
 
-        site_id = self.site_context.get("site_id")
-        comp_id = self.site_context.get("comp_id")
+        lab_id = self.site_context.get("lab_id")
         workstation_id = self.workstation.get("workstation_id")
 
-        # If we don't have a valid site_id or workstation_id → nothing to show
-        if not site_id or not workstation_id:
+        # If we don't have a valid lab_id or workstation_id → nothing to show
+        if not lab_id or not workstation_id:
             self.lstItems.delete(0, tk.END)
             self.title(_("Assign test methods"))
             return
 
         # Title
-        site_name = self._get_site_name_by_comp_id(comp_id) if comp_id else _("Site")
+        lab_name = self._get_lab_name(lab_id)
         target_name = self.workstation.get("description", _("workstation"))
-        self.title(f"{site_name} — {_('Assign test methods to')} {target_name}")
+        self.title(f"{lab_name} — {_('Assign test methods to')} {target_name}")
 
-        # Fill list (site + workstation_id so NOT EXISTS always filters correctly)
-        self.set_values(site_id, workstation_id)
+        # Fill list (lab + workstation_id so NOT EXISTS always filters correctly)
+        self.set_values(lab_id, workstation_id)
 
         self.show()
 
@@ -149,32 +148,24 @@ class UI(ChildView):
     # ------------------------------------------------------------------
     # Helpers (context)
     # ------------------------------------------------------------------
-    def _get_site_name_by_comp_id(self, comp_id: int) -> str:
+    def _get_lab_name(self, lab_id: int) -> str:
         """
-        Resolve the site (hospital/company) name given a comp_id.
+        Get laboratory name from organizations table.
 
         Args:
-            comp_id: Company/supplier ID
+            lab_id: Lab org_id
 
         Returns:
-            Site name or "Site" if not found
+            Lab name or "Lab" if not found
         """
-        sql = """
-            SELECT 
-                sites.site_id          AS site_id,
-                suppliers.description  AS site_name
-            FROM sites
-            JOIN suppliers 
-                ON suppliers.supplier_id = sites.comp_id
-            WHERE sites.comp_id = ?
-        """
-        row = self.engine.read(False, sql, (comp_id,))
-        return row["site_name"] if row else "Site"
+        sql = "SELECT description FROM organizations WHERE org_id = ?"
+        row = self.engine.read(False, sql, (lab_id,))
+        return row["description"] if row else _("Lab")
 
     # ------------------------------------------------------------------
     # List population
     # ------------------------------------------------------------------
-    def set_values(self, site_id=None, workstation_id=None):
+    def set_values(self, lab_id=None, workstation_id=None):
         """
         Populate the list of assignable test methods for the given lab context
         and target workstation_id.
@@ -185,15 +176,15 @@ class UI(ChildView):
             - excludes already mapped methods using NOT EXISTS.
 
         Args:
-            site_id: Lab org_id (from current_ids["lab_id"]) to filter test methods
+            lab_id: Lab org_id (from current_ids["lab_id"]) to filter test methods
             workstation_id: Workstation ID to check existing assignments
         """
         self.lstItems.delete(0, tk.END)
         self.dict_items = {}
         idx = 0
 
-        # Use lab_id from current_ids (site_id param is now lab_id for compatibility)
-        lab_id = self.engine.current_ids.get("lab_id") or site_id
+        # Use lab_id from current_ids or parameter
+        lab_id = self.engine.current_ids.get("lab_id") or lab_id
         if not lab_id or not workstation_id:
             return
 
@@ -409,8 +400,8 @@ class UI(ChildView):
                 self.already_assigned.append(test_method_id)
 
             # Refill this dialog (so the just-assigned method disappears from list)
-            site_id = self.site_context.get("site_id")
-            self.set_values(site_id, workstation_id)
+            lab_id = self.site_context.get("lab_id")
+            self.set_values(lab_id, workstation_id)
 
         except Exception as exc:
             messagebox.showerror(
@@ -422,14 +413,14 @@ class UI(ChildView):
     def refresh_from_parent(self):
         """
         Called by the parent after external DELETE/UPDATE operations.
-        Always refresh the list using current site + workstation (if any).
+        Always refresh the list using current lab + workstation (if any).
         """
         if not self.workstation or not self.site_context:
             return
 
         workstation_id = self.workstation.get("workstation_id")
-        site_id = self.site_context.get("site_id")
-        self.set_values(site_id, workstation_id)
+        lab_id = self.site_context.get("lab_id")
+        self.set_values(lab_id, workstation_id)
 
     def on_item_selected(self, _evt=None):
         """

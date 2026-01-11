@@ -223,8 +223,30 @@ class Login(ttk.Frame):
                     return
 
                 self.engine.init_current_ids_from_user(selected_lab_id)
+            elif user_role in (1, 2):
+                # Country/Regional Admin: check if assigned to non-lab org
+                org_type = self.engine._get_org_type(user_org_id)
+                if org_type and org_type != "lab":
+                    # Assigned to country/region/site: show filtered lab selector
+                    dialog = LabSelectorDialog(self, parent_org_id=user_org_id)
+                    self.wait_window(dialog)
+                    selected_lab_id = dialog.get_selected_lab_id()
+
+                    if selected_lab_id is None:
+                        messagebox.showinfo(
+                            self.engine.app_title,
+                            _("Login cancelled."),
+                            parent=self
+                        )
+                        self.engine.log_user.clear()
+                        return
+
+                    self.engine.init_current_ids_from_user(selected_lab_id)
+                else:
+                    # Assigned directly to lab
+                    self.engine.init_current_ids_from_user(user_org_id)
             else:
-                # Normal user: use assigned org_id (lab level)
+                # Normal user (roles 3-6): use assigned org_id (lab level)
                 self.engine.init_current_ids_from_user(user_org_id)
 
             self.hide()
