@@ -130,6 +130,7 @@ TRANSLATIONS = {
     "(Global - App Admin)": {"it": "(Globale - App Admin)", "en": "(Global - App Admin)"},
     "Country": {"it": "Paese", "en": "Country"},
     "Region": {"it": "Regione", "en": "Region"},
+    "Site": {"it": "Ospedale", "en": "Site"},
     "Lab": {"it": "Laboratorio", "en": "Lab"},
     "Section": {"it": "Sezione", "en": "Section"},
     "Select a parent organization first.": {

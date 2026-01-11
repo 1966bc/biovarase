@@ -9,7 +9,7 @@
 Organizations Management Window.
 
 Hierarchical tree view of the organization structure:
-    Country → Region → Lab → Section
+    Country → Region → Site (hospital) → Lab → Section
 
 Features:
     - Tree navigation with expand/collapse
@@ -30,6 +30,7 @@ import views.organization as ui
 # Organization type constants
 ORG_TYPE_COUNTRY = "country"
 ORG_TYPE_REGION = "region"
+ORG_TYPE_SITE = "site"
 ORG_TYPE_LAB = "lab"
 ORG_TYPE_SECTION = "section"
 
@@ -37,15 +38,18 @@ ORG_TYPE_SECTION = "section"
 ORG_TYPE_LABELS = {
     ORG_TYPE_COUNTRY: "Country",
     ORG_TYPE_REGION: "Region",
+    ORG_TYPE_SITE: "Site",
     ORG_TYPE_LAB: "Lab",
     ORG_TYPE_SECTION: "Section",
 }
 
 # Allowed child types for each parent type
+# Hierarchy: Country → Region → Site (hospital) → Lab → Section
 ORG_CHILD_TYPES = {
     None: [ORG_TYPE_COUNTRY],  # Root can have countries
     ORG_TYPE_COUNTRY: [ORG_TYPE_REGION],
-    ORG_TYPE_REGION: [ORG_TYPE_LAB],
+    ORG_TYPE_REGION: [ORG_TYPE_SITE],  # Region can have sites (hospitals)
+    ORG_TYPE_SITE: [ORG_TYPE_LAB],  # Site can have labs
     ORG_TYPE_LAB: [ORG_TYPE_SECTION],
     ORG_TYPE_SECTION: [],  # Sections cannot have children
 }
@@ -201,7 +205,7 @@ class UI(ParentView):
         children = [row for row in org_dict.values() if row["parent_id"] == parent_id]
 
         # Sort by type order, then by description
-        type_order = {ORG_TYPE_COUNTRY: 0, ORG_TYPE_REGION: 1, ORG_TYPE_LAB: 2, ORG_TYPE_SECTION: 3}
+        type_order = {ORG_TYPE_COUNTRY: 0, ORG_TYPE_REGION: 1, ORG_TYPE_SITE: 2, ORG_TYPE_LAB: 3, ORG_TYPE_SECTION: 4}
         children.sort(key=lambda r: (type_order.get(r["org_type"], 99), r["description"] or ""))
 
         for row in children:

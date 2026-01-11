@@ -28,6 +28,7 @@ from views.child_view import ChildView
 # Organization type constants
 ORG_TYPE_COUNTRY = "country"
 ORG_TYPE_REGION = "region"
+ORG_TYPE_SITE = "site"
 ORG_TYPE_LAB = "lab"
 ORG_TYPE_SECTION = "section"
 
@@ -35,15 +36,18 @@ ORG_TYPE_SECTION = "section"
 ORG_TYPE_LABELS = {
     ORG_TYPE_COUNTRY: "Country",
     ORG_TYPE_REGION: "Region",
+    ORG_TYPE_SITE: "Site",
     ORG_TYPE_LAB: "Lab",
     ORG_TYPE_SECTION: "Section",
 }
 
 # Allowed child types for each parent type
+# Hierarchy: Country → Region → Site (hospital) → Lab → Section
 ORG_CHILD_TYPES = {
     None: [ORG_TYPE_COUNTRY],  # Root can have countries
     ORG_TYPE_COUNTRY: [ORG_TYPE_REGION],
-    ORG_TYPE_REGION: [ORG_TYPE_LAB],
+    ORG_TYPE_REGION: [ORG_TYPE_SITE],  # Region can have sites (hospitals)
+    ORG_TYPE_SITE: [ORG_TYPE_LAB],  # Site can have labs
     ORG_TYPE_LAB: [ORG_TYPE_SECTION],
     ORG_TYPE_SECTION: [],  # Sections cannot have children
 }
