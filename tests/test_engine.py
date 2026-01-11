@@ -790,6 +790,7 @@ class TestInitCurrentIds:
     def test_init_from_user_org_id(self, mock_engine):
         """init_current_ids_from_user() uses user's org_id."""
         mock_engine.log_user = {"org_id": 2002}
+        mock_engine._get_org_type = MagicMock(return_value="lab")
         mock_engine.get_idd_by_lab_id = MagicMock(return_value={
             "site_id": 2001,
             "lab_id": 2002,
@@ -806,6 +807,7 @@ class TestInitCurrentIds:
     def test_init_with_override_lab_id(self, mock_engine):
         """init_current_ids_from_user(lab_id) uses provided lab_id."""
         mock_engine.log_user = {"org_id": 2002}
+        mock_engine._get_org_type = MagicMock(return_value="lab")
         mock_engine.get_idd_by_lab_id = MagicMock(return_value={
             "site_id": 3001,
             "lab_id": 3002,
