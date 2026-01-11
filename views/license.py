@@ -21,8 +21,6 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.attributes("-topmost", True)
-
         self._build_ui()
         self.show()
 

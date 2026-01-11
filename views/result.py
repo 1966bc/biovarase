@@ -255,6 +255,7 @@ class UI(ChildView):
             )
 
         self.title(msg)
+        self.attributes("-topmost", True)
 
         # Make sure the window is visible and on top
         self.deiconify()
@@ -344,7 +345,7 @@ class UI(ChildView):
         Build the argument list for INSERT/UPDATE on 'results'.
 
         Table structure (without PK result_id):
-            batch_id, lab_id, run_number, workstation_id, reagent_lot,
+            batch_id, lab_id, org_id, run_number, workstation_id, reagent_lot,
             result, received, status,
             validated, validated_by, validated_at,
             is_delete, log_time, log_id, log_ip
@@ -396,6 +397,9 @@ class UI(ChildView):
         # lab_id from batch (multi-tenant isolation)
         lab_id = self.selected_batch["lab_id"]
 
+        # org_id from batch (organizations table)
+        org_id = self.selected_batch.get("org_id")
+
         # FK workstation_id
         workstation_id = self.selected_workstation["workstation_id"]
 
@@ -407,6 +411,7 @@ class UI(ChildView):
         args = [
             batch_id,         # batch_id
             lab_id,           # lab_id (multi-tenant)
+            org_id,           # org_id (organizations FK)
             run_number,       # run_number
             workstation_id,   # workstation_id
             reagent_lot_value,  # reagent_lot
@@ -475,6 +480,10 @@ class UI(ChildView):
 
         self._update_main_results_lists()
         self._set_index(last_id)
+
+        # Notify observers (e.g., daily_validation)
+        self.engine.notify("result_changed", last_id)
+
         self.on_cancel()
 
     def _update_main_results_lists(self) -> None:
@@ -560,6 +569,10 @@ class UI(ChildView):
         self.engine.write(sql, args)
 
         self._update_main_results_lists()
+
+        # Notify observers (e.g., daily_validation)
+        self.engine.notify("result_changed", pk)
+
         self.on_cancel()
 
     def on_cancel(self, _evt: Optional[tk.Event] = None) -> None:

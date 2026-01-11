@@ -138,6 +138,7 @@ class UI(ParentView):
     def on_open(self):
         """Initialize view."""
         self.title(_("Bland-Altman Alert Scanner"))
+        self.attributes("-topmost", True)
 
     def _on_scan(self, _evt=None):
         """Scan all test/level/workstation combinations."""

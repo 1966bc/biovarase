@@ -294,9 +294,12 @@ class Controller:
 
             # 3c) INSERT into results
             try:
+                lab_id = self.get_lab_id()
+                org_id = self.current_ids.get("org_id") or lab_id
                 args = (
                     batch_id,               # batch_id
-                    self.get_lab_id(),      # lab_id (multi-tenant)
+                    lab_id,                 # lab_id (multi-tenant)
+                    org_id,                 # org_id (organizations FK)
                     "0",                    # run_number (MANDATORY, cannot be NULL)
                     workstation_id,         # workstation_id
                     reagent_lot_value,      # reagent_lot

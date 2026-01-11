@@ -251,19 +251,20 @@ class UI(ChildView):
 
     # ----------------------------------------------------------------------
     def _get_values(self):
-        """Get form values for INSERT/UPDATE. Returns org_id for section."""
+        """Get form values for INSERT/UPDATE."""
         equipment_idx = self.cbEquipments.current()
         section_idx = self.cbSections.current()
 
         equipment_id = self.dict_instruments.get(equipment_idx)
-        org_id = self.dict_sections.get(section_idx)  # Now org_id, not section_id
+        section_org_id = self.dict_sections.get(section_idx)  # org_id of the section
 
         return [
             equipment_id,
             self.device_id.get(),
             self.description.get(),
             self.serial.get(),
-            org_id,  # This is now org_id for the section
+            section_org_id,  # section_id (legacy, now same as org_id)
+            section_org_id,  # org_id (organizations FK)
             self.rank.get(),
             self.status.get(),
         ]

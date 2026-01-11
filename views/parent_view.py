@@ -119,6 +119,8 @@ class ParentView(tk.Toplevel):
         """
         self.engine.center_window(self, on_screen=on_screen)
         self.deiconify()
+        self.lift()
+        self.focus_set()
 
     def on_cancel(self, evt=None):
         """

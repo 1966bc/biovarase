@@ -565,8 +565,8 @@ class TestOnLogin:
         hashed = bcrypt.hashpw(test_password, bcrypt.gensalt())
 
         cursor.execute("""
-            INSERT INTO users (last_name, first_name, nickname, pswrd, role, status)
-            VALUES ('Test', 'Login', 'test_login_user', ?, 5, 1)
+            INSERT INTO users (last_name, first_name, nickname, pswrd, role, org_id, lab_id, status)
+            VALUES ('Test', 'Login', 'test_login_user', ?, 5, NULL, NULL, 1)
         """, (hashed.decode('utf-8'),))
 
         user_id = cursor.lastrowid
@@ -589,8 +589,8 @@ class TestOnLogin:
         hashed = bcrypt.hashpw(test_password, bcrypt.gensalt())
 
         cursor.execute("""
-            INSERT INTO users (last_name, first_name, nickname, pswrd, role, status)
-            VALUES ('Test', 'Wrong', 'test_wrong_user', ?, 5, 1)
+            INSERT INTO users (last_name, first_name, nickname, pswrd, role, org_id, lab_id, status)
+            VALUES ('Test', 'Wrong', 'test_wrong_user', ?, 5, NULL, NULL, 1)
         """, (hashed.decode('utf-8'),))
 
         user_id = cursor.lastrowid

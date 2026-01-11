@@ -158,9 +158,9 @@ class TestUsersTable:
 
         # Insert test user
         cursor.execute("""
-            INSERT INTO users (last_name, first_name, nickname, pswrd, role, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, ("Test", "User", "test_integration_user", "hashed_password", 5, 1))
+            INSERT INTO users (last_name, first_name, nickname, pswrd, role, org_id, lab_id, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, ("Test", "User", "test_integration_user", "hashed_password", 5, None, None, 1))
 
         user_id = cursor.lastrowid
         ids["users"].append(user_id)

@@ -238,9 +238,11 @@ class UI(ChildView):
         ):
             return
 
-        # Build args: lab_id, description, status
+        # Build args: lab_id, org_id, description, status
+        org_id = lab_id  # org_id is same as lab_id (organizations table)
         args = [
             lab_id,
+            org_id,
             desc,
             int(self.status.get())
         ]
@@ -249,15 +251,15 @@ class UI(ChildView):
             # UPDATE
             sql = """
                 UPDATE categories
-                SET lab_id = ?, description = ?, status = ?
+                SET lab_id = ?, org_id = ?, description = ?, status = ?
                 WHERE category_id = ?
             """
             args.append(self.selected_item["category_id"])
         else:
             # INSERT
             sql = """
-                INSERT INTO categories (lab_id, description, status)
-                VALUES (?, ?, ?)
+                INSERT INTO categories (lab_id, org_id, description, status)
+                VALUES (?, ?, ?, ?)
             """
 
         last_id = self.engine.write(sql, args)
