@@ -140,12 +140,11 @@ class UI(ParentView):
             INNER JOIN samples        AS s  ON tm.sample_id      = s.sample_id
             INNER JOIN batches        AS b  ON tm.test_method_id = b.test_method_id
             INNER JOIN results        AS r  ON b.batch_id        = r.batch_id
-            INNER JOIN sections       AS se ON tm.section_id     = se.section_id
-            INNER JOIN labs           AS l  ON se.lab_id         = l.lab_id
-            INNER JOIN sites          AS si ON l.site_id         = si.site_id
+            INNER JOIN organizations  AS section ON tm.org_id = section.org_id
             INNER JOIN workstations   AS w  ON r.workstation_id  = w.workstation_id
             WHERE t.status = 1
-              AND se.lab_id = ?
+              AND section.parent_id = ?
+              AND section.org_type = 'section'
               AND g.to_export = 1
               AND b.status = 1
               AND b.expiration IS NOT NULL

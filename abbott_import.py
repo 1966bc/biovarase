@@ -277,7 +277,7 @@ class AbbottImporter:
 
         # 2. Create test_method
         test_method_id = self.insert(
-            """INSERT INTO test_methods (test_id, section_id, category_id, sample_id, code, status)
+            """INSERT INTO test_methods (test_id, org_id, category_id, sample_id, code, status)
                VALUES (?, ?, 29, 1, ?, 1)""",
             (test_id, SECTION_ID, external_code)
         )
