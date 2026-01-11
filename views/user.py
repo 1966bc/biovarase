@@ -78,19 +78,28 @@ class UI(ChildView):
 
         r += 1
         ttk.Label(frm_left, text=_("Level:")).grid(row=r, column=0, sticky=tk.W)
-        tk.Spinbox(
+        self.spnRole = tk.Spinbox(
             frm_left,
             from_=0,
-            to=9,
+            to=6,
             width=5,
             justify=tk.CENTER,
             wrap=True,
             textvariable=self.role,
-        ).grid(row=r, column=c, sticky=tk.W, **paddings)
+            command=self._on_role_changed,
+        )
+        self.spnRole.grid(row=r, column=c, sticky=tk.W, **paddings)
+
+        r += 1
+        # Role hint label
+        self.role_hint = tk.StringVar(value="")
+        ttk.Label(frm_left, textvariable=self.role_hint, foreground="gray").grid(
+            row=r, column=c, sticky=tk.W, padx=8
+        )
 
         r += 1
         ttk.Label(frm_left, text=_("Organization:")).grid(row=r, column=0, sticky=tk.W)
-        self.cbOrg = ttk.Combobox(frm_left, state="readonly", width=45)
+        self.cbOrg = ttk.Combobox(frm_left, state="readonly", width=50)
         self.cbOrg.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
@@ -172,25 +181,56 @@ class UI(ChildView):
             - self.parent.selected_item is expected to be a hybrid dict
               (index + column names) returned by engine.get_selected.
         """
-        self._load_orgs()
-
         if self.index is not None:
-            # UPDATE mode
+            # UPDATE mode - load data first, then orgs based on role
             self.title(_("Update User"))
             self.selected_item = self.parent.selected_item
             self._set_values()
         else:
-            # INSERT mode
+            # INSERT mode - default to role 4 (Superuser)
             self.title(_("Add User"))
+            self.role.set(4)
             self.status.set(1)
-            # Default: no organization (App Admin) - first item is "(Global)"
-            if self.dict_orgs:
-                self.cbOrg.current(0)
+            self._load_orgs()
+            self._update_role_hint()
 
         self._focus_entry()
 
+    def _on_role_changed(self):
+        """Called when role spinbox changes - update org dropdown and hint."""
+        self._load_orgs()
+        self._update_role_hint()
+
+    def _update_role_hint(self):
+        """Update the role hint label based on current role."""
+        role = self.role.get()
+        hints = {
+            0: _("App Admin - Global access"),
+            1: _("Country Admin - Assign to country"),
+            2: _("Regional Admin - Assign to region/site"),
+            3: _("Lab Admin - Assign to lab"),
+            4: _("Superuser - Assign to lab"),
+            5: _("Technician - Assign to lab"),
+            6: _("Viewer - Assign to lab"),
+        }
+        self.role_hint.set(hints.get(role, ""))
+
+    def _get_allowed_org_types(self, role):
+        """Return list of allowed org_types for a given role."""
+        if role == 0:
+            return []  # App Admin: only Global (NULL)
+        elif role == 1:
+            return ["country"]
+        elif role == 2:
+            return ["region", "site"]
+        else:  # roles 3-6
+            return ["lab"]
+
     def _load_orgs(self):
-        """Load organizations hierarchy into the combobox."""
+        """Load organizations hierarchy into the combobox, filtered by role."""
+        role = self.role.get()
+        allowed_types = self._get_allowed_org_types(role)
+
         # Fetch all active organizations
         sql = """
             SELECT org_id, parent_id, org_type, description
@@ -200,28 +240,20 @@ class UI(ChildView):
         """
         rows = self.engine.read(True, sql, ()) or []
 
-        # Build parent lookup
+        # Build parent lookup for path generation
         org_dict = {row["org_id"]: row for row in rows}
 
         # Build display names with hierarchy path
         self.dict_orgs = {}
         values = []
 
-        # First item: Global (NULL org_id for App Admin)
-        values.append(_("(Global - App Admin)"))
-        self.dict_orgs[0] = None  # NULL org_id
-
-        # Type order and prefixes for visual hierarchy
-        type_prefix = {
-            "country": "",
-            "region": "  ",
-            "site": "    ",
-            "lab": "      ",
-            "section": "        ",
-        }
-
-        # Sort by hierarchy: country first, then region, site, lab, section
-        type_order = {"country": 0, "region": 1, "site": 2, "lab": 3, "section": 4}
+        # For App Admin (role 0), only show Global option
+        if role == 0:
+            values.append(_("(Global - App Admin)"))
+            self.dict_orgs[0] = None
+            self.cbOrg["values"] = values
+            self.cbOrg.current(0)
+            return
 
         def get_path(org_id):
             """Build full path for an organization."""
@@ -232,21 +264,33 @@ class UI(ChildView):
                 current = org_dict.get(current["parent_id"])
             return " > ".join(path)
 
-        # Sort rows by type and description
-        sorted_rows = sorted(rows, key=lambda r: (type_order.get(r["org_type"], 99), r["description"]))
+        # Filter and sort rows by allowed types
+        type_order = {"country": 0, "region": 1, "site": 2, "lab": 3, "section": 4}
+        filtered_rows = [r for r in rows if r["org_type"] in allowed_types]
+        sorted_rows = sorted(filtered_rows, key=lambda r: (type_order.get(r["org_type"], 99), r["description"]))
 
-        idx = 1  # Start from 1 (0 is Global)
+        # Type labels for display
+        type_labels = {
+            "country": _("Country"),
+            "region": _("Region"),
+            "site": _("Site"),
+            "lab": _("Lab"),
+        }
+
+        idx = 0
         for row in sorted_rows:
             org_id = row["org_id"]
             org_type = row["org_type"]
-            prefix = type_prefix.get(org_type, "")
             path = get_path(org_id)
-            display = f"{prefix}{path} [{org_type}]"
+            type_label = type_labels.get(org_type, org_type)
+            display = f"{path}"
             values.append(display)
             self.dict_orgs[idx] = org_id
             idx += 1
 
         self.cbOrg["values"] = values
+        if values:
+            self.cbOrg.current(0)
 
     def _focus_entry(self):
         """Focus the surname entry and select its content."""
@@ -273,14 +317,18 @@ class UI(ChildView):
             self.last_name.set(s.get("last_name", ""))
             self.first_name.set(s.get("first_name", ""))
             self.nickname.set(s.get("nickname", ""))
-            self.role.set(int(s.get("role", 0)))
             self.elapsing_time.set(int(s.get("elapsing_time", 0)))
             self.enable_time.set(bool(s.get("enable_time", 0)))
             self.status.set(int(s.get("status", 1)))
 
-            # Set organization selection
+            # Set role first, then load orgs filtered by role
+            self.role.set(int(s.get("role", 0)))
+            self._load_orgs()
+            self._update_role_hint()
+
+            # Set organization selection in filtered list
             user_org_id = s.get("org_id")
-            org_index = 0  # default: Global (NULL)
+            org_index = 0  # default: first item
             for idx, oid in self.dict_orgs.items():
                 if oid == user_org_id:
                     org_index = idx
