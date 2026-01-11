@@ -30,6 +30,7 @@
    - [Gestione delle Transazioni](#gestione-delle-transazioni)
 8. [Concorrenza](#concorrenza)
    - [Threading e Race Conditions](#threading-e-race-conditions)
+   - [Queue per Comunicazione Thread](#queue-per-comunicazione-thread)
 
 ---
 
@@ -1140,6 +1141,173 @@ thread = threading.Thread(target=save_critical_data, daemon=False)
 
 ---
 
+### Queue per Comunicazione Thread
+
+#### Il problema
+
+Come passare dati in modo sicuro da un thread worker al main thread (GUI)?
+
+```python
+# SBAGLIATO - Race condition!
+self.results = []  # Condiviso tra thread
+
+def worker():
+    for item in items:
+        result = process(item)
+        self.results.append(result)  # Thread worker scrive
+
+def check():
+    for r in self.results:  # Main thread legge
+        update_gui(r)       # Mentre worker scrive!
+```
+
+#### La soluzione: queue.Queue
+
+`Queue` è una struttura dati **thread-safe** progettata per la comunicazione tra thread.
+
+```python
+from queue import Queue, Empty
+
+q = Queue()
+
+# Thread worker - produce dati
+def worker():
+    for item in items:
+        result = process(item)
+        q.put(result)  # Thread-safe
+    q.put(None)  # Segnale di fine (sentinel)
+
+# Main thread - consuma dati
+def check_queue():
+    try:
+        while True:
+            result = q.get_nowait()  # Non bloccante
+            if result is None:
+                return  # Fine
+            update_gui(result)
+    except Empty:
+        pass  # Coda vuota, riprova dopo
+
+    self.after(50, check_queue)  # Polling
+```
+
+#### Implementazione in Biovarase
+
+```python
+# In views/bland_altman_alert.py
+
+def _on_scan(self):
+    """Avvia scansione con Queue."""
+    # Crea coda per risultati
+    self._result_queue = Queue()
+
+    # Lancia thread con riferimento alla coda
+    self._scan_thread = threading.Thread(
+        target=self._do_scan,
+        args=(threshold, self._result_queue),  # Passa la coda
+        daemon=True
+    )
+    self._scan_thread.start()
+
+    # Avvia polling della coda
+    self._process_result_queue()
+
+def _do_scan(self, threshold, result_queue):
+    """Thread worker - mette risultati in coda."""
+    try:
+        for combo in combinations:
+            result = self._compare(combo, threshold)
+            if result:
+                result_queue.put(result)  # Invia al main thread
+    finally:
+        result_queue.put(None)  # Segnale di completamento
+
+def _process_result_queue(self):
+    """Main thread - legge dalla coda e aggiorna GUI."""
+    try:
+        while True:
+            try:
+                result = self._result_queue.get_nowait()
+            except Empty:
+                break  # Coda vuota
+
+            if result is None:
+                # Scan completato
+                self._show_final_status()
+                return
+
+            # Aggiorna GUI progressivamente
+            self._add_result_to_tree(result)
+            self._update_status()
+
+    except tk.TclError:
+        return  # Finestra chiusa
+
+    # Continua polling
+    self.after(50, self._process_result_queue)
+```
+
+#### Metodi di Queue
+
+| Metodo | Comportamento | Uso |
+|--------|---------------|-----|
+| `put(item)` | Aggiunge item (bloccante se piena) | Thread worker |
+| `get()` | Preleva item (bloccante se vuota) | Consumer |
+| `get_nowait()` | Preleva senza bloccare (raise Empty) | GUI polling |
+| `put_nowait()` | Aggiunge senza bloccare (raise Full) | Non bloccante |
+| `empty()` | True se vuota (approssimativo) | Check veloce |
+| `qsize()` | Numero elementi (approssimativo) | Debug |
+
+#### Pattern: Sentinel per fine stream
+
+```python
+# Il worker segnala la fine con un valore speciale
+result_queue.put(None)  # None = "ho finito"
+
+# Il consumer riconosce il segnale
+result = queue.get()
+if result is None:
+    print("Stream completato")
+    return
+```
+
+#### Vantaggi rispetto a variabili condivise
+
+| Variabile condivisa | Queue |
+|---------------------|-------|
+| Race condition possibili | Thread-safe by design |
+| Serve Lock manuale | Lock interno automatico |
+| Polling su flag | Metodi bloccanti disponibili |
+| Dati possono perdersi | FIFO garantito |
+
+#### Quando usare Queue
+
+| Scenario | Usa Queue? |
+|----------|------------|
+| Thread produce dati incrementali | ✅ Sì |
+| Thread fa una singola operazione | ❌ No, usa `after()` |
+| Più producer, un consumer | ✅ Sì |
+| Risultati devono essere ordinati | ✅ Sì (FIFO) |
+| GUI deve aggiornarsi progressivamente | ✅ Sì |
+
+#### Cleanup alla chiusura
+
+```python
+def on_cancel(self):
+    """Pulisci risorse prima di chiudere."""
+    # Svuota la coda per sbloccare thread in attesa
+    if hasattr(self, '_result_queue'):
+        try:
+            while not self._result_queue.empty():
+                self._result_queue.get_nowait()
+        except Empty:
+            pass
+
+    super().on_cancel()
+```
+
+---
+
 ## Glossario
 
 | Termine | Definizione |
@@ -1161,7 +1329,9 @@ thread = threading.Thread(target=save_critical_data, daemon=False)
 | **Lock** | Meccanismo per sincronizzare accesso a risorse condivise |
 | **MRO** | Method Resolution Order - Ordine ricerca metodi in ereditarietà |
 | **ORM** | Object-Relational Mapping - Mappa oggetti a tabelle DB |
+| **Queue** | Struttura dati thread-safe per comunicazione tra thread |
 | **Race Condition** | Bug da accesso concorrente non sincronizzato |
+| **Sentinel** | Valore speciale che segnala fine di uno stream |
 | **Refactoring** | Migliorare codice senza cambiare comportamento |
 | **Salt** | Valore random aggiunto prima dell'hashing |
 | **Scope** | Ambito di visibilità di variabili/funzioni |
