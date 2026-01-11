@@ -50,6 +50,7 @@ ROLE_AUTOLOGIN = ROLE_VIEWER
 # Tree node types (based on organizations.org_type)
 NODE_TYPE_COUNTRY = "country"
 NODE_TYPE_REGION = "region"
+NODE_TYPE_SITE = "site"
 NODE_TYPE_LAB = "lab"
 NODE_TYPE_SECTION = "section"
 NODE_TYPE_WORKSTATION = "workstation"
@@ -168,7 +169,7 @@ class UI(ParentView):
         """
         Build the hierarchy tree from organizations table.
 
-        Structure: Country → Region → Lab → Section → Workstation
+        Structure: Country → Region → Site → Lab → Section → Workstation
 
         Role-based filtering:
             - App Admin (role=0): See all organizations
@@ -198,7 +199,7 @@ class UI(ParentView):
             # Non-admin: find the country ancestor of user's org
             countries = self._get_user_country_scope(user_org_id)
 
-        # 5) Build the tree: Country → Region → Lab → Section → Workstation
+        # 5) Build the tree: Country → Region → Site → Lab → Section → Workstation
         for country_id, country_name in countries:
             country_iid = f"country_{country_id}"
             self.Sites.insert(
@@ -217,35 +218,45 @@ class UI(ParentView):
                     values=(region_id, NODE_TYPE_REGION),
                 )
 
-                # Load labs under this region
-                labs = self._load_orgs_by_type(region_id, "lab")
-                for lab_id, lab_name in labs:
-                    lab_iid = f"lab_{lab_id}"
+                # Load sites (hospitals) under this region
+                sites = self._load_orgs_by_type(region_id, "site")
+                for site_id, site_name in sites:
+                    site_iid = f"site_{site_id}"
                     self.Sites.insert(
-                        region_iid, tk.END, iid=lab_iid,
-                        text=lab_name,
-                        values=(lab_id, NODE_TYPE_LAB),
+                        region_iid, tk.END, iid=site_iid,
+                        text=site_name,
+                        values=(site_id, NODE_TYPE_SITE),
                     )
 
-                    # Load sections under this lab
-                    sections = self._load_orgs_by_type(lab_id, "section")
-                    for section_id, section_name in sections:
-                        sec_iid = f"sec_{section_id}"
+                    # Load labs under this site
+                    labs = self._load_orgs_by_type(site_id, "lab")
+                    for lab_id, lab_name in labs:
+                        lab_iid = f"lab_{lab_id}"
                         self.Sites.insert(
-                            lab_iid, tk.END, iid=sec_iid,
-                            text=section_name,
-                            values=(section_id, NODE_TYPE_SECTION),
+                            site_iid, tk.END, iid=lab_iid,
+                            text=lab_name,
+                            values=(lab_id, NODE_TYPE_LAB),
                         )
 
-                        # Load workstations under this section (by org_id)
-                        workstations = self._load_workstations(section_id)
-                        for ws_id, ws_descr in workstations:
-                            ws_iid = f"ws_{ws_id}"
+                        # Load sections under this lab
+                        sections = self._load_orgs_by_type(lab_id, "section")
+                        for section_id, section_name in sections:
+                            sec_iid = f"sec_{section_id}"
                             self.Sites.insert(
-                                sec_iid, tk.END, iid=ws_iid,
-                                text=ws_descr,
-                                values=(ws_id, NODE_TYPE_WORKSTATION),
+                                lab_iid, tk.END, iid=sec_iid,
+                                text=section_name,
+                                values=(section_id, NODE_TYPE_SECTION),
                             )
+
+                            # Load workstations under this section (by org_id)
+                            workstations = self._load_workstations(section_id)
+                            for ws_id, ws_descr in workstations:
+                                ws_iid = f"ws_{ws_id}"
+                                self.Sites.insert(
+                                    sec_iid, tk.END, iid=ws_iid,
+                                    text=ws_descr,
+                                    values=(ws_id, NODE_TYPE_WORKSTATION),
+                                )
 
         # 6) Expand root and first levels for better UX
         self.Sites.item(root_iid, open=True)
@@ -259,7 +270,7 @@ class UI(ParentView):
 
         Args:
             parent_id: Parent org_id (None for root/countries)
-            org_type: Organization type ('country', 'region', 'lab', 'section')
+            org_type: Organization type ('country', 'region', 'site', 'lab', 'section')
 
         Returns:
             List of (org_id, description) tuples

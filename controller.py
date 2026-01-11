@@ -526,7 +526,7 @@ class Controller:
         """
         Retrieve hierarchical organization information for the current lab context.
 
-        Returns country, region, lab, section names from organizations table.
+        Returns country, region, site, lab, section names from organizations table.
         Uses the current lab_id from current_ids.
         """
         lab_id = self.current_ids.get("lab_id")
