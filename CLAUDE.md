@@ -81,6 +81,9 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 | `Controller` | controller.py | SQL builders, domain logic |
 | `QC` | qc.py | Statistical calculations |
 | `Westgards` | westgards.py | Multirule QC evaluation |
+| `Exporter` | exporter.py | Excel/data export |
+| `Importer` | importer.py | QC data import |
+| `Launcher` | launcher.py | Window management |
 | `Tools` | tools.py | GUI utilities |
 
 ### Engine Manages
@@ -449,6 +452,9 @@ mysql -u root -p biovarase < migrations/012_create_organizations.sql
 mysql -u root -p biovarase < migrations/013_add_org_id_to_tables.sql
 mysql -u root -p biovarase < migrations/014_update_roles_and_triggers.sql
 # mysql -u root -p biovarase < migrations/015_cleanup_old_hierarchy.sql  # ONLY after full testing!
+
+# Admin user (after organizations migration)
+mysql -u root -p biovarase < migrations/016_create_admin_user.sql
 ```
 
 ### Production Migration Guide (008-011)
