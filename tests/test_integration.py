@@ -311,7 +311,7 @@ class TestOrganizationsTable:
         cursor.execute("SELECT DISTINCT org_type FROM organizations")
         org_types = [row["org_type"] for row in cursor.fetchall()]
 
-        valid_types = ["country", "region", "lab", "section"]
+        valid_types = ["country", "region", "site", "lab", "section"]
         for org_type in org_types:
             if org_type:  # Skip NULL
                 assert org_type in valid_types, f"Invalid org_type: {org_type}"

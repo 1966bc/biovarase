@@ -56,7 +56,7 @@ class UI(ParentView):
         self.pane_left = ttk.Frame(self.pw, style="App.TFrame", padding=6)
         self.pw.add(self.pane_left, minsize=260)
 
-        # Hierarchical tree: Country → Region → Lab → Section
+        # Hierarchical tree: Country → Region → Site → Lab → Section
         self.Sites = ttk.Treeview(self.pane_left, show="tree")
         self.Sites.column("#0", width=260, minwidth=220, stretch=True)
         self.Sites.heading("#0", text=_("Organizations"), anchor=tk.W)
@@ -137,7 +137,7 @@ class UI(ParentView):
         """
         Populate the tree with the full hierarchy from organizations table:
 
-            Country → Region → Lab → Section
+            Country → Region → Site → Lab → Section
 
         Role-based filtering:
         - App Admin (role=0): See all organizations
@@ -160,7 +160,7 @@ class UI(ParentView):
             # Non-admin: find the country ancestor of user's org
             countries = self._get_user_country_scope(user_org_id)
 
-        # Build the tree: Country → Region → Lab → Section
+        # Build the tree: Country → Region → Site → Lab → Section
         for country_id, country_name in countries:
             country_iid = f"country_{country_id}"
             self.Sites.insert(
@@ -177,23 +177,32 @@ class UI(ParentView):
                     text=region_name,
                 )
 
-                # Load labs under this region
-                labs = self._load_orgs_by_type(region_id, "lab")
-                for lab_id, lab_name in labs:
-                    lab_iid = f"lab_{lab_id}"
+                # Load sites (hospitals) under this region
+                sites = self._load_orgs_by_type(region_id, "site")
+                for site_id, site_name in sites:
+                    site_iid = f"site_{site_id}"
                     self.Sites.insert(
-                        region_iid, tk.END, iid=lab_iid,
-                        text=lab_name,
+                        region_iid, tk.END, iid=site_iid,
+                        text=site_name,
                     )
 
-                    # Load sections under this lab
-                    sections = self._load_orgs_by_type(lab_id, "section")
-                    for section_id, section_name in sections:
-                        sec_iid = f"section_{section_id}"
+                    # Load labs under this site
+                    labs = self._load_orgs_by_type(site_id, "lab")
+                    for lab_id, lab_name in labs:
+                        lab_iid = f"lab_{lab_id}"
                         self.Sites.insert(
-                            lab_iid, tk.END, iid=sec_iid,
-                            text=section_name,
+                            site_iid, tk.END, iid=lab_iid,
+                            text=lab_name,
                         )
+
+                        # Load sections under this lab
+                        sections = self._load_orgs_by_type(lab_id, "section")
+                        for section_id, section_name in sections:
+                            sec_iid = f"section_{section_id}"
+                            self.Sites.insert(
+                                lab_iid, tk.END, iid=sec_iid,
+                                text=section_name,
+                            )
 
         self.Sites.item(root_iid, open=True)
         # Auto-expand first level for better UX
@@ -206,7 +215,7 @@ class UI(ParentView):
 
         Args:
             parent_id: Parent org_id (None for root/countries)
-            org_type: Organization type ('country', 'region', 'lab', 'section')
+            org_type: Organization type ('country', 'region', 'site', 'lab', 'section')
 
         Returns:
             List of (org_id, description) tuples

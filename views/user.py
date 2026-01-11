@@ -219,8 +219,8 @@ class UI(ChildView):
             "section": "      ",
         }
 
-        # Sort by hierarchy: country first, then region, lab, section
-        type_order = {"country": 0, "region": 1, "lab": 2, "section": 3}
+        # Sort by hierarchy: country first, then region, site, lab, section
+        type_order = {"country": 0, "region": 1, "site": 2, "lab": 3, "section": 4}
 
         def get_path(org_id):
             """Build full path for an organization."""
