@@ -157,8 +157,10 @@ class UI(ChildView):
         sql = """
             SELECT w.workstation_id, w.description, w.serial
             FROM workstations w
-            JOIN sections s ON s.section_id = w.section_id
-            WHERE s.lab_id = ? AND w.status = 1
+            JOIN organizations section ON section.org_id = w.org_id
+            WHERE section.parent_id = ?
+              AND section.org_type = 'section'
+              AND w.status = 1
             ORDER BY w.description
         """
 

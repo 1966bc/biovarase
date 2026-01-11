@@ -92,7 +92,7 @@ class AbbottImporter:
             SELECT wtm.external_code, wtm.workstation_id, wtm.test_method_id
             FROM workstation_test_methods wtm
             JOIN workstations w ON wtm.workstation_id = w.workstation_id
-            WHERE w.section_id = ?
+            WHERE w.org_id = ?
         ''', (SECTION_ID,))
         for row in self.cur.fetchall():
             if row['external_code']:

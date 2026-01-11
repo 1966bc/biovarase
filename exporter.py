@@ -78,12 +78,12 @@ class Exporter:
                 INNER JOIN batches      AS b  ON tm.test_method_id = b.test_method_id
                 INNER JOIN categories   AS c  ON tm.category_id = c.category_id
                 INNER JOIN samples      AS s  ON tm.sample_id = s.sample_id
-                INNER JOIN sections     AS se ON tm.section_id = se.section_id
-                INNER JOIN labs         AS l  ON se.lab_id = l.lab_id
+                INNER JOIN organizations AS section ON tm.org_id = section.org_id
                 INNER JOIN results      AS r  ON b.batch_id = r.batch_id
                 WHERE t.status = 1
                   AND tm.status = 1
-                  AND se.lab_id = ?
+                  AND section.parent_id = ?
+                  AND section.org_type = 'section'
                   AND DATE(r.received) >= ?
                   AND r.is_delete = 0
                 GROUP BY tm.test_method_id
@@ -149,20 +149,19 @@ class Exporter:
                 equipments.description          AS equipment_description,
                 workstations.description        AS workstation_description,
                 workstations.serial             AS workstation_serial,
-                labs.description                AS lab_description,
-                sections.description            AS section_description
+                section.description             AS section_description
             FROM tests
             INNER JOIN test_methods ON tests.test_id = test_methods.test_id
             INNER JOIN batches ON test_methods.test_method_id = batches.test_method_id
             INNER JOIN results ON batches.batch_id = results.batch_id
             INNER JOIN workstations ON results.workstation_id = workstations.workstation_id
             INNER JOIN equipments ON workstations.equipment_id = equipments.equipment_id
-            INNER JOIN sections ON workstations.section_id = sections.section_id
-            INNER JOIN labs ON sections.lab_id = labs.lab_id
+            INNER JOIN organizations section ON section.org_id = workstations.org_id
             INNER JOIN notes ON results.result_id = notes.result_id
             INNER JOIN actions ON notes.action_id = actions.action_id
             WHERE DATE(results.received) >= ?
-              AND sections.lab_id = ?
+              AND section.parent_id = ?
+              AND section.org_type = 'section'
               AND tests.status  = 1
               AND batches.status = 1
               AND results.is_delete = 0
@@ -310,10 +309,9 @@ class Exporter:
             INNER JOIN test_methods AS tm ON t.test_id     = tm.test_id
             INNER JOIN categories  AS c  ON tm.category_id = c.category_id
             INNER JOIN samples     AS s  ON tm.sample_id   = s.sample_id
-            INNER JOIN sections    AS se ON tm.section_id  = se.section_id
-            INNER JOIN labs        AS l  ON se.lab_id      = l.lab_id
-            INNER JOIN sites       AS si ON l.site_id      = si.site_id
-            WHERE l.lab_id = ?
+            INNER JOIN organizations AS section ON tm.org_id = section.org_id
+            WHERE section.parent_id = ?
+              AND section.org_type = 'section'
               AND t.status = 1
               AND tm.status = 1
         """
@@ -355,11 +353,11 @@ class Exporter:
             FROM batches AS b
             INNER JOIN workstations AS w ON b.workstation_id = w.workstation_id
             INNER JOIN equipments   AS e ON w.equipment_id   = e.equipment_id
-            INNER JOIN sections     AS se ON w.section_id    = se.section_id
-            INNER JOIN labs         AS l  ON l.lab_id        = se.lab_id
+            INNER JOIN organizations AS section ON section.org_id = w.org_id
             WHERE b.status = 1
               AND b.test_method_id = ?
-              AND l.lab_id = ?
+              AND section.parent_id = ?
+              AND section.org_type = 'section'
         """
         return self.read(True, sql, (test_method_id, lab_id)) or []
 

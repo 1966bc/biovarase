@@ -283,9 +283,10 @@ class UI(ParentView):
             JOIN test_methods tm ON tm.test_method_id = b.test_method_id
             JOIN tests t ON t.test_id = tm.test_id
             JOIN workstations w ON w.workstation_id = r.workstation_id
-            JOIN sections s ON s.section_id = w.section_id
+            JOIN organizations section ON section.org_id = w.org_id
             JOIN equipments e ON e.equipment_id = w.equipment_id
-            WHERE s.lab_id = ?
+            WHERE section.parent_id = ?
+              AND section.org_type = 'section'
               AND w.status = 1
               AND e.status = 1
               AND b.description IS NOT NULL
