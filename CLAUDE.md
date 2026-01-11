@@ -100,7 +100,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 **Primary isolation: `organizations` table with `org_id`**
 
 The hierarchy is stored in a self-referential `organizations` table:
-- `org_type`: 'country', 'region', 'lab', 'section'
+- `org_type`: 'country', 'region', 'site', 'lab', 'section'
 - `parent_id`: References parent organization
 
 At login, `current_ids` is populated from the user's `org_id`:
@@ -249,10 +249,12 @@ Single `organizations` table with `parent_id` for any depth:
 organizations (org_type, parent_id)
 ├── Italia (country, NULL)
 │   ├── Lazio (region, parent=Italia)
-│   │   ├── Ospedale San Camillo (lab, parent=Lazio)
-│   │   │   ├── Chimica Clinica (section, parent=San Camillo)
-│   │   │   └── Ematologia (section, parent=San Camillo)
-│   │   └── Policlinico Umberto I (lab, parent=Lazio)
+│   │   ├── Azienda Ospedaliera San Camillo (site, parent=Lazio)
+│   │   │   ├── Laboratorio Analisi (lab, parent=San Camillo)
+│   │   │   │   ├── Chimica Clinica (section, parent=Lab)
+│   │   │   │   └── Ematologia (section, parent=Lab)
+│   │   │   └── Laboratorio Microbiologia (lab, parent=San Camillo)
+│   │   └── Policlinico Umberto I (site, parent=Lazio)
 │   └── Lombardia (region, parent=Italia)
 └── France (country, NULL)
 ```
@@ -455,6 +457,9 @@ mysql -u root -p biovarase < migrations/014_update_roles_and_triggers.sql
 
 # Admin user (after organizations migration)
 mysql -u root -p biovarase < migrations/016_create_admin_user.sql
+
+# Site org_type (physical hospital locations)
+mysql -u root -p biovarase < migrations/017_add_site_org_type.sql
 ```
 
 ### Production Migration Guide (008-011)

@@ -546,7 +546,7 @@ class Controller:
             SELECT
                 org_type, description
             FROM ancestors
-            ORDER BY FIELD(org_type, 'country', 'region', 'lab', 'section')
+            ORDER BY FIELD(org_type, 'country', 'region', 'site', 'lab', 'section')
         """
         rows = self.read(True, sql, (lab_id,))
         if not rows:
