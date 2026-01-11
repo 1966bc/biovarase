@@ -27,6 +27,8 @@ class UI(ParentView):
         if self._reusing:
             return
 
+        self.attributes("-topmost", True)
+
         self.selected_workstation = None
         self.selected_test_method = None
         self.elements = 0
@@ -96,7 +98,7 @@ class UI(ParentView):
         self.frm_plots.columnconfigure(0, weight=1) 
         self.frm_plots.bind(
             "<Configure>",
-            lambda e: self._canvas.configure(scrollregion=self._canvas.bbox("all")),
+            lambda e: self._canvas.configure(scrollregion=self._canvas.bbox("all")) if self._canvas else None,
         )
 
         # Create the window inside the canvas and keep its id
@@ -109,7 +111,7 @@ class UI(ParentView):
         # Make inner frame width follow the canvas width
         self._canvas.bind(
             "<Configure>",
-            lambda e: self._canvas.itemconfigure(self._plots_window, width=e.width),
+            lambda e: self._canvas.itemconfigure(self._plots_window, width=e.width) if self._canvas else None,
         )
 
 

@@ -6,7 +6,7 @@
 # modify:   January 2026
 # -----------------------------------------------------------------------------
 """
-Category editor with lab_id support for multi-tenant.
+Category editor - categories are always created in the current lab context.
 """
 
 import tkinter as tk
@@ -18,10 +18,12 @@ from views.child_view import ChildView
 
 class UI(ChildView):
     """
-    Editor for categories table with lab_id field.
+    Editor for categories table.
+
+    Categories are automatically assigned to the current laboratory
+    (from engine.get_lab_id()).
 
     Fields:
-        - lab_id: combobox to select laboratory
         - description: category name
         - status: active/inactive
     """
@@ -33,13 +35,8 @@ class UI(ChildView):
         self.selected_item = None
 
         # Form variables
-        self.lab_var = tk.StringVar()
         self.description = tk.StringVar()
         self.status = tk.BooleanVar()
-
-        # Lab mapping
-        self.labs = []
-        self.dict_labs = {}
 
         self._build_ui()
         self.show()
@@ -57,20 +54,6 @@ class UI(ChildView):
         frm_left.grid(row=0, column=0, sticky="ns", **paddings)
 
         r = 0
-
-        # Lab combobox
-        ttk.Label(frm_left, text=_("Laboratory:")).grid(
-            row=r, column=0, sticky="w", padx=5, pady=5
-        )
-        self.cbLab = ttk.Combobox(
-            frm_left,
-            textvariable=self.lab_var,
-            state="readonly",
-            width=30
-        )
-        self.cbLab.grid(row=r, column=1, sticky="ew", padx=5, pady=5)
-
-        r += 1
 
         # Description
         ttk.Label(frm_left, text=_("Category:")).grid(
@@ -119,8 +102,6 @@ class UI(ChildView):
 
     def on_open(self):
         """Load data and set form values."""
-        self._load_labs()
-
         if self.index is not None:
             # UPDATE mode
             self.title(_("Update Category"))
@@ -133,76 +114,19 @@ class UI(ChildView):
             # INSERT mode
             self.title(_("Add Category"))
             self.status.set(True)
-            # Pre-select current lab
-            current_lab_id = self.engine.get_lab_id()
-            if current_lab_id:
-                for idx, lab_id in self.dict_labs.items():
-                    if lab_id == current_lab_id:
-                        self.cbLab.current(idx)
-                        break
 
         self.txDescription.focus_set()
-
-    def _load_labs(self):
-        """Load laboratories for combobox from organizations table."""
-        role = self.engine.log_user["role"]
-
-        if role == 0:
-            # Admin: all labs
-            sql = """
-                SELECT org_id AS lab_id, description
-                FROM organizations
-                WHERE org_type = 'lab' AND status = 1
-                ORDER BY description
-            """
-            args = ()
-        else:
-            # Others: only their lab
-            sql = """
-                SELECT org_id AS lab_id, description
-                FROM organizations
-                WHERE org_id = ? AND org_type = 'lab' AND status = 1
-            """
-            args = (self.engine.get_lab_id(),)
-
-        rows = self.engine.read(True, sql, args) or []
-        self.labs = list(rows)
-
-        values = []
-        self.dict_labs = {}
-        for idx, lab in enumerate(self.labs):
-            values.append(lab["description"])
-            self.dict_labs[idx] = lab["lab_id"]
-
-        self.cbLab["values"] = values
 
     def _set_values(self):
         """Populate form from selected record."""
         if not self.selected_item:
             return
 
-        # Set lab
-        lab_id = self.selected_item.get("lab_id")
-        if lab_id:
-            for idx, lid in self.dict_labs.items():
-                if lid == lab_id:
-                    self.cbLab.current(idx)
-                    break
-
         self.description.set(self.selected_item.get("description", ""))
         self.status.set(bool(self.selected_item.get("status", 1)))
 
     def _on_save(self, _evt=None):
         """Save category."""
-        # Validate
-        if self.cbLab.current() < 0:
-            messagebox.showwarning(
-                self.engine.app_title,
-                _("Please select a laboratory."),
-                parent=self
-            )
-            return
-
         desc = self.description.get().strip()
         if not desc:
             messagebox.showwarning(
@@ -212,14 +136,23 @@ class UI(ChildView):
             )
             return
 
+        # Get current lab org_id
+        org_id = self.engine.get_lab_id()
+        if not org_id:
+            messagebox.showerror(
+                self.engine.app_title,
+                _("No laboratory selected."),
+                parent=self
+            )
+            return
+
         # Check duplicate
-        lab_id = self.dict_labs[self.cbLab.current()]
         sql = """
             SELECT category_id FROM categories
-            WHERE description = ? AND lab_id = ?
+            WHERE description = ? AND org_id = ?
             LIMIT 1
         """
-        row = self.engine.read(False, sql, (desc, lab_id))
+        row = self.engine.read(False, sql, (desc, org_id))
         if row:
             current_id = self.selected_item.get("category_id") if self.selected_item else None
             if current_id is None or row["category_id"] != current_id:
@@ -238,10 +171,8 @@ class UI(ChildView):
         ):
             return
 
-        # Build args: lab_id, org_id, description, status
-        org_id = lab_id  # org_id is same as lab_id (organizations table)
+        # Build args: org_id, description, status
         args = [
-            lab_id,
             org_id,
             desc,
             int(self.status.get())
@@ -251,15 +182,15 @@ class UI(ChildView):
             # UPDATE
             sql = """
                 UPDATE categories
-                SET lab_id = ?, org_id = ?, description = ?, status = ?
+                SET org_id = ?, description = ?, status = ?
                 WHERE category_id = ?
             """
             args.append(self.selected_item["category_id"])
         else:
             # INSERT
             sql = """
-                INSERT INTO categories (lab_id, org_id, description, status)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO categories (org_id, description, status)
+                VALUES (?, ?, ?)
             """
 
         last_id = self.engine.write(sql, args)

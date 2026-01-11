@@ -129,11 +129,13 @@ class LabSelectorDialog(tk.Toplevel):
                 SELECT
                     lab.org_id AS lab_id,
                     lab.description AS lab_name,
+                    COALESCE(site.description, 'N/A') AS site_name,
                     COALESCE(region.description, 'N/A') AS region_name
                 FROM descendants lab
-                LEFT JOIN organizations region ON lab.parent_id = region.org_id
+                LEFT JOIN organizations site ON lab.parent_id = site.org_id
+                LEFT JOIN organizations region ON site.parent_id = region.org_id
                 WHERE lab.org_type = 'lab' AND lab.status = 1
-                ORDER BY region.description, lab.description
+                ORDER BY region.description, site.description, lab.description
             """
             rows = self.engine.read(True, sql, (self.parent_org_id,)) or []
         else:
@@ -142,11 +144,13 @@ class LabSelectorDialog(tk.Toplevel):
                 SELECT
                     lab.org_id AS lab_id,
                     lab.description AS lab_name,
+                    COALESCE(site.description, 'N/A') AS site_name,
                     COALESCE(region.description, 'N/A') AS region_name
                 FROM organizations lab
-                LEFT JOIN organizations region ON lab.parent_id = region.org_id
+                LEFT JOIN organizations site ON lab.parent_id = site.org_id
+                LEFT JOIN organizations region ON site.parent_id = region.org_id
                 WHERE lab.org_type = 'lab' AND lab.status = 1
-                ORDER BY region.description, lab.description
+                ORDER BY region.description, site.description, lab.description
             """
             rows = self.engine.read(True, sql, ()) or []
 
@@ -156,7 +160,7 @@ class LabSelectorDialog(tk.Toplevel):
         if rows:
             default_idx = 0
             for idx, row in enumerate(rows):
-                display = f"{row['lab_name']} - {row['region_name']}"
+                display = f"{row['region_name']} - {row['site_name']} - {row['lab_name']}"
                 self.listbox.insert(tk.END, display)
                 self.lab_ids.append(row["lab_id"])
                 if row["lab_id"] == self.default_lab_id:

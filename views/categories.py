@@ -87,7 +87,7 @@ class UI(ParentView):
         self.dict_items.clear()
         self.selected_item = None
 
-        role = self.engine.log_user["role"]
+        role = self.engine.log_user.get("role", 5)  # Default to technician
 
         if role == 0:
             # Admin: all categories
@@ -95,27 +95,26 @@ class UI(ParentView):
                 SELECT c.category_id AS pk,
                        c.description,
                        c.status,
-                       c.lab_id,
+                       c.org_id,
                        o.description AS lab_name
                 FROM categories c
-                LEFT JOIN organizations o ON o.org_id = c.lab_id
-                ORDER BY CASE WHEN c.lab_id IS NULL THEN 1 ELSE 0 END,
+                LEFT JOIN organizations o ON o.org_id = c.org_id
+                ORDER BY CASE WHEN c.org_id IS NULL THEN 1 ELSE 0 END,
                          o.description, c.description
             """
             args = ()
         else:
-            # All non-admin users: categories in their lab + unassigned
+            # Non-admin users: only categories in their lab
             sql = """
                 SELECT c.category_id AS pk,
                        c.description,
                        c.status,
-                       c.lab_id,
+                       c.org_id,
                        o.description AS lab_name
                 FROM categories c
-                LEFT JOIN organizations o ON o.org_id = c.lab_id
-                WHERE c.lab_id = ? OR c.lab_id IS NULL
-                ORDER BY CASE WHEN c.lab_id IS NULL THEN 1 ELSE 0 END,
-                         c.description
+                LEFT JOIN organizations o ON o.org_id = c.org_id
+                WHERE c.org_id = ?
+                ORDER BY c.description
             """
             args = (self.engine.get_lab_id(),)
 
@@ -135,7 +134,7 @@ class UI(ParentView):
             # Gray background for inactive OR unassigned
             if row.get("status", 1) != 1:
                 self.lstItems.itemconfig(index, {"bg": "light gray"})
-            elif row.get("lab_id") is None:
+            elif row.get("org_id") is None:
                 self.lstItems.itemconfig(index, {"bg": "#fff3cd"})  # light yellow for unassigned
 
             self.dict_items[index] = row["pk"]

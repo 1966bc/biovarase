@@ -207,7 +207,10 @@ class TestConnection:
 
     def test_connection_is_open(self, db_connection):
         """Connection should be open."""
-        assert db_connection.con.open
+        # mariadb connector doesn't have .open attribute, verify with query
+        cursor = db_connection.con.cursor(dictionary=True)
+        cursor.execute("SELECT 1")
+        cursor.close()
 
     def test_connection_uses_correct_database(self, db_connection):
         """Should be connected to test database."""
@@ -221,7 +224,10 @@ class TestConnection:
         """_ensure_connection should work when already connected."""
         db_connection._ensure_connection()
         assert db_connection.con is not None
-        assert db_connection.con.open
+        # Verify connection works
+        cursor = db_connection.con.cursor(dictionary=True)
+        cursor.execute("SELECT 1")
+        cursor.close()
 
 
 # ============================================================================

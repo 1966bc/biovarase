@@ -38,6 +38,7 @@ SELECT
     30,     -- 30 minutes logout time
     1,      -- Enable timeout
     1       -- Active status
+FROM DUAL
 WHERE @admin_exists = 0;
 
 -- If admin already exists, update to ensure correct role and scope

@@ -141,7 +141,7 @@ class UI(ParentView):
         self.pw.add(pane_right, minsize=140, stretch="never")
 
         frm_buttons = ttk.Frame(pane_right, style="Panel.TFrame")
-        frm_buttons.pack(side=tk.LEFT, fill=tk.Y, expand=0)
+        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
         self.engine.add_button(frm_buttons, _("Goals"), self.on_analytical_goal, "<Alt-g>", self)
         self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
