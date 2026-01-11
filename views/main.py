@@ -607,8 +607,8 @@ class Main(tk.Toplevel):
         #print(self.engine.current_ids)
         company = self.engine.get_company_data()
         if company:
-            # Use region name (was 'site' in old schema)
-            self.title(f"Biovarase {company.get('region', company.get('lab', ''))}")
+            # Use lab name (hospital/site)
+            self.title(f"Biovarase {company.get('lab', '')}")
         else:
             self.title("Biovarase")
 
@@ -646,8 +646,8 @@ class Main(tk.Toplevel):
         """Re-read section-dependent data and update title, status bar and lists."""
         company = self.engine.get_company_data()
         if company:
-            # Use region name (was 'site' in old schema)
-            self.title(f"Biovarase {company.get('region', company.get('lab', ''))}")
+            # Use lab name (hospital/site)
+            self.title(f"Biovarase {company.get('lab', '')}")
             self.status_bar_site_description.set(
                 self.get_status_bar_site_description(company)
             )
