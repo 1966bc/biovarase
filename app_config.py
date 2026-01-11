@@ -37,7 +37,7 @@ LOG_MAX_SIZE_MB = 10  # Maximum log file size before rotation
 LOG_KEEP_COUNT = 5  # Number of old log files to keep
 
 # Main window minimum dimensions (UI design constraint)
-MAIN_WINDOW_MIN_WIDTH = 1200
+MAIN_WINDOW_MIN_WIDTH = 1400
 MAIN_WINDOW_MIN_HEIGHT = 700
 
 
