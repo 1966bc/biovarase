@@ -132,10 +132,11 @@ rows = self.engine.read(True, sql, (lab_id,))
 **Tables with org_id:**
 | Table | org_id Usage |
 |-------|--------------|
+| `results` | `org_id` = lab's org_id |
+| `batches` | `org_id` = lab's org_id |
 | `test_methods` | `org_id` = section's org_id |
 | `workstations` | `org_id` = section's org_id |
-| `batches` | `org_id` = lab's org_id |
-| `categories` | `lab_id` = lab's org_id |
+| `categories` | `org_id` = lab's org_id |
 | `users` | `org_id` = assigned lab/section org_id |
 
 ### Database Access
