@@ -511,6 +511,9 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         Uses organizations table. The lab_id stored in current_ids is actually
         the org_id of the lab-level organization.
 
+        For users assigned to non-lab orgs (country, region, site), finds the
+        first lab under their org to use as default.
+
         Args:
             lab_id: Optional lab org_id override (used by admin lab selector)
                     If None, uses log_user["org_id"]
@@ -528,6 +531,19 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                 # No org assigned (admin without selection)
                 self.current_ids = {}
                 return False
+
+            # Check if this org_id is a lab or something higher in hierarchy
+            org_type = self._get_org_type(lab_id)
+
+            if org_type and org_type != "lab":
+                # User is assigned to country/region/site - find first lab under it
+                first_lab = self._get_first_lab_under_org(lab_id)
+                if first_lab:
+                    lab_id = first_lab
+                else:
+                    # No lab found under this org
+                    self.current_ids = {}
+                    return False
 
             # Query DB for hierarchical org IDs related to this lab org_id
             row = self.get_idd_by_lab_id(lab_id)
@@ -552,6 +568,35 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             self.on_log("init_current_ids_from_user", e, type(e), sys.modules[__name__])
             self.current_ids = {}
             return False
+
+    def _get_org_type(self, org_id: int) -> str:
+        """Get the org_type for a given org_id."""
+        sql = "SELECT org_type FROM organizations WHERE org_id = ?"
+        row = self.read(False, sql, (org_id,))
+        return row["org_type"] if row else None
+
+    def _get_first_lab_under_org(self, org_id: int) -> int:
+        """
+        Find the first active lab under the given organization (recursive).
+
+        Used for Regional/Country admins who need a default lab context.
+        """
+        sql = """
+            WITH RECURSIVE descendants AS (
+                SELECT org_id, org_type, status
+                FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id, o.org_type, o.status
+                FROM organizations o
+                JOIN descendants d ON o.parent_id = d.org_id
+            )
+            SELECT org_id FROM descendants
+            WHERE org_type = 'lab' AND status = 1
+            ORDER BY org_id
+            LIMIT 1
+        """
+        row = self.read(False, sql, (org_id,))
+        return row["org_id"] if row else None
 
     def get_user_role(self) -> int:
         """
