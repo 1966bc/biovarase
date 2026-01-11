@@ -429,7 +429,7 @@ class UI(ParentView):
                         u.last_name
                     FROM workstations w
                     INNER JOIN equipments e ON w.equipment_id = e.equipment_id
-                    INNER JOIN sections s ON w.section_id = s.section_id
+                    INNER JOIN organizations section ON section.org_id = w.org_id
                     LEFT JOIN results r ON r.workstation_id = w.workstation_id
                         AND DATE(r.received) = ?
                         AND r.status = 1
@@ -440,7 +440,8 @@ class UI(ParentView):
                         AND da.approval_date = ?
                     LEFT JOIN users u ON da.approved_by = u.user_id
                     WHERE w.status = 1
-                        AND s.lab_id = ?
+                        AND section.parent_id = ?
+                        AND section.org_type = 'section'
                     GROUP BY w.workstation_id, w.description, e.description,
                              da.approval_id, da.approved_by, da.approved_at,
                              u.first_name, u.last_name
