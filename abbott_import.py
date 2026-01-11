@@ -32,6 +32,7 @@ from pathlib import Path
 ABBOTT_PATH = "/mnt/biovarase_qc/EXPQC/Biovarase"
 SECTION_ID = 6  # Sezione Alinity
 LAB_ID = 2  # Laboratory ID for Abbott batches/results
+ORG_ID = 2002  # organizations.org_id for the lab (from migration mapping)
 VALID_WORKSTATIONS = ("ALCI-1", "ALCI-2", "ALCI-3")
 MAPPING_FILE = "CFGTESTQNRANGE.xlsx"  # Excel with test code -> description mapping
 
@@ -277,9 +278,9 @@ class AbbottImporter:
 
         # 2. Create test_method
         test_method_id = self.insert(
-            """INSERT INTO test_methods (test_id, org_id, category_id, sample_id, code, status)
-               VALUES (?, ?, 29, 1, ?, 1)""",
-            (test_id, SECTION_ID, external_code)
+            """INSERT INTO test_methods (test_id, category_id, sample_id, code, section_id, lab_id, org_id, status)
+               VALUES (?, 29, 1, ?, ?, ?, ?, 1)""",
+            (test_id, external_code, SECTION_ID, LAB_ID, SECTION_ID)
         )
         if not test_method_id:
             return None
@@ -353,10 +354,10 @@ class AbbottImporter:
 
         batch_id = self.insert(
             """INSERT INTO batches
-               (lab_id, test_method_id, workstation_id, lot_number, description,
+               (lab_id, org_id, test_method_id, workstation_id, lot_number, description,
                 target, sd, expiration, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
-            (lab_id, test_method_id, workstation_id, batch_lot, description,
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)""",
+            (lab_id, ORG_ID, test_method_id, workstation_id, batch_lot, description,
              target, sd, exp_date)
         )
         if batch_id:
@@ -410,10 +411,10 @@ class AbbottImporter:
 
         result_id = self.insert(
             """INSERT INTO results
-               (batch_id, lab_id, run_number, workstation_id, result, received,
+               (batch_id, lab_id, org_id, run_number, workstation_id, result, received,
                 status, validated, is_delete, log_id)
-               VALUES (?, ?, '0', ?, ?, ?, 1, 0, 0, 1)""",
-            (batch_id, LAB_ID, workstation_id, result_value, received)
+               VALUES (?, ?, ?, '0', ?, ?, ?, 1, 0, 0, 1)""",
+            (batch_id, LAB_ID, ORG_ID, workstation_id, result_value, received)
         )
         if result_id:
             self.stats["results_inserted"] += 1

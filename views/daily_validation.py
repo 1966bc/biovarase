@@ -65,6 +65,7 @@ class UI(ParentView):
             return
 
         self.title(_("Daily QC Validation"))
+        self.attributes("-topmost", True)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.bind("<Escape>", self.on_close)
         self.bind("<F5>", lambda e: self._load_data())
@@ -83,6 +84,10 @@ class UI(ParentView):
 
         # Build UI
         self._build_ui()
+
+        # Subscribe to result changes
+        self.engine.subscribe("result_changed", self._on_result_changed)
+
         self.show(on_screen=True)
 
     def _build_ui(self):
@@ -1405,5 +1410,11 @@ class UI(ParentView):
     def on_close(self, evt=None):
         """Close the window."""
         self._stop_auto_refresh()
+        self.engine.unsubscribe("result_changed", self._on_result_changed)
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.destroy()
+
+    def _on_result_changed(self, result_id):
+        """Handle result_changed event - reload data if window is visible."""
+        if self.winfo_exists() and self.winfo_viewable():
+            self._load_data(preserve_expansion=True)

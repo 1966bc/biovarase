@@ -393,6 +393,10 @@ class UI(ParentView):
         # Test id from selected_test (hybrid dict from engine.get_selected)
         test_id = self.selected_test["test_id"]
 
+        # Section org_id and lab org_id for multi-tenant
+        section_org_id = self.dict_sections[self.cbSections.current()]
+        lab_id = self.engine.get_lab_id()
+
         return [
             test_id,                                            # test_id
             self.dict_categories[self.cbCategories.current()],  # category_id
@@ -400,7 +404,9 @@ class UI(ParentView):
             self.dict_samples[self.cbSamples.current()],        # sample_id
             self.dict_methods[self.cbMethods.current()],        # method_id
             self.dict_units[self.cbUnits.current()],            # unit_id
-            self.dict_sections[self.cbSections.current()],      # org_id (section)
+            section_org_id,                                     # section_id (org_id of section)
+            lab_id,                                             # lab_id (org_id of lab)
+            section_org_id,                                     # org_id (same as section for test_methods)
             int(self.is_mandatory.get()),                       # is_mandatory
             int(self.status.get()),                             # status
         ]

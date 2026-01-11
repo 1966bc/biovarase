@@ -183,6 +183,7 @@ class UI(ParentView):
                 - ws2_id: int
         """
         self.title(_("Bland-Altman Comparison"))
+        self.attributes("-topmost", True)
         self._load_categories()
 
         # If preselect data provided, auto-select and calculate
