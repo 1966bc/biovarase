@@ -22,6 +22,7 @@
 5. [Architettura](#architettura)
    - [Separazione delle Responsabilità](#separazione-delle-responsabilità)
    - [Multi-Tenant](#multi-tenant)
+   - [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
 6. [Python Avanzato](#python-avanzato)
    - [Decoratori](#decoratori)
    - [Context Manager](#context-manager)
@@ -671,6 +672,225 @@ organizations (tabella singola con parent_id)
 │   └── Lombardia (region)
 └── France (country)
 ```
+
+---
+
+### Role-Based Access Control (RBAC)
+
+#### Cos'è
+
+Il **RBAC** è un modello di controllo accessi dove i permessi sono assegnati ai **ruoli**, non direttamente agli utenti. Ogni utente ha un ruolo, e il ruolo determina cosa può vedere e fare.
+
+#### Perché usarlo
+
+| Senza RBAC | Con RBAC |
+|------------|----------|
+| Permessi per ogni utente | Permessi per ruolo |
+| Difficile da mantenere | Facile da gestire |
+| Errori di configurazione | Consistenza garantita |
+| "Mario può vedere X, Y ma non Z..." | "I Tecnici possono..." |
+
+#### Gerarchia ruoli in Biovarase
+
+```
+Role 0: APP ADMIN
+   └── Vede TUTTO, gestisce master data globali
+
+Role 1-2: COUNTRY/REGIONAL ADMIN
+   └── Vede la propria gerarchia (country/region e discendenti)
+
+Role 3: LAB ADMIN
+   └── Gestisce UN laboratorio (utenti, workstation, test methods)
+
+Role 4: SUPERUSER
+   └── Valida risultati QC, gestisce batch
+
+Role 5: TECHNICIAN
+   └── Inserisce dati QC
+
+Role 6: VIEWER
+   └── Solo lettura
+```
+
+#### Implementazione: Filtro dati per ruolo
+
+Il pattern base è: **interroga il ruolo, costruisci query diverse**.
+
+```python
+# In views/users.py - Lista utenti filtrata per ruolo
+def _load_items(self):
+    role = self.engine.log_user.get("role", 5)
+    user_org_id = self.engine.log_user.get("org_id")
+
+    if role == ROLE_APP_ADMIN:
+        # App Admin: vede tutti gli utenti
+        sql = """
+            SELECT u.*, o.description AS lab_name
+            FROM users u
+            LEFT JOIN organizations o ON u.org_id = o.org_id
+            ORDER BY o.description, u.last_name
+        """
+        args = ()
+
+    elif role >= ROLE_LAB_ADMIN:
+        # Lab Admin e inferiori: solo utenti del proprio lab
+        sql = """
+            SELECT u.*, o.description AS lab_name
+            FROM users u
+            LEFT JOIN organizations o ON u.org_id = o.org_id
+            WHERE u.org_id = ?
+            ORDER BY u.last_name
+        """
+        args = (user_org_id,)
+
+    else:
+        # Country/Regional Admin: utenti nella propria gerarchia
+        sql = """
+            WITH RECURSIVE org_tree AS (
+                SELECT org_id FROM organizations WHERE org_id = ?
+                UNION ALL
+                SELECT o.org_id FROM organizations o
+                JOIN org_tree t ON o.parent_id = t.org_id
+            )
+            SELECT u.*, o.description AS lab_name
+            FROM users u
+            LEFT JOIN organizations o ON u.org_id = o.org_id
+            WHERE u.org_id IN (SELECT org_id FROM org_tree)
+            ORDER BY o.description, u.last_name
+        """
+        args = (user_org_id,)
+
+    rows = self.engine.read(True, sql, args) or []
+```
+
+#### Implementazione: Menu filtrati per ruolo
+
+Non basta filtrare i dati - devi anche **nascondere le voci di menu** che l'utente non può usare.
+
+```python
+# In views/main.py - Menu con voci filtrate
+
+def _init_menu(self):
+    role = self.engine.log_user.get("role", 6)
+
+    # Menu Admin visibile solo per role 0-3
+    is_lab_admin = role <= ROLE_LAB_ADMIN
+    m_adm = tk.Menu(m_main) if is_lab_admin else None
+
+    if m_adm:
+        # Ogni voce ha un ruolo massimo che può vederla
+        # (label, underline, command, max_role)
+        items = (
+            (_("Actions"), 0, self.on_actions, ROLE_APP_ADMIN),      # Solo role 0
+            (_("Controls"), 0, self.on_controls, ROLE_APP_ADMIN),    # Solo role 0
+            (_("Users"), 0, self.on_users, ROLE_LAB_ADMIN),          # Role 0-3
+        )
+
+        for label, underline, command, max_role in sorted(items):
+            if role <= max_role:  # Mostra solo se il ruolo è "abbastanza alto"
+                m_adm.add_command(label=label, underline=underline, command=command)
+```
+
+#### Implementazione: Restrizioni nell'editor
+
+Quando un utente crea/modifica record, devi limitare le sue scelte.
+
+```python
+# In views/user.py - Lab Admin può creare solo utenti nel proprio lab
+
+def on_open(self):
+    # Salva il ruolo dell'utente loggato
+    self.logged_user_role = self.engine.log_user.get("role", 5)
+    self.logged_user_org_id = self.engine.log_user.get("org_id")
+
+    # Limita i ruoli selezionabili: non puoi creare ruoli superiori al tuo
+    min_role = max(self.logged_user_role, 0)
+    self.spnRole.config(from_=min_role)  # Spinbox parte dal tuo ruolo
+
+def _load_orgs(self):
+    """Carica organizzazioni filtrate per il ruolo loggato."""
+    if self.logged_user_role == ROLE_APP_ADMIN:
+        # App Admin: tutte le organizzazioni
+        sql = "SELECT * FROM organizations WHERE status = 1"
+        args = ()
+    elif self.logged_user_role >= ROLE_LAB_ADMIN:
+        # Lab Admin: solo la propria organizzazione
+        sql = "SELECT * FROM organizations WHERE org_id = ?"
+        args = (self.logged_user_org_id,)
+    # ... popola combobox
+```
+
+#### Pattern: Doppio controllo (Defense in Depth)
+
+**Mai fidarsi solo del menu nascosto!** Un utente potrebbe chiamare direttamente una funzione.
+
+```python
+# SBAGLIATO - Solo menu nascosto
+def on_users(self):
+    views.users.UI(self).on_open()  # Chiunque può chiamare questo!
+
+# CORRETTO - Controllo anche nella funzione
+def on_users(self):
+    role = self.engine.log_user.get("role", 99)
+    if role > ROLE_LAB_ADMIN:
+        messagebox.showwarning(self.engine.app_title, "Non autorizzato")
+        return
+
+    views.users.UI(self).on_open()
+```
+
+#### Query ricorsive per gerarchie (CTE)
+
+Per Country/Regional Admin che devono vedere "tutti i discendenti":
+
+```python
+# Common Table Expression (CTE) ricorsiva
+sql = """
+    WITH RECURSIVE org_tree AS (
+        -- Caso base: l'organizzazione di partenza
+        SELECT org_id, parent_id, org_type, description
+        FROM organizations
+        WHERE org_id = ?
+
+        UNION ALL
+
+        -- Caso ricorsivo: tutti i figli
+        SELECT o.org_id, o.parent_id, o.org_type, o.description
+        FROM organizations o
+        JOIN org_tree t ON o.parent_id = t.org_id
+        WHERE o.status = 1
+    )
+    SELECT * FROM org_tree;
+"""
+# Partendo da "Lazio" (region), ritorna:
+# - Lazio
+# - Ospedale San Camillo (lab, figlio di Lazio)
+# - Chimica Clinica (section, figlio di San Camillo)
+# - Ematologia (section, figlio di San Camillo)
+# - Policlinico Umberto I (lab, figlio di Lazio)
+# - ...
+```
+
+#### Checklist RBAC
+
+Quando implementi una nuova view:
+
+```
+□ La query filtra per org_id/ruolo?
+□ Il menu è visibile solo ai ruoli autorizzati?
+□ La funzione ha un controllo di ruolo all'inizio?
+□ L'editor limita le scelte (combobox, spinbox)?
+□ I test coprono i diversi ruoli?
+```
+
+#### Errori comuni
+
+| Errore | Conseguenza | Soluzione |
+|--------|-------------|-----------|
+| Solo menu nascosto | Bypass facile | Doppio controllo |
+| Hardcoded role numbers | Codice fragile | Usare costanti `ROLE_*` |
+| Dimenticare un filtro | Data leak | Checklist per ogni view |
+| Query senza org_id | Utente vede tutto | Review query SQL |
 
 ---
 
@@ -1341,4 +1561,4 @@ def on_cancel(self):
 
 ---
 
-*Ultimo aggiornamento: Gennaio 2025*
+*Ultimo aggiornamento: Gennaio 2026*
