@@ -596,11 +596,11 @@ class Main(tk.Toplevel):
 
     def init_status_bar(self) -> None:
 
-        user = "{0} {1} on board {2}".format(self.engine.log_user["last_name"],
-                                             self.engine.log_user["first_name"],
-                                             self.engine.get_log_ip())
-
-        msg = _("Ready Player {0}").format(user)
+        msg = "{0} {1} - {2}".format(
+            self.engine.log_user["last_name"],
+            self.engine.log_user["first_name"],
+            self.engine.get_log_ip()
+        )
 
         self.status_bar_text.set(msg)
 
