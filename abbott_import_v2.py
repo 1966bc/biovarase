@@ -27,9 +27,9 @@ from pathlib import Path
 
 # Configuration
 ABBOTT_PATH = "/mnt/biovarase_qc/EXPQC/Biovarase"
-SECTION_ID = 6
+SECTION_LAB_ORG_ID = 3006  # organizations.org_id for section (old section_id 6 + 3000)
 LAB_ID = 2
-ORG_ID = 2002  # organizations.org_id for the lab (from migration mapping)
+LAB_LAB_ORG_ID = 2002  # organizations.org_id for the lab (old lab_id 2 + 2000)
 CONTROL_ID = 71
 VALID_WORKSTATIONS = ("ALCI-1", "ALCI-2", "ALCI-3")
 
@@ -79,8 +79,8 @@ class AbbottImporter:
         """Load workstations and test_method mappings into cache."""
         # Load workstations for section
         self.cur.execute(
-            'SELECT workstation_id, device_id FROM workstations WHERE section_id = ?',
-            (SECTION_ID,)
+            'SELECT workstation_id, device_id FROM workstations WHERE org_id = ?',
+            (SECTION_LAB_ORG_ID,)
         )
         for row in self.cur.fetchall():
             self.workstation_cache[row['device_id']] = row['workstation_id']
@@ -94,7 +94,7 @@ class AbbottImporter:
             FROM workstation_test_methods wtm
             JOIN workstations w ON wtm.workstation_id = w.workstation_id
             WHERE w.org_id = ?
-        ''', (SECTION_ID,))
+        ''', (SECTION_LAB_ORG_ID,))
         for row in self.cur.fetchall():
             if row['external_code']:
                 key = (row['external_code'], row['workstation_id'])
@@ -187,7 +187,7 @@ class AbbottImporter:
                 (lab_id, org_id, control_id, test_method_id, workstation_id, lot_number,
                  expiration, target, sd, description, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ''', (LAB_ID, ORG_ID, CONTROL_ID, test_method_id, workstation_id, lot_level,
+            ''', (LAB_ID, LAB_ORG_ID, CONTROL_ID, test_method_id, workstation_id, lot_level,
                   expiration, target, sd, f"L{level}"))
             batch_id = self.cur.lastrowid
         else:
@@ -227,7 +227,7 @@ class AbbottImporter:
                 (batch_id, lab_id, org_id, run_number, workstation_id, reagent_lot, result,
                  received, status, validated, is_delete)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0)
-            ''', (batch_id, LAB_ID, ORG_ID, '', workstation_id, reagent_lot, result, received))
+            ''', (batch_id, LAB_ID, LAB_ORG_ID, '', workstation_id, reagent_lot, result, received))
             self.stats['results_created'] += 1
             return True
         except mariadb.Error as e:
