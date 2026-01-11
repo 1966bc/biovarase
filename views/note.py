@@ -180,7 +180,8 @@ class UI(ChildView):
 
         for index, row in enumerate(rs):
             self.dict_actions[index] = row.get("action_id")
-            voices.append(row.get("description", ""))
+            # Translate action description for display
+            voices.append(_(row.get("description", "")))
 
         self.cbActions["values"] = voices
         if voices:

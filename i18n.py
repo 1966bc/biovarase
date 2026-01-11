@@ -1013,6 +1013,33 @@ TRANSLATIONS = {
     "Violation": {"it": "Violazione", "en": "Violation"},
 
     # ==========================================================================
+    # QC Actions (Global Master Data)
+    # ==========================================================================
+    "Calibration": {"it": "Calibrazione", "en": "Calibration"},
+    "Replacement": {"it": "Sostituzione", "en": "Replacement"},
+    "Reagent blank performed": {"it": "Eseguito bianco reattivi", "en": "Reagent blank performed"},
+    "New calibration performed": {"it": "Eseguita nuova calibrazione", "en": "New calibration performed"},
+    "Reagents replaced": {"it": "Sostituiti i reagenti", "en": "Reagents replaced"},
+    "Controls reconstituted and repeated": {
+        "it": "Ricostituiti e ripetuti i controlli",
+        "en": "Controls reconstituted and repeated"
+    },
+    "Operating conditions check": {"it": "Verifica condizioni operative", "en": "Operating conditions check"},
+    "Detection system maintenance": {"it": "Manutenzione sistema rilevazione", "en": "Detection system maintenance"},
+    "Target modified": {"it": "Modificato target", "en": "Target modified"},
+    "SD modified": {"it": "Modificata DS", "en": "SD modified"},
+    "Target and SD modified": {"it": "Modifica target e DS", "en": "Target and SD modified"},
+    "Comment": {"it": "Commento", "en": "Comment"},
+    "Controls replaced": {"it": "Sostituzione controlli", "en": "Controls replaced"},
+    "Electrode replaced": {"it": "Sostituzione elettrodo", "en": "Electrode replaced"},
+    "Repeat analysis": {"it": "Ripetere analisi", "en": "Repeat analysis"},
+    "Contact service": {"it": "Contattare assistenza", "en": "Contact service"},
+    "New lot number": {"it": "Nuovo lotto", "en": "New lot number"},
+    "Preventive maintenance": {"it": "Manutenzione preventiva", "en": "Preventive maintenance"},
+    "Result excluded": {"it": "Risultato escluso", "en": "Result excluded"},
+    "Instrument restart": {"it": "Riavvio strumento", "en": "Instrument restart"},
+
+    # ==========================================================================
     # Lab Selector
     # ==========================================================================
     "Select Laboratory": {"it": "Seleziona Laboratorio", "en": "Select Laboratory"},

@@ -220,7 +220,7 @@ class UI(ParentView):
                 iid=str(row["note_id"]),
                 text=str(row["note_id"]),
                 values=(
-                    row["description"],
+                    _(row["description"]),  # Translate action description
                     row["modified"],
                 ),
                 tags=tags,
