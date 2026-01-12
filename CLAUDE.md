@@ -28,7 +28,10 @@ Note for future Claude instances working on this codebase:
 - **Schema cleanup:** `lab_id` column completely removed from `batches` and `results` tables - only `org_id` is used
 - **Triggers updated (migration 020):** Audit triggers no longer reference `lab_id`
 - **Abbott import:** `abbott_import_v2.py` updated to use only `org_id`, filters by `test_methods.status = 1`
+- **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution to prevent DB conflicts
 - **Main view:** `set_categories()` now filters by `tests.status = 1` in addition to `test_methods.status = 1`
+- **Bland-Altman scanner:** Blocks scan if Abbott import is running (checks lock file)
+- **Bland-Altman view:** Fixed `categories` queries to use `org_id` instead of `lab_id`
 
 **Testing:**
 - Run tests with venv: `./venv/bin/pytest tests/ -v`

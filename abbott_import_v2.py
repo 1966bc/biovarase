@@ -31,6 +31,7 @@ SECTION_LAB_ORG_ID = 3006  # organizations.org_id for section (old section_id 6 
 LAB_ORG_ID = 2002  # organizations.org_id for the lab (results/batches use this)
 CONTROL_ID = 71
 VALID_WORKSTATIONS = ("ALCI-1", "ALCI-2", "ALCI-3")
+LOCK_FILE = "/tmp/abbott_import.lock"
 
 # Database credentials
 DB_CONFIG = {
@@ -361,6 +362,13 @@ def main():
 
     args = parser.parse_args()
 
+    # Create lock file to signal import in progress
+    try:
+        with open(LOCK_FILE, 'w') as f:
+            f.write(str(os.getpid()))
+    except IOError:
+        pass
+
     importer = AbbottImporter(dry_run=args.dry_run, verbose=args.verbose)
 
     try:
@@ -368,6 +376,11 @@ def main():
         importer.run(limit=args.limit)
     finally:
         importer.close()
+        # Remove lock file
+        try:
+            os.remove(LOCK_FILE)
+        except OSError:
+            pass
 
 
 if __name__ == '__main__':

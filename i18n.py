@@ -937,6 +937,10 @@ TRANSLATIONS = {
         "it": "Seleziona un confronto.",
         "en": "Please select a comparison."
     },
+    "Cannot scan while Abbott import is running.\nPlease wait for the import to complete.": {
+        "it": "Impossibile scansionare durante l'import Abbott.\nAttendi il completamento dell'import.",
+        "en": "Cannot scan while Abbott import is running.\nPlease wait for the import to complete."
+    },
     "Selected comparison": {"it": "Confronto selezionato", "en": "Selected comparison"},
     "Please select these values in the Bland-Altman view.": {
         "it": "Seleziona questi valori nella vista Bland-Altman.",
