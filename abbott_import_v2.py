@@ -20,7 +20,8 @@ import os
 import sys
 import argparse
 import mariadb
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Tuple
 from pathlib import Path
 
@@ -298,21 +299,48 @@ class AbbottImporter:
 
         return results_created
 
-    def run(self, limit: Optional[int] = None):
+    def _extract_date_from_filename(self, filename: str) -> Optional[datetime]:
+        """Extract date from Abbott filename like 'Export meas AMS 1.00_2026-01-12 15-35-03-400.txt'."""
+        match = re.search(r'_(\d{4}-\d{2}-\d{2})', filename)
+        if match:
+            try:
+                return datetime.strptime(match.group(1), '%Y-%m-%d')
+            except ValueError:
+                return None
+        return None
+
+    def run(self, limit: Optional[int] = None, months: Optional[int] = None):
         """Run the import process."""
         print(f"Abbott Importer v2 {'(DRY RUN)' if self.dry_run else ''}")
         print(f"Path: {ABBOTT_PATH}")
+        if months:
+            print(f"Filter: last {months} months")
         print("-" * 60)
 
         if not os.path.exists(ABBOTT_PATH):
             print(f"ERROR: Path not found: {ABBOTT_PATH}")
             return
 
+        # Calculate cutoff date if months filter specified
+        cutoff_date = None
+        if months:
+            cutoff_date = datetime.now() - timedelta(days=months * 30)
+
         # Get list of files
-        files = sorted([
+        all_files = sorted([
             f for f in os.listdir(ABBOTT_PATH)
             if f.endswith('.txt')
         ])
+
+        # Filter by date if specified
+        if cutoff_date:
+            files = []
+            for f in all_files:
+                file_date = self._extract_date_from_filename(f)
+                if file_date and file_date >= cutoff_date:
+                    files.append(f)
+        else:
+            files = all_files
 
         if limit:
             files = files[:limit]
@@ -361,6 +389,8 @@ def main():
                        help='Verbose output')
     parser.add_argument('--limit', '-l', type=int,
                        help='Limit number of files to process')
+    parser.add_argument('--months', '-m', type=int, default=6,
+                       help='Import only files from last N months (default: 6, 0=all)')
 
     args = parser.parse_args()
 
@@ -373,9 +403,12 @@ def main():
 
     importer = AbbottImporter(dry_run=args.dry_run, verbose=args.verbose)
 
+    # months=0 means no filter (all files)
+    months_filter = args.months if args.months > 0 else None
+
     try:
         importer.connect()
-        importer.run(limit=args.limit)
+        importer.run(limit=args.limit, months=months_filter)
     finally:
         importer.close()
         # Remove lock file
