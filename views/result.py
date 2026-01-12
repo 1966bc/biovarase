@@ -63,9 +63,9 @@ class UI(ChildView):
 
         self.float_vcmd = self.engine.get_float_vcmd(self)
 
-        # Layout root columns
+        # Layout root - single column, rows expand
         self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=0)
+        self.rowconfigure(0, weight=1)
 
         # Build interface
         self._build_ui()
@@ -77,61 +77,64 @@ class UI(ChildView):
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
     def _build_ui(self) -> None:
-        """Build the user interface layout."""
+        """Build the user interface layout following GNOME/Windows HIG."""
         paddings = {"padx": 5, "pady": 5}
 
+        # Main container
         self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
-        self.frm_main.grid(row=0, column=0)
+        self.frm_main.grid(row=0, column=0, sticky=tk.NSEW)
+        self.frm_main.columnconfigure(0, weight=1)
 
-        frm_left = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_left.grid(row=0, column=0, sticky=tk.NS, **paddings)
+        # Content frame (form fields)
+        frm_content = ttk.Frame(self.frm_main, style="App.TFrame")
+        frm_content.grid(row=0, column=0, sticky=tk.NSEW, **paddings)
 
         r = 0
         c = 1
-        ttk.Label(frm_left, text=_("Test:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Test:")).grid(row=r, sticky=tk.W)
         ttk.Label(
-            frm_left,
+            frm_content,
             style="Data.TLabel",
             textvariable=self.test,
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Batch:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Batch:")).grid(row=r, sticky=tk.W)
         ttk.Label(
-            frm_left,
+            frm_content,
             style="Data.TLabel",
             textvariable=self.batch,
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Level:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Level:")).grid(row=r, sticky=tk.W)
         ttk.Label(
-            frm_left,
+            frm_content,
             style="Data.TLabel",
             textvariable=self.level,
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Workstation:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Workstation:")).grid(row=r, sticky=tk.W)
         ttk.Label(
-            frm_left,
+            frm_content,
             style="Data.TLabel",
             textvariable=self.workstation,
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Reagent Lot:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Reagent Lot:")).grid(row=r, sticky=tk.W)
         self.txtReagentLot = ttk.Entry(
-            frm_left,
+            frm_content,
             width=20,
             textvariable=self.reagent_lot,
         )
         self.txtReagentLot.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Result:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Result:")).grid(row=r, sticky=tk.W)
         self.txtResult = ttk.Entry(
-            frm_left,
+            frm_content,
             width=8,
             justify=tk.CENTER,
             validate="key",
@@ -143,17 +146,17 @@ class UI(ChildView):
         self.txtResult.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Received:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Received:")).grid(row=r, sticky=tk.W)
 
         # Two widgets for "Received" field:
         # 1. Calendarium (editable) - shown only when inserting new result
         bg = getattr(self.engine, "BASE_BG_RGB", self.engine.get_rgb(240, 240, 237))
-        self.calendarium_received = Calendarium(frm_left, "", base_bg_color=bg)
+        self.calendarium_received = Calendarium(frm_content, "", base_bg_color=bg)
         self.calendarium_received.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         # 2. Label (read-only) - shown only when editing existing result
         self.lbl_received = ttk.Label(
-            frm_left,
+            frm_content,
             style="Data.TLabel",
             textvariable=self.received_display,
         )
@@ -163,45 +166,22 @@ class UI(ChildView):
         self.calendarium_received.grid_remove()
 
         r += 1
-        ttk.Label(frm_left, text=_("Status:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text=_("Status:")).grid(row=r, sticky=tk.W)
         self.ckStatus = ttk.Checkbutton(
-            frm_left,
+            frm_content,
             onvalue=1,
             offvalue=0,
             variable=self.status,
         )
         self.ckStatus.grid(row=r, column=c, sticky=tk.W)
 
+        # Button bar at bottom (GNOME/Windows HIG: buttons at bottom, right-aligned)
         frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_buttons.grid(row=0, column=1, sticky=tk.NS, **paddings)
+        frm_buttons.grid(row=1, column=0, sticky=tk.E, pady=(10, 0))
 
-        r = 0
+        # Button order: Cancel, Delete (if applicable), Save (primary action on right)
         c = 0
-        btn = ttk.Button(
-            frm_buttons,
-            style="App.TButton",
-            text=_("Save"),
-            underline=0,
-            command=self._on_save,
-        )
-        self.bind("<Alt-s>", self._on_save)
-        btn.grid(row=r, column=c, sticky=tk.EW, **paddings)
-
-        # Only admins/superusers can delete (role < 2)
-        if self.engine.log_user["role"] < 2 and self.index is not None:
-            r += 1
-            btn = ttk.Button(
-                frm_buttons,
-                style="App.TButton",
-                text=_("Delete"),
-                underline=0,
-                command=self._delete,
-            )
-            self.bind("<Alt-d>", self._delete)
-            btn.grid(row=r, column=c, sticky=tk.EW, **paddings)
-
-        r += 1
-        btn = ttk.Button(
+        btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
             text=_("Cancel"),
@@ -209,7 +189,31 @@ class UI(ChildView):
             command=self.on_cancel,
         )
         self.bind("<Alt-c>", self.on_cancel)
-        btn.grid(row=r, column=c, sticky=tk.EW, **paddings)
+        btn_cancel.grid(row=0, column=c, padx=(0, 5))
+
+        # Only admins/superusers can delete (role < 2)
+        if self.engine.log_user["role"] < 2 and self.index is not None:
+            c += 1
+            btn_delete = ttk.Button(
+                frm_buttons,
+                style="App.TButton",
+                text=_("Delete"),
+                underline=0,
+                command=self._delete,
+            )
+            self.bind("<Alt-d>", self._delete)
+            btn_delete.grid(row=0, column=c, padx=(0, 5))
+
+        c += 1
+        btn_save = ttk.Button(
+            frm_buttons,
+            style="App.TButton",
+            text=_("Save"),
+            underline=0,
+            command=self._on_save,
+        )
+        self.bind("<Alt-s>", self._on_save)
+        btn_save.grid(row=0, column=c)
 
     def on_open(self) -> None:
         """
