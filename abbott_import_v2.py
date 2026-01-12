@@ -28,8 +28,7 @@ from pathlib import Path
 # Configuration
 ABBOTT_PATH = "/mnt/biovarase_qc/EXPQC/Biovarase"
 SECTION_LAB_ORG_ID = 3006  # organizations.org_id for section (old section_id 6 + 3000)
-LAB_ID = 2
-LAB_LAB_ORG_ID = 2002  # organizations.org_id for the lab (old lab_id 2 + 2000)
+LAB_ORG_ID = 2002  # organizations.org_id for the lab (results/batches use this)
 CONTROL_ID = 71
 VALID_WORKSTATIONS = ("ALCI-1", "ALCI-2", "ALCI-3")
 
@@ -88,12 +87,13 @@ class AbbottImporter:
         if self.verbose:
             print(f"Loaded {len(self.workstation_cache)} workstations")
 
-        # Load workstation_test_methods mappings
+        # Load workstation_test_methods mappings (only active test_methods)
         self.cur.execute('''
             SELECT wtm.external_code, wtm.workstation_id, wtm.test_method_id
             FROM workstation_test_methods wtm
             JOIN workstations w ON wtm.workstation_id = w.workstation_id
-            WHERE w.org_id = ?
+            JOIN test_methods tm ON wtm.test_method_id = tm.test_method_id
+            WHERE w.org_id = ? AND tm.status = 1
         ''', (SECTION_LAB_ORG_ID,))
         for row in self.cur.fetchall():
             if row['external_code']:
@@ -148,6 +148,7 @@ class AbbottImporter:
                 'received': received,
                 'expiration': expiration,
                 'reagent_lot': fields[17] if len(fields) > 17 else None,
+                'run_number': fields[5].strip(),
             }
         except (ValueError, IndexError) as e:
             if self.verbose:
@@ -184,10 +185,10 @@ class AbbottImporter:
         if not self.dry_run:
             self.cur.execute('''
                 INSERT INTO batches
-                (lab_id, org_id, control_id, test_method_id, workstation_id, lot_number,
+                (org_id, control_id, test_method_id, workstation_id, lot_number,
                  expiration, target, sd, description, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ''', (LAB_ID, LAB_ORG_ID, CONTROL_ID, test_method_id, workstation_id, lot_level,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ''', (LAB_ORG_ID, CONTROL_ID, test_method_id, workstation_id, lot_level,
                   expiration, target, sd, f"L{level}"))
             batch_id = self.cur.lastrowid
         else:
@@ -215,7 +216,8 @@ class AbbottImporter:
         return row is not None
 
     def create_result(self, batch_id: int, workstation_id: int,
-                     result: float, received: datetime, reagent_lot: str) -> bool:
+                     result: float, received: datetime, reagent_lot: str,
+                     run_number: str) -> bool:
         """Create a new result record."""
         if self.dry_run:
             self.stats['results_created'] += 1
@@ -224,10 +226,10 @@ class AbbottImporter:
         try:
             self.cur.execute('''
                 INSERT INTO results
-                (batch_id, lab_id, org_id, run_number, workstation_id, reagent_lot, result,
+                (batch_id, org_id, run_number, workstation_id, reagent_lot, result,
                  received, status, validated, is_delete)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0)
-            ''', (batch_id, LAB_ID, LAB_ORG_ID, '', workstation_id, reagent_lot, result, received))
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 0)
+            ''', (batch_id, LAB_ORG_ID, run_number, workstation_id, reagent_lot, result, received))
             self.stats['results_created'] += 1
             return True
         except mariadb.Error as e:
@@ -281,7 +283,8 @@ class AbbottImporter:
 
                     # Create result
                     if self.create_result(batch_id, workstation_id, data['result'],
-                                         data['received'], data['reagent_lot']):
+                                         data['received'], data['reagent_lot'],
+                                         data['run_number']):
                         results_created += 1
 
             self.stats['files_processed'] += 1

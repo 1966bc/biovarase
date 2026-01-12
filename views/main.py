@@ -936,9 +936,11 @@ class Main(tk.Toplevel):
             INNER JOIN organizations section ON test_methods.org_id = section.org_id
             INNER JOIN categories ON categories.category_id = test_methods.category_id
                                   AND categories.org_id = section.parent_id
+            INNER JOIN tests ON tests.test_id = test_methods.test_id
             WHERE section.parent_id = ?
               AND section.org_type = 'section'
               AND test_methods.status = 1
+              AND tests.status = 1
               AND categories.status = 1
             ORDER BY categories.description;
         """
