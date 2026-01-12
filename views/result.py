@@ -73,15 +73,13 @@ class UI(ChildView):
         # Register window in engine (per PROJECT_RULES.md section 7.1)
         self.engine.dict_instances[self.winfo_name()] = self
         self.show()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
     def _build_ui(self) -> None:
         """Build the user interface layout following GNOME/Windows HIG."""
         paddings = {"padx": 5, "pady": 5}
 
-        # Main container
-        self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
+        # Main container with adequate padding (extra bottom padding for buttons)
+        self.frm_main = ttk.Frame(self, style="App.TFrame", padding=(15, 15, 15, 20))
         self.frm_main.grid(row=0, column=0, sticky=tk.NSEW)
         self.frm_main.columnconfigure(0, weight=1)
 
@@ -177,12 +175,12 @@ class UI(ChildView):
 
         # Separator before buttons
         ttk.Separator(self.frm_main, orient=tk.HORIZONTAL).grid(
-            row=1, column=0, sticky=tk.EW, pady=(15, 10)
+            row=1, column=0, sticky=tk.EW, pady=(20, 15)
         )
 
         # Button bar at bottom (GNOME/Windows HIG: buttons at bottom, right-aligned)
         frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_buttons.grid(row=2, column=0, sticky=tk.E, pady=(0, 5))
+        frm_buttons.grid(row=2, column=0, sticky=tk.E, pady=(0, 10))
 
         # Button order: Cancel, Delete (if applicable), Save (primary action on right)
         c = 0
@@ -275,6 +273,10 @@ class UI(ChildView):
 
         # Second attempt after event queue settles (covers double-click edge cases)
         self.after(FOCUS_DELAY_MS, self._focus_entry)
+
+        # Calculate minimum size AFTER layout is finalized
+        self.update_idletasks()
+        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight() + 20)
 
     def _focus_entry(self) -> None:
         """Ensure focus goes to result entry field."""
