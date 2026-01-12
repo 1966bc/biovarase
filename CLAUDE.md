@@ -29,15 +29,23 @@ Note for future Claude instances working on this codebase:
 - **Triggers updated (migration 020):** Audit triggers no longer reference `lab_id`
 - **Abbott import:** `abbott_import_v2.py` updated to use only `org_id`, filters by `test_methods.status = 1`
 - **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution to prevent DB conflicts
+- **Abbott import filter:** `--months` parameter filters files by date (default: 6 months, use `--months 0` for all)
 - **Main view:** `set_categories()` now filters by `tests.status = 1` in addition to `test_methods.status = 1`
+- **Main view:** Added "Recent Only" filter - shows only batches with results in the last 60 days (default on)
+- **Main view:** Batches LabelFrame shows count, e.g. "Batches (5)"
+- **Main view:** Subscribes to `test_method_changed` - refreshes tests combobox when test_method status changes
 - **Bland-Altman scanner:** Blocks scan if Abbott import is running (checks lock file)
 - **Bland-Altman scanner:** Rewritten without threading - uses `after()` cooperative multitasking to avoid DB segfaults
 - **Bland-Altman view:** Fixed `categories` queries to use `org_id` instead of `lab_id`
-- **Main view:** Added "Recent Only" filter - shows only batches with results in the last 60 days (default on)
+- **Technical validation (migration 021):** Added dual validation workflow with 4 new fields:
+  - `tech_validated` (flag), `tech_validated_by` (FK users), `tech_validated_at` (timestamp), `operator_code` (machine code)
+  - Abbott import sets `tech_validated=1`, `operator_code` from workstation (ALCI-1/2/3)
+  - Manual entry sets `tech_validated_by` to logged-in user
+- **Daily validation:** New "Operator" column shows operator_code or technician name
 
 **Testing:**
 - Run tests with venv: `./venv/bin/pytest tests/ -v`
-- 721 tests passing, 11 skipped (empty test DB tables)
+- 731 tests passing, 1 skipped
 
 **Key patterns to follow:**
 - `org_id` = `lab_id` for lab-level data (results, batches, categories)
@@ -570,6 +578,9 @@ mysql -u root -p biovarase < migrations/017_add_site_org_type.sql
 
 # English actions for international peer lab comparison
 mysql -u root -p biovarase < migrations/018_actions_to_english.sql
+
+# Technical validation (dual validation workflow)
+mysql -u root -p biovarase < migrations/021_add_technical_validation.sql
 ```
 
 ### Production Migration Guide (008-011)
