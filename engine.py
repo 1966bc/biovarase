@@ -800,6 +800,38 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
                         type(e),
                         sys.modules[__name__])
 
+    def get_show_recent_only(self) -> int:
+        """
+        Read show_recent_only preference from configuration.
+
+        Returns:
+            int: 1 to show only recent batches, 0 to show all.
+                 Defaults to 1 (show recent only).
+        """
+        try:
+            with open(self.get_file("show_recent_only"), "r") as f:
+                v = f.readline().strip()
+                return int(v)
+        except (FileNotFoundError, IOError, ValueError):
+            return 1  # default: show recent batches only
+
+    def set_show_recent_only(self, value: int) -> None:
+        """
+        Save show_recent_only preference to configuration file.
+
+        Args:
+            value: 1 to show recent only, 0 to show all
+        """
+        try:
+            path = self.get_file('show_recent_only')
+            with open(path, 'w') as f:
+                f.write(str(value))
+        except (FileNotFoundError, IOError) as e:
+            self.on_log(inspect.stack()[0][3],
+                        e,
+                        type(e),
+                        sys.modules[__name__])
+
     def get_section_id(self):
         """
         Return current section_id from context.

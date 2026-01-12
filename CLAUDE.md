@@ -33,6 +33,7 @@ Note for future Claude instances working on this codebase:
 - **Bland-Altman scanner:** Blocks scan if Abbott import is running (checks lock file)
 - **Bland-Altman scanner:** Rewritten without threading - uses `after()` cooperative multitasking to avoid DB segfaults
 - **Bland-Altman view:** Fixed `categories` queries to use `org_id` instead of `lab_id`
+- **Main view:** Added "Recent Only" filter - shows only batches with results in the last 60 days (default on)
 
 **Testing:**
 - Run tests with venv: `./venv/bin/pytest tests/ -v`

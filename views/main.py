@@ -140,6 +140,7 @@ class Main(tk.Toplevel):
         self.te = tk.DoubleVar()
         self.ddof = tk.IntVar()
         self.show_expired = tk.IntVar()
+        self.show_recent_only = tk.IntVar()
         self.status_bar_site_description = tk.StringVar()
         
         # selection state (all dictionaries, not tuples)
@@ -683,6 +684,13 @@ class Main(tk.Toplevel):
                         variable=self.show_expired,
                         command=self.on_show_expired).pack(side=tk.RIGHT, fill=tk.X)
 
+        ttk.Checkbutton(frm_status_bar,
+                        text=_("Recent Only"),
+                        onvalue=1,
+                        offvalue=0,
+                        variable=self.show_recent_only,
+                        command=self.on_show_recent_only).pack(side=tk.RIGHT, fill=tk.X, padx=(0, 8))
+
         self.status.pack(side=tk.LEFT, fill=tk.X, expand=1)
 
         frm_status_bar.pack(side=tk.BOTTOM, fill=tk.X)
@@ -701,6 +709,7 @@ class Main(tk.Toplevel):
         self.status_bar_site_description.set(self.get_status_bar_site_description(company))
         self.ddof.set(self.engine.get_ddof())
         self.show_expired.set(self.engine.get_show_expired_batches())
+        self.show_recent_only.set(self.engine.get_show_recent_only())
         self.observations.set(self.engine.get_observations())
         self.set_categories()
         self.set_zscore()
@@ -1144,20 +1153,41 @@ class Main(tk.Toplevel):
         self.engine.clear_treeview(self.lstBatches)
         self.dict_batches = {}
 
-        # Base query
-        sql = """
-            SELECT batches.batch_id,
-                   batches.description,
-                   DATE_FORMAT(batches.expiration, '%d-%m-%Y') AS expiration_str,
-                   batches.target,
-                   batches.sd,
-                   batches.lot_number,
-                   batches.expiration
-            FROM batches
-            WHERE batches.test_method_id  = ?
-              AND batches.workstation_id  = ?
-              AND batches.status          = 1
-        """
+        # Base query with optional recent results filter
+        if self.show_recent_only.get():
+            # Filter batches with results in the last 60 days
+            sql = """
+                SELECT batches.batch_id,
+                       batches.description,
+                       DATE_FORMAT(batches.expiration, '%d-%m-%Y') AS expiration_str,
+                       batches.target,
+                       batches.sd,
+                       batches.lot_number,
+                       batches.expiration
+                FROM batches
+                WHERE batches.test_method_id  = ?
+                  AND batches.workstation_id  = ?
+                  AND batches.status          = 1
+                  AND EXISTS (
+                      SELECT 1 FROM results r
+                      WHERE r.batch_id = batches.batch_id
+                        AND r.received >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+                  )
+            """
+        else:
+            sql = """
+                SELECT batches.batch_id,
+                       batches.description,
+                       DATE_FORMAT(batches.expiration, '%d-%m-%Y') AS expiration_str,
+                       batches.target,
+                       batches.sd,
+                       batches.lot_number,
+                       batches.expiration
+                FROM batches
+                WHERE batches.test_method_id  = ?
+                  AND batches.workstation_id  = ?
+                  AND batches.status          = 1
+            """
 
         # Filter expired batches unless show_expired is checked
         if not self.show_expired.get():
@@ -2084,6 +2114,21 @@ class Main(tk.Toplevel):
             self.engine.set_show_expired_batches(0)
 
         self.show_expired.set(self.engine.get_show_expired_batches())
+
+        # Refresh batch list with new filter
+        try:
+            self.set_batches()
+        except AttributeError:
+            pass  # No test method/workstation selected
+
+    def on_show_recent_only(self):
+        """Toggle visibility of recent-only batches and refresh list."""
+        if self.show_recent_only.get():
+            self.engine.set_show_recent_only(1)
+        else:
+            self.engine.set_show_recent_only(0)
+
+        self.show_recent_only.set(self.engine.get_show_recent_only())
 
         # Refresh batch list with new filter
         try:
