@@ -175,9 +175,14 @@ class UI(ChildView):
         )
         self.ckStatus.grid(row=r, column=c, sticky=tk.W)
 
+        # Separator before buttons
+        ttk.Separator(self.frm_main, orient=tk.HORIZONTAL).grid(
+            row=1, column=0, sticky=tk.EW, pady=(15, 10)
+        )
+
         # Button bar at bottom (GNOME/Windows HIG: buttons at bottom, right-aligned)
         frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_buttons.grid(row=1, column=0, sticky=tk.E, pady=(10, 0))
+        frm_buttons.grid(row=2, column=0, sticky=tk.E, pady=(0, 5))
 
         # Button order: Cancel, Delete (if applicable), Save (primary action on right)
         c = 0
