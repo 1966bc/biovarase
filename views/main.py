@@ -1196,7 +1196,7 @@ class Main(tk.Toplevel):
             """
 
         sql += """
-            ORDER BY batches.rank ASC;
+            ORDER BY batches.rank ASC, batches.description ASC;
         """
 
         args = (
