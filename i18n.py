@@ -222,6 +222,7 @@ TRANSLATIONS = {
     "Z Score:": {"it": "Z Score:", "en": "Z Score:"},
     "Delta Degree of Freedom": {"it": "Delta Gradi di Libertà", "en": "Delta Degree of Freedom"},
     "Show Expired": {"it": "Mostra Scaduti", "en": "Show Expired"},
+    "Recent Only": {"it": "Solo Recenti", "en": "Recent Only"},
 
     # ==========================================================================
     # Main Window
