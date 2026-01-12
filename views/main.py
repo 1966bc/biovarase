@@ -438,7 +438,8 @@ class Main(tk.Toplevel):
         self.lstWorkstations.bind("<<TreeviewSelect>>", self.on_selected_workstation)
         w.pack(side=tk.TOP, fill=tk.BOTH, expand=0)
 
-        w = ttk.LabelFrame(frm_lists, text=_("Batches"))
+        self.frmBatches = ttk.LabelFrame(frm_lists, text=_("Batches"))
+        w = self.frmBatches
         cols_batch = ("level", "lot", "expiration")
         self.lstBatches = ttk.Treeview(w, columns=cols_batch, show="headings", height=4)
         self.lstBatches.column("level", width=30, minwidth=20, anchor=tk.W)
@@ -1222,11 +1223,16 @@ class Main(tk.Toplevel):
                 )
                 self.dict_batches[item_id] = row["batch_id"]
 
+        # Update LabelFrame with batch count
+        count = len(self.lstBatches.get_children())
+        self.frmBatches.config(text=f"{_('Batches')} ({count})")
+
     def set_batches(self) -> None:
         """Fill batches treeview for selected test method and workstation."""
         if self.cbTests.current() == -1 or not self.lstWorkstations.selection():
             self.engine.clear_treeview(self.lstBatches)
             self.dict_batches = {}
+            self.frmBatches.config(text=f"{_('Batches')} (0)")
             self.reset_cal_data()
             self.reset_graph()
             return
@@ -1234,6 +1240,7 @@ class Main(tk.Toplevel):
         if not (self.selected_test_method and self.selected_workstation):
             self.engine.clear_treeview(self.lstBatches)
             self.dict_batches = {}
+            self.frmBatches.config(text=f"{_('Batches')} (0)")
             self.reset_cal_data()
             self.reset_graph()
             return
