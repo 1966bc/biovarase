@@ -345,7 +345,7 @@ class QC:
         """
         bias = self.get_bias(avg, target)
         try:
-            return round(abs(bias) + (self.get_zscore() * cv), 2)
+            return round(abs(bias) + (self.get_zscore() * float(cv)), 2)
         except Exception as e:
             self.on_log(
                 inspect.stack()[0][3],
