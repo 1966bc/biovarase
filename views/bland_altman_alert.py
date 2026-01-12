@@ -10,14 +10,15 @@ Bland-Altman Alert - Automatic comparison scanner.
 
 Scans all test/level combinations with results on multiple workstations
 and calculates Bland-Altman statistics to detect discrepancies.
+
+Uses cooperative multitasking with after() to keep UI responsive
+without threading (avoids DB connection conflicts).
 """
 
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 import statistics
-import threading
-from queue import Queue, Empty
 
 from i18n import _
 from views.parent_view import ParentView
@@ -45,6 +46,15 @@ class UI(ParentView):
         self.comparisons = []  # List of dicts with comparison data
         self.dict_items = {}   # Map treeview iid to comparison data
 
+        # Scan state
+        self._scanning = False
+        self._scan_queue = []  # List of (combo, ws_pairs) to process
+        self._scan_count = 0
+        self._scan_alerts = 0
+        self._displayed = 0
+        self._bias_threshold = 10.0
+        self._out_threshold = 5.0
+
         self._build_ui()
         self.minsize(1000, 500)
         self.show()
@@ -58,17 +68,19 @@ class UI(ParentView):
         frm_top = ttk.Frame(frm_main, style="App.TFrame")
         frm_top.pack(fill=tk.X, pady=(0, 8))
 
-        ttk.Button(
+        self.btnScan = ttk.Button(
             frm_top,
             text=_("Scan"),
             command=self._on_scan
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.btnScan.pack(side=tk.LEFT, padx=(0, 8))
 
-        ttk.Button(
+        self.btnViewPlot = ttk.Button(
             frm_top,
             text=_("View Plot"),
             command=self._on_view_plot
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.btnViewPlot.pack(side=tk.LEFT, padx=(0, 8))
 
         # Threshold settings
         ttk.Label(frm_top, text=_("Bias threshold:")).pack(side=tk.LEFT, padx=(16, 4))
@@ -145,7 +157,7 @@ class UI(ParentView):
         self.attributes("-topmost", True)
 
     def _on_scan(self, _evt=None):
-        """Scan all test/level/workstation combinations."""
+        """Start scanning all test/level/workstation combinations."""
         # Check if Abbott import is running
         if os.path.exists(ABBOTT_LOCK_FILE):
             messagebox.showwarning(
@@ -155,131 +167,148 @@ class UI(ParentView):
             )
             return
 
+        # Check if already scanning
+        if self._scanning:
+            return
+
+        # Clear previous results
         self.tree.delete(*self.tree.get_children())
         self.comparisons.clear()
         self.dict_items.clear()
 
-        self.lblStatus.config(text=_("Scanning..."))
-        self.update_idletasks()
-
         # Get thresholds
         try:
-            bias_threshold = float(self.spnBiasThreshold.get())
-            out_threshold = float(self.spnOutThreshold.get())
+            self._bias_threshold = float(self.spnBiasThreshold.get())
+            self._out_threshold = float(self.spnOutThreshold.get())
         except ValueError:
-            bias_threshold = 10.0
-            out_threshold = 5.0
+            self._bias_threshold = 10.0
+            self._out_threshold = 5.0
 
-        # Create thread-safe queue for results
-        self._result_queue = Queue()
+        # Reset counters
         self._scan_count = 0
         self._scan_alerts = 0
         self._displayed = 0
 
-        # Run scan in background thread to avoid UI freeze
-        self._scan_thread = threading.Thread(
-            target=self._do_scan,
-            args=(bias_threshold, out_threshold, self._result_queue),
-            daemon=True
-        )
-        self._scan_thread.start()
+        # Disable scan button during scan
+        self._scanning = True
+        self.btnScan.config(state=tk.DISABLED)
+        self.btnViewPlot.config(state=tk.DISABLED)
 
-        # Process queue periodically (updates UI progressively)
-        self._process_result_queue()
+        self.lblStatus.config(text=_("Scanning..."))
+        self.update_idletasks()
 
-    def _process_result_queue(self):
-        """Process results from queue and update UI progressively."""
-        try:
-            # Process all available results without blocking
-            while True:
-                try:
-                    result = self._result_queue.get_nowait()
-                except Empty:
-                    break
+        # Build scan queue: list of all comparison pairs to process
+        self._scan_queue = self._build_scan_queue()
 
-                # None signals scan complete
-                if result is None:
-                    self.lblStatus.config(
-                        text=f"{_('Scanned')}: {self._scan_count} | "
-                             f"{_('Displayed')}: {self._displayed} | "
-                             f"{_('Alerts')}: {self._scan_alerts}"
-                    )
-                    return  # Stop polling
+        # Start processing
+        self.after(10, self._process_next)
 
-                # Update counters
-                self._scan_count += 1
-                if result["tag"] == "alert":
-                    self._scan_alerts += 1
+    def _build_scan_queue(self):
+        """Build list of all workstation pairs to compare."""
+        combinations = self._find_combinations()
+        queue = []
 
-                # Show only alerts and warnings (skip OK and insufficient)
-                if result["tag"] in ("alert", "warning"):
-                    iid = self.tree.insert(
-                        "", tk.END,
-                        values=(
-                            result["test_name"],
-                            result["level"],
-                            result["ws1_desc"],
-                            result["ws2_desc"],
-                            result["pairs"],
-                            f"{result['bias']:.2f}",
-                            f"{result['sd']:.2f}",
-                            f"{result['pct_out']:.1f}%",
-                            result["alert_text"]
-                        ),
-                        tags=(result["tag"],)
-                    )
-                    self.dict_items[iid] = result
-                    self.comparisons.append(result)
-                    self._displayed += 1
+        for combo in combinations:
+            test_id = combo["test_id"]
+            test_name = combo["test_name"]
+            level = combo["level"]
+            workstations = combo["workstations"]
 
-                # Update status while scanning
-                self.lblStatus.config(
-                    text=f"{_('Scanning...')} {self._scan_count} | "
-                         f"{_('Alerts')}: {self._scan_alerts}"
-                )
+            # Generate all pairs of workstations
+            for i in range(len(workstations)):
+                for j in range(i + 1, len(workstations)):
+                    ws1 = workstations[i]
+                    ws2 = workstations[j]
+                    queue.append({
+                        "test_id": test_id,
+                        "test_name": test_name,
+                        "level": level,
+                        "ws1": ws1,
+                        "ws2": ws2,
+                    })
 
-        except tk.TclError:
-            # Window was closed
+        return queue
+
+    def _process_next(self):
+        """Process next comparison in queue."""
+        if not self._scanning:
             return
 
-        # Continue polling queue
-        self.after(50, self._process_result_queue)
+        if not self._scan_queue:
+            # Scan complete
+            self._finish_scan()
+            return
 
-    def _do_scan(self, bias_threshold, out_threshold, result_queue):
-        """Background scan thread - puts results in queue."""
+        # Get next item to process
+        item = self._scan_queue.pop(0)
+
         try:
-            # Find all test/level combinations with 2+ workstations
-            combinations = self._find_combinations()
+            result = self._compare_workstations(
+                item["test_id"],
+                item["level"],
+                item["ws1"]["workstation_id"],
+                item["ws1"]["description"],
+                item["ws2"]["workstation_id"],
+                item["ws2"]["description"],
+                self._bias_threshold,
+                self._out_threshold
+            )
 
-            for combo in combinations:
-                test_id = combo["test_id"]
-                test_name = combo["test_name"]
-                level = combo["level"]
-                workstations = combo["workstations"]
+            if result:
+                result["test_name"] = item["test_name"]
+                result["test_id"] = item["test_id"]
+                result["ws1_desc"] = item["ws1"]["description"]
+                result["ws2_desc"] = item["ws2"]["description"]
+                self._add_result(result)
 
-                # Compare each pair of workstations
-                for i in range(len(workstations)):
-                    for j in range(i + 1, len(workstations)):
-                        ws1 = workstations[i]
-                        ws2 = workstations[j]
+        except Exception:
+            pass  # Skip errors, continue scanning
 
-                        result = self._compare_workstations(
-                            test_id, level,
-                            ws1["workstation_id"], ws1["description"],
-                            ws2["workstation_id"], ws2["description"],
-                            bias_threshold, out_threshold
-                        )
+        # Update status
+        self._scan_count += 1
+        self.lblStatus.config(
+            text=f"{_('Scanning...')} {self._scan_count} | {_('Alerts')}: {self._scan_alerts}"
+        )
 
-                        if result:
-                            result["test_name"] = test_name
-                            result["test_id"] = test_id
-                            result["ws1_desc"] = ws1["description"]
-                            result["ws2_desc"] = ws2["description"]
-                            # Put result in queue (thread-safe)
-                            result_queue.put(result)
-        finally:
-            # Signal completion with sentinel
-            result_queue.put(None)
+        # Schedule next item (yield to event loop)
+        self.after(1, self._process_next)
+
+    def _add_result(self, result):
+        """Add a result to the treeview if it's an alert or warning."""
+        if result["tag"] == "alert":
+            self._scan_alerts += 1
+
+        # Show only alerts and warnings (skip OK and insufficient)
+        if result["tag"] in ("alert", "warning"):
+            iid = self.tree.insert(
+                "", tk.END,
+                values=(
+                    result["test_name"],
+                    result["level"],
+                    result["ws1_desc"],
+                    result["ws2_desc"],
+                    result["pairs"],
+                    f"{result['bias']:.2f}",
+                    f"{result['sd']:.2f}",
+                    f"{result['pct_out']:.1f}%",
+                    result["alert_text"]
+                ),
+                tags=(result["tag"],)
+            )
+            self.dict_items[iid] = result
+            self.comparisons.append(result)
+            self._displayed += 1
+
+    def _finish_scan(self):
+        """Complete the scan and re-enable UI."""
+        self._scanning = False
+        self.btnScan.config(state=tk.NORMAL)
+        self.btnViewPlot.config(state=tk.NORMAL)
+        self.lblStatus.config(
+            text=f"{_('Scanned')}: {self._scan_count} | "
+                 f"{_('Displayed')}: {self._displayed} | "
+                 f"{_('Alerts')}: {self._scan_alerts}"
+        )
 
     def _find_combinations(self):
         """Find all test/level combinations with results on 2+ workstations."""
@@ -443,7 +472,7 @@ class UI(ParentView):
     def _on_view_plot(self, _evt=None):
         """Open detailed Bland-Altman plot for selected comparison."""
         # Check if scan is in progress
-        if hasattr(self, '_scan_thread') and self._scan_thread.is_alive():
+        if self._scanning:
             messagebox.showwarning(
                 self.engine.app_title,
                 _("Please wait for the scan to complete."),
@@ -478,13 +507,7 @@ class UI(ParentView):
         ba_view.on_open(preselect=preselect)
 
     def on_cancel(self, evt=None):
-        """Close window and cleanup thread resources."""
-        # Clear queue to unblock any waiting thread
-        if hasattr(self, '_result_queue'):
-            try:
-                while not self._result_queue.empty():
-                    self._result_queue.get_nowait()
-            except Empty:
-                pass
-
+        """Close window and stop any active scan."""
+        self._scanning = False
+        self._scan_queue.clear()
         super().on_cancel(evt)
