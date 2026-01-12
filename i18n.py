@@ -855,6 +855,7 @@ TRANSLATIONS = {
     "CV": {"it": "CV", "en": "CV"},
     "Range": {"it": "Range", "en": "Range"},
     "Status": {"it": "Stato", "en": "Status"},
+    "Operator": {"it": "Operatore", "en": "Operator"},
     "Type": {"it": "Tipo", "en": "Type"},
     "Test": {"it": "Test", "en": "Test"},
     "Code": {"it": "Codice", "en": "Code"},
