@@ -25,7 +25,10 @@ Note for future Claude instances working on this codebase:
 - **Bug fix:** `notify()` is synchronous - extract needed data BEFORE calling notify if the callback modifies state (e.g., `dict_results.clear()`)
 - **Role-based access control (RBAC):** All list views (users, batches, workstations, categories) now filter data by user's org_id and role
 - **User management:** Lab Admin (role 3) can now manage users in their lab via Admin → Users menu
-- **Schema cleanup:** Removed legacy `lab_id`/`section_id` fields from `_get_values()` methods - only `org_id` is used
+- **Schema cleanup:** `lab_id` column completely removed from `batches` and `results` tables - only `org_id` is used
+- **Triggers updated (migration 020):** Audit triggers no longer reference `lab_id`
+- **Abbott import:** `abbott_import_v2.py` updated to use only `org_id`, filters by `test_methods.status = 1`
+- **Main view:** `set_categories()` now filters by `tests.status = 1` in addition to `test_methods.status = 1`
 
 **Testing:**
 - Run tests with venv: `./venv/bin/pytest tests/ -v`
