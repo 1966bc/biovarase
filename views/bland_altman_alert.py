@@ -442,6 +442,15 @@ class UI(ParentView):
 
     def _on_view_plot(self, _evt=None):
         """Open detailed Bland-Altman plot for selected comparison."""
+        # Check if scan is in progress
+        if hasattr(self, '_scan_thread') and self._scan_thread.is_alive():
+            messagebox.showwarning(
+                self.engine.app_title,
+                _("Please wait for the scan to complete."),
+                parent=self
+            )
+            return
+
         sel = self.tree.selection()
         if not sel:
             messagebox.showwarning(
