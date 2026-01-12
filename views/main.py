@@ -121,6 +121,7 @@ class Main(tk.Toplevel):
         self.engine.subscribe("batch_changed", self._on_batch_changed)
         self.engine.subscribe("tests_changed", self._on_tests_changed)
         self.engine.subscribe("categories_changed", self._on_categories_changed)
+        self.engine.subscribe("test_method_changed", self._on_test_method_changed)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -1148,6 +1149,36 @@ class Main(tk.Toplevel):
         if current_index >= 0 and current_index < len(self.cbCategories["values"]):
             self.cbCategories.current(current_index)
             self.cbCategories.event_generate("<<ComboboxSelected>>")
+
+    def _on_test_method_changed(self, data=None) -> None:
+        """Observer callback for test_method changes - refresh tests combobox.
+
+        When a test_method status changes, the tests combobox must be refreshed
+        because it filters by test_methods.status = 1.
+        """
+        # Save current selection
+        current_index = self.cbTests.current()
+        current_test_method_id = (
+            self.selected_test_method.get("test_method_id")
+            if self.selected_test_method
+            else None
+        )
+
+        # Refresh tests list
+        self.set_tests()
+
+        # Try to restore selection by test_method_id
+        if current_test_method_id:
+            for idx, test_method_id in self.test_methods.items():
+                if test_method_id == current_test_method_id:
+                    self.cbTests.current(idx)
+                    self.cbTests.event_generate("<<ComboboxSelected>>")
+                    return
+
+        # Fallback: restore by index if valid
+        if current_index >= 0 and current_index < len(self.cbTests["values"]):
+            self.cbTests.current(current_index)
+            self.cbTests.event_generate("<<ComboboxSelected>>")
 
     def _populate_batches(self) -> None:
         """Core logic to populate batch treeview (no early-return checks)."""
@@ -2724,5 +2755,6 @@ class Main(tk.Toplevel):
         self.engine.unsubscribe("batch_changed", self._on_batch_changed)
         self.engine.unsubscribe("tests_changed", self._on_tests_changed)
         self.engine.unsubscribe("categories_changed", self._on_categories_changed)
+        self.engine.unsubscribe("test_method_changed", self._on_test_method_changed)
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.nametowidget(".").on_exit()

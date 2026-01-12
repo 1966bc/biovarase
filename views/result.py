@@ -348,6 +348,7 @@ class UI(ChildView):
             batch_id, org_id, run_number, workstation_id, reagent_lot,
             result, received, status,
             validated, validated_by, validated_at,
+            tech_validated, tech_validated_by, tech_validated_at, operator_code,
             is_delete, log_time, log_id, log_ip
 
         Returns:
@@ -360,6 +361,11 @@ class UI(ChildView):
             validated = self.selected_result["validated"]
             validated_by = self.selected_result.get("validated_by")
             validated_at = self.selected_result.get("validated_at")
+            # Technical validation - preserve existing values
+            tech_validated = self.selected_result.get("tech_validated", 0)
+            tech_validated_by = self.selected_result.get("tech_validated_by")
+            tech_validated_at = self.selected_result.get("tech_validated_at")
+            operator_code = self.selected_result.get("operator_code")
         else:
             # Insert mode - new result defaults
             run_number = 0
@@ -367,6 +373,11 @@ class UI(ChildView):
             validated = 0
             validated_by = None
             validated_at = None
+            # Technical validation - manual entry by logged user
+            tech_validated = 1
+            tech_validated_by = self.engine.log_user["user_id"]
+            tech_validated_at = None  # Will be set to received timestamp below
+            operator_code = None  # Manual entry, no machine code
 
         # Result → safe float
         try:
@@ -405,6 +416,10 @@ class UI(ChildView):
         if not reagent_lot_value:
             reagent_lot_value = DEFAULT_REAGENT_LOT
 
+        # Set tech_validated_at to received timestamp for insert mode
+        if self.index is None and tech_validated_at is None:
+            tech_validated_at = ts
+
         args = [
             batch_id,         # batch_id
             org_id,           # org_id (organizations FK)
@@ -417,6 +432,10 @@ class UI(ChildView):
             validated,        # validated
             validated_by,     # validated_by
             validated_at,     # validated_at
+            tech_validated,   # tech_validated
+            tech_validated_by,  # tech_validated_by
+            tech_validated_at,  # tech_validated_at
+            operator_code,    # operator_code
             is_delete,        # is_delete
             self.engine.get_log_time(),
             self.engine.get_log_id(),
