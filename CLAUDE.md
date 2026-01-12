@@ -31,6 +31,7 @@ Note for future Claude instances working on this codebase:
 - **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution to prevent DB conflicts
 - **Main view:** `set_categories()` now filters by `tests.status = 1` in addition to `test_methods.status = 1`
 - **Bland-Altman scanner:** Blocks scan if Abbott import is running (checks lock file)
+- **Bland-Altman scanner:** Rewritten without threading - uses `after()` cooperative multitasking to avoid DB segfaults
 - **Bland-Altman view:** Fixed `categories` queries to use `org_id` instead of `lab_id`
 
 **Testing:**
