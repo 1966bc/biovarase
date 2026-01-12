@@ -206,7 +206,7 @@ class UI(ParentView):
             FROM categories c
             JOIN test_methods tm ON tm.category_id = c.category_id
             WHERE tm.test_id = ?
-              AND c.lab_id = ?
+              AND c.org_id = ?
             LIMIT 1
         """
         row = self.engine.read(False, sql, (test_id, self.engine.get_lab_id()))
@@ -263,18 +263,18 @@ class UI(ParentView):
         self.cbCategory.set("")
         self.cbCategory["values"] = []
 
-        category_lab_id = self.engine.get_lab_id()
+        lab_org_id = self.engine.get_lab_id()
 
         sql = """
             SELECT DISTINCT c.category_id, c.description
             FROM categories c
             JOIN test_methods tm ON tm.category_id = c.category_id
-            WHERE c.lab_id = ?
+            WHERE c.org_id = ?
               AND c.status = 1
               AND tm.status = 1
             ORDER BY c.description
         """
-        rows = self.engine.read(True, sql, (category_lab_id,)) or []
+        rows = self.engine.read(True, sql, (lab_org_id,)) or []
 
         values = []
         for idx, row in enumerate(rows):

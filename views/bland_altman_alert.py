@@ -12,6 +12,7 @@ Scans all test/level combinations with results on multiple workstations
 and calculates Bland-Altman statistics to detect discrepancies.
 """
 
+import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 import statistics
@@ -21,6 +22,9 @@ from queue import Queue, Empty
 from i18n import _
 from views.parent_view import ParentView
 import views.bland_altman
+
+# Lock file used by Abbott import
+ABBOTT_LOCK_FILE = "/tmp/abbott_import.lock"
 
 
 class UI(ParentView):
@@ -142,6 +146,15 @@ class UI(ParentView):
 
     def _on_scan(self, _evt=None):
         """Scan all test/level/workstation combinations."""
+        # Check if Abbott import is running
+        if os.path.exists(ABBOTT_LOCK_FILE):
+            messagebox.showwarning(
+                self.engine.app_title,
+                _("Cannot scan while Abbott import is running.\nPlease wait for the import to complete."),
+                parent=self
+            )
+            return
+
         self.tree.delete(*self.tree.get_children())
         self.comparisons.clear()
         self.dict_items.clear()
