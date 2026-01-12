@@ -137,7 +137,7 @@ class UI(ParentView):
         sb_horiz = ttk.Scrollbar(frm_tree, orient=tk.HORIZONTAL)
 
         # TreeView with hierarchical structure
-        cols = ("equipment_batch", "time", "counts_result", "problems_sd", "status")
+        cols = ("equipment_batch", "time", "counts_result", "problems_sd", "operator", "status")
         self.tree = ttk.Treeview(
             frm_tree,
             columns=cols,
@@ -154,6 +154,7 @@ class UI(ParentView):
         self.tree.heading("time", text=_("Time"), anchor=tk.CENTER)
         self.tree.heading("counts_result", text=_("Counts / Result"), anchor=tk.CENTER)
         self.tree.heading("problems_sd", text=_("Problems / Z-Score"), anchor=tk.CENTER)
+        self.tree.heading("operator", text=_("Operator"), anchor=tk.CENTER)
         self.tree.heading("status", text=_("Status"), anchor=tk.CENTER)
 
         # Column widths
@@ -162,6 +163,7 @@ class UI(ParentView):
         self.tree.column("time", width=50, anchor=tk.CENTER)
         self.tree.column("counts_result", width=100, anchor=tk.CENTER)
         self.tree.column("problems_sd", width=80, anchor=tk.CENTER)
+        self.tree.column("operator", width=80, anchor=tk.CENTER)
         self.tree.column("status", width=120, anchor=tk.CENTER)
 
         # Grid layout
@@ -534,8 +536,8 @@ class UI(ParentView):
         counts_text = f"{total} tot / {pending} pend"
         problems_text = f"{problems} prob" if problems > 0 else ""
 
-        # time column empty for workstations
-        values = (eq_name, "", counts_text, problems_text, status_text)
+        # time and operator columns empty for workstations
+        values = (eq_name, "", counts_text, problems_text, "", status_text)
         tags = (TAG_WORKSTATION, color)
 
         # Insert with dummy child so it's expandable
@@ -568,6 +570,9 @@ class UI(ParentView):
                     r.received,
                     r.validated,
                     r.validated_by,
+                    r.tech_validated,
+                    r.tech_validated_by,
+                    r.operator_code,
                     b.target,
                     b.sd,
                     b.lot_number,
@@ -575,13 +580,16 @@ class UI(ParentView):
                     t.description AS test_description,
                     s.sample,
                     u.first_name AS validated_first_name,
-                    u.last_name AS validated_last_name
+                    u.last_name AS validated_last_name,
+                    tu.first_name AS tech_first_name,
+                    tu.last_name AS tech_last_name
                 FROM results r
                 INNER JOIN batches b ON r.batch_id = b.batch_id
                 INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
                 INNER JOIN tests t ON tm.test_id = t.test_id
                 INNER JOIN samples s ON tm.sample_id = s.sample_id
                 LEFT JOIN users u ON r.validated_by = u.user_id
+                LEFT JOIN users tu ON r.tech_validated_by = tu.user_id
                 WHERE r.workstation_id = ?
                   AND DATE(r.received) = ?
                   AND r.status = 1
@@ -630,6 +638,14 @@ class UI(ParentView):
             zscore = 0
             zscore_str = "-"
 
+        # Operator info (machine code or technician name)
+        operator_code = row.get("operator_code")
+        if operator_code:
+            operator_str = operator_code
+        else:
+            tech_name = f"{row.get('tech_first_name') or ''} {row.get('tech_last_name') or ''}".strip()
+            operator_str = tech_name if tech_name else "-"
+
         # Status
         if validated == 1:
             validated_by = f"{row.get('validated_first_name') or ''} {row.get('validated_last_name') or ''}".strip()
@@ -649,7 +665,7 @@ class UI(ParentView):
         batch_info = f"{lot_number} {level}".strip()
         result_str = f"{result_val:.2f}"
 
-        values = (batch_info, time_str, result_str, zscore_str, status_text)
+        values = (batch_info, time_str, result_str, zscore_str, operator_str, status_text)
         tags = [TAG_RESULT]
         if color:
             tags.append(color)
