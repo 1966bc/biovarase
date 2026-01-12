@@ -275,8 +275,9 @@ class UI(ChildView):
         self.after(FOCUS_DELAY_MS, self._focus_entry)
 
         # Calculate minimum size AFTER layout is finalized
+        # Extra height for Windows compatibility (different font metrics)
         self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight() + 10)
+        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight() + 30)
 
     def _focus_entry(self) -> None:
         """Ensure focus goes to result entry field."""
