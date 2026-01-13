@@ -612,6 +612,9 @@ mysql -u root -p biovarase < migrations/022_result_id_to_bigint.sql
 # Cleanup Abbott data before 2026 (removes results, batches, audit_results orphans)
 mysql -u root -p biovarase < migrations/023_cleanup_abbott_pre_2026.sql
 # Then manually: DELETE FROM audit_results WHERE result_id NOT IN (SELECT result_id FROM results);
+
+# Translate methods to English (international naming)
+mysql -u root -p biovarase < migrations/024_methods_to_english.sql
 ```
 
 ### Production Migration Guide (008-011)
