@@ -140,7 +140,6 @@ py -m nuitka biovarase.py ^
     --include-data-files=ddof=ddof ^
     --include-data-files=dimensions=dimensions ^
     --include-data-files=elements=elements ^
-    --include-data-files=icon=icon ^
     --include-data-files=language=language ^
     --include-data-files=LICENSE=LICENSE ^
     --include-data-files=observations=observations ^
