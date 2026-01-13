@@ -1090,17 +1090,27 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
             return None
 
     def get_icon(self):
-        try:
-            path = self.get_file("icon")
-            with open(path, "r") as f:
-                v = f.readline().strip()
-            return v
-        except (FileNotFoundError, IOError) as e:
-            self.on_log(inspect.stack()[0][3],
-                        e,
-                        type(e),
-                        sys.modules[__name__])
-            return None
+        """Return embedded application icon as base64 PNG data."""
+        return (
+            "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAADvklEQVR4nO2d4XHcIBBGpUw6STl2"
+            "G9dDSkgP14ZdTmrBv3RzcSQBgoXd+96b8Q/7NBLDPhbYk+Q1pbSALj9mNwDmggDiIIA4CCAOAoiD"
+            "AOIggDg/rS+w3lYKDY2ke1qtzr1aFIIIuh29ZegqAIEfRy8RughA4OfRKkLzIpDgz6W1/5sEIPg+"
+            "aInDZQEIvi+uxuOSAATfJ1fiUi0AwfdNbXyqBCD4MaiJE6VgcYoFYPTHojReZABxigRg9MekJG5k"
+            "AHEQQJysAKT/2OTiRwYQBwHEQQBxEEAcBBAHAcRBAHEQQBwEEAcBxEEAcRBAHAQQBwHEMX88XJ10"
+            "///b2PVm9rR3NWQAQ/aCf/b3GSCAEbkge5HAfAr4+P1hfQl3vP16Kzou3dPy+fcze9z7n/fWJh2S"
+            "fT8At4TVUzO6R6wHzt4hEGoR6H1BFZEwa4AIC6qIhBAgyoIqIu4FKA2uJwlKpyUP05d7AaLiIbgl"
+            "IIA4oXYBkdimpL1MsH2W7ml6ppARwNMWcr2tbiRwPwXUdE7tVtFq4Xg2+jdmj/wN9wKUsN7WR4em"
+            "e3r8bL+f4WH3MLMN7kvBuc45Gkm1ndprRJaM/r3je7Zh5xrxS8G1nfM8z3pmdjtdTwG1o2k2re2d"
+            "IYJbASKM3l6wC/jGiHmxN72y1WjxXQqw0dqZkWryz20YKYE7AXrP+yODO0rYnrgSwMr8XMe2Xtei"
+            "3aOygJttoPW836teYM33MvHe5z1xlQGWZXwafK4gXsFiq3p2rt7CmlcCvY2wV6HyO5LDg91lACij"
+            "18Aa8Z9Dl2Upa/Ds7djVOn7Pdr9kHSDKfX01skYrUx/BFHDAbBlHgQDfKKnIvcroXxYE2GVmYEeX"
+            "r90UgryxFWSOsoClJLl7BHpee0gGiPSlTCnWa4SjvujdR8MywEirR2F9R++IPhm6BhhldQ+ibF1b"
+            "Gb4G8BhsZdgFiIMA4iCAOAhwwCtuXfdAgBNywY0e/GVBgCyRtq5XoBRcwKsEew8ygDgIIA4CiMO7"
+            "ggPAu4KhCW4Lh0MQQBwEEAcBxEEAcRBAHAQQBwHEQQBxEEAcBBAHAcRBAHEQQBwEEAcBxEEAcbIC"
+            "nN1NAv7JxY8MIA4CiFMkANNATEriRgYQp1gAskAsSuNFBhCnSgCyQAxq4lSdAZDAN7XxuTQFIIFP"
+            "rsTl8hoACXxxNR5Ni0Ak8EFLHJp3AUgwl9b+zz4eXnUyHiUfRq+B11WAx0kRwYzeGddEgH8ugAzN"
+            "WE6z5gKAbygFi4MA4iCAOAggDgKIgwDifAEIyYnKq3JXZAAAAABJRU5ErkJggg=="
+        )
 
     def get_expiration_date(self, expiration_date):
         try:
