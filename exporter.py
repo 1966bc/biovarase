@@ -863,7 +863,7 @@ class Exporter:
 
             f = (
                 "ROUND((((F{0} - E{0}) / E{0}) * 100) / "
-                "SQRT(POWER(H{0}, 2) + POWER(I{0}, 2)), 2)"
+                "SQRT(POWER(G{0}, 2) + POWER(H{0}, 2)), 2)"
             ).format(row)
 
             return f, c
