@@ -719,11 +719,12 @@ class TestUtilityMethods:
         assert result == 0.95
         assert isinstance(result, float)
 
-    def test_get_icon_reads_file(self, mock_engine):
-        """get_icon() reads icon name from file."""
-        with patch("builtins.open", mock_open(read_data="biovarase.png\n")):
-            result = mock_engine.get_icon()
-        assert result == "biovarase.png"
+    def test_get_icon_returns_embedded_data(self, mock_engine):
+        """get_icon() returns embedded base64 PNG data."""
+        result = mock_engine.get_icon()
+        assert result is not None
+        assert result.startswith("iVBORw0KGgo")  # PNG base64 header
+        assert len(result) > 100  # Reasonable icon size
 
     def test_get_expiration_date_positive(self, mock_engine):
         """get_expiration_date() returns positive for future dates."""
