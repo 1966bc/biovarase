@@ -821,7 +821,7 @@ class Exporter:
             red:    k > 0.75
         """
         try:
-            k = round((cva / cvw), 2)
+            k = round(float(cva) / float(cvw), 2)
 
             if 0.25 <= k <= 0.50:
                 c = "green"
@@ -835,7 +835,7 @@ class Exporter:
             f = "ROUND(G{0} / H{0}, 2)".format(row)
             return f, c
 
-        except (ZeroDivisionError, ValueError) as e:
+        except (ZeroDivisionError, ValueError, TypeError) as e:
             return None
 
     def get_formula_k_bias(self, avg, target, cvw, cva, row):
@@ -869,7 +869,7 @@ class Exporter:
 
             return f, c
 
-        except ZeroDivisionError:
+        except (ZeroDivisionError, TypeError):
             return None, None
 
     def get_formula_drc(self, row):
