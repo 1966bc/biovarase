@@ -755,9 +755,9 @@ class Exporter:
                     '={0}'.format(formula_bias),               # Bias% (col K)
                     '={0}'.format(formula_eta),                # TEa% (col L)
                     '={0}'.format(formula_cvt),                # CVt (col M)
-                    formula_k_imp_res[0] if formula_k_imp_res else None,   # k imp (col N)
-                    formula_k_bias_res[0] if formula_k_bias_res else None, # k bias (col O)
-                    tea_tes_comparison_res[0] if tea_tes_comparison_res else None,  # TE% (col P)
+                    '={0}'.format(formula_k_imp_res[0]) if formula_k_imp_res else None,   # k imp (col N)
+                    '={0}'.format(formula_k_bias_res[0]) if formula_k_bias_res else None, # k bias (col O)
+                    '={0}'.format(tea_tes_comparison_res[0]) if tea_tes_comparison_res else None,  # TE% (col P)
                     '={0}'.format(formula_drc),                # Drc% (col Q)
                     len(series),                      # records
                     workstation_description,          # workstation description
