@@ -847,8 +847,11 @@ class Exporter:
             red:    k > 0.375
         """
         try:
+            cvt = self.get_cvt(float(cva), float(cvw))
+            if cvt == 0:
+                return None, None
             k = round(
-                self.get_bias(avg, target) / self.get_cvt(cva, cvw),  # type: ignore
+                self.get_bias(float(avg), float(target)) / cvt,
                 2,
             )
 
