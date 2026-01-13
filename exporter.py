@@ -728,8 +728,7 @@ class Exporter:
                 formula_k_bias_res = self.get_formula_k_bias(
                     avg, target, cvw, cva, row_num
                 )
-                # ATTENZIONE: metodo si chiama get_tea_tes_comparision
-                tea_tes_comparision_res = self.get_tea_tes_comparision(
+                tea_tes_comparison_res = self.get_tea_tes_comparison(
                     avg, target, cvw, cvb, sd, cva
                 )
                 formula_drc = self.get_formula_drc(row_num)
@@ -758,7 +757,7 @@ class Exporter:
                     '={0}'.format(formula_cvt),                # CVt (col M)
                     formula_k_imp_res[0] if formula_k_imp_res else None,   # k imp (col N)
                     formula_k_bias_res[0] if formula_k_bias_res else None, # k bias (col O)
-                    tea_tes_comparision_res[0] if tea_tes_comparision_res else None,  # TE% (col P)
+                    tea_tes_comparison_res[0] if tea_tes_comparison_res else None,  # TE% (col P)
                     '={0}'.format(formula_drc),                # Drc% (col Q)
                     len(series),                      # records
                     workstation_description,          # workstation description
@@ -777,7 +776,7 @@ class Exporter:
                 # Apply colors using helper method
                 self._apply_fill_color(worksheet, row_num, 14, formula_k_imp_res)
                 self._apply_fill_color(worksheet, row_num, 15, formula_k_bias_res)
-                self._apply_fill_color(worksheet, row_num, 16, tea_tes_comparision_res)
+                self._apply_fill_color(worksheet, row_num, 16, tea_tes_comparison_res)
 
                 row_num += 1
 
