@@ -19,6 +19,7 @@ show_expired_batches
 # Logs
 log.txt
 log_*.txt
+abbott_import.log
 
 # Generated reports
 QC_Report_*.txt
@@ -27,6 +28,11 @@ QC_Report_*.txt
 *.bak
 *.bak.*
 *.bak_*
+backup_*.sql
+
+# Data files
+*.xlsx
+qc/
 
 # Python cache
 __pycache__/
