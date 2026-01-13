@@ -872,11 +872,8 @@ class Exporter:
             return None, None
 
     def get_formula_drc(self, row):
-        """Calcola la differenza critica (Critical Difference)"""
-        f = (
-            "ROUND(ROUND(SQRT(POWER(G{0}, 2) + POWER(H{0}, 2)) * 2.77, 2) "
-            "* F{0} / 100, 2)"
-        ).format(row)
+        """Reference Change Value (RCV%) = 2.77 × CVt"""
+        f = "ROUND(SQRT(POWER(G{0}, 2) + POWER(H{0}, 2)) * 2.77, 2)".format(row)
         return f
 
     # ------------------------------------------------------------------ #
