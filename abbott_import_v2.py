@@ -309,22 +309,35 @@ class AbbottImporter:
                 return None
         return None
 
-    def run(self, limit: Optional[int] = None, months: Optional[int] = None):
+    def run(self, limit: Optional[int] = None, months: Optional[int] = None,
+            days: Optional[int] = None, since: Optional[str] = None):
         """Run the import process."""
         print(f"Abbott Importer v2 {'(DRY RUN)' if self.dry_run else ''}")
         print(f"Path: {ABBOTT_PATH}")
-        if months:
+
+        # Determine cutoff date from parameters (priority: since > days > months)
+        cutoff_date = None
+        if since:
+            try:
+                cutoff_date = datetime.strptime(since, '%Y-%m-%d')
+                print(f"Filter: since {since}")
+            except ValueError:
+                print(f"ERROR: Invalid date format: {since} (use YYYY-MM-DD)")
+                return
+        elif days:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            print(f"Filter: last {days} days")
+        elif months:
+            cutoff_date = datetime.now() - timedelta(days=months * 30)
             print(f"Filter: last {months} months")
+        else:
+            print("Filter: all files (no date filter)")
+
         print("-" * 60)
 
         if not os.path.exists(ABBOTT_PATH):
             print(f"ERROR: Path not found: {ABBOTT_PATH}")
             return
-
-        # Calculate cutoff date if months filter specified
-        cutoff_date = None
-        if months:
-            cutoff_date = datetime.now() - timedelta(days=months * 30)
 
         # Get list of files
         all_files = sorted([
@@ -389,8 +402,12 @@ def main():
                        help='Verbose output')
     parser.add_argument('--limit', '-l', type=int,
                        help='Limit number of files to process')
-    parser.add_argument('--months', '-m', type=int, default=6,
-                       help='Import only files from last N months (default: 6, 0=all)')
+    parser.add_argument('--months', '-m', type=int, default=None,
+                       help='Import only files from last N months (0=all)')
+    parser.add_argument('--days', '-D', type=int, default=None,
+                       help='Import only files from last N days (default for cron)')
+    parser.add_argument('--since', '-s', type=str, default=None,
+                       help='Import files since date YYYY-MM-DD (e.g., 2026-01-01)')
 
     args = parser.parse_args()
 
@@ -403,12 +420,17 @@ def main():
 
     importer = AbbottImporter(dry_run=args.dry_run, verbose=args.verbose)
 
-    # months=0 means no filter (all files)
-    months_filter = args.months if args.months > 0 else None
+    # Determine filter: --since > --days > --months
+    # Default for cron: --days 7 (last week)
+    # For initial import: --since 2026-01-01
+    months_filter = None
+    if args.months is not None:
+        months_filter = args.months if args.months > 0 else None
 
     try:
         importer.connect()
-        importer.run(limit=args.limit, months=months_filter)
+        importer.run(limit=args.limit, months=months_filter,
+                    days=args.days, since=args.since)
     finally:
         importer.close()
         # Remove lock file

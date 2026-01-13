@@ -42,6 +42,10 @@ Note for future Claude instances working on this codebase:
   - Abbott import sets `tech_validated=1`, `operator_code` from workstation (ALCI-1/2/3)
   - Manual entry sets `tech_validated_by` to logged-in user
 - **Daily validation:** New "Operator" column shows operator_code or technician name
+- **result_id type (migration 022):** Changed from `INT UNSIGNED` to `BIGINT UNSIGNED` (max 18 quintillion) - both `results` and `audit_results`
+- **Abbott import parameters:** Added `--days` and `--since` for flexible date filtering
+- **Cron import:** `run_abbott_import.sh` now uses `--days 7` (last week only, lightweight)
+- **Data cleanup (migration 023):** Removed Abbott data before 2026-01-01 from `results`, `batches`, and `audit_results` (orphans)
 
 **Testing:**
 - Run tests with venv: `./venv/bin/pytest tests/ -v`
@@ -511,9 +515,12 @@ Abbott (ALCI-1/2/3) → Windows Share (\\172.16.145.11) → Linux Mount (/mnt/bi
 
 ### Import Commands
 ```bash
-python3 abbott_import_v2.py --dry-run --verbose  # Test
-python3 abbott_import_v2.py --limit 100 -v       # Limited
-python3 abbott_import_v2.py                       # Full
+python3 abbott_import_v2.py --dry-run --verbose    # Test (no DB changes)
+python3 abbott_import_v2.py --days 7 -v            # Last 7 days (cron default)
+python3 abbott_import_v2.py --since 2026-01-01 -v  # Since specific date
+python3 abbott_import_v2.py --months 1 -v          # Last month
+python3 abbott_import_v2.py --months 0             # All files (no date filter)
+python3 abbott_import_v2.py --limit 100 -v         # Limit to 100 files
 ```
 
 ### Configuration
@@ -541,10 +548,24 @@ sudo mount -t cifs //172.16.145.11/Omnilab/EXPQC/Biovarase /mnt/biovarase_qc \
 
 ### Cron
 ```bash
+# Runs every 5 minutes, imports only last 7 days (lightweight)
 */5 * * * * /home/gcostanzi@intraosa.net/Documents/projects/biovarase/run_abbott_import.sh
 ```
 
 **TODO:** Add fstab entry and firewall (port 445) documentation from production server.
+
+### Data Cleanup (Optional)
+To start fresh from a specific date:
+```bash
+# 1. Backup first!
+mysqldump -u root -p --single-transaction biovarase results batches > backup.sql
+
+# 2. Run cleanup migration (removes Abbott data before 2026-01-01)
+mysql -u root -p biovarase < migrations/023_cleanup_abbott_pre_2026.sql
+
+# 3. Reimport from desired date
+python3 abbott_import_v2.py --since 2026-01-01 --verbose
+```
 
 ## Database Migrations
 
@@ -579,8 +600,18 @@ mysql -u root -p biovarase < migrations/017_add_site_org_type.sql
 # English actions for international peer lab comparison
 mysql -u root -p biovarase < migrations/018_actions_to_english.sql
 
+# Fix triggers to remove lab_id (after lab_id column removal)
+mysql -u root -p biovarase < migrations/020_fix_triggers_remove_lab_id.sql
+
 # Technical validation (dual validation workflow)
 mysql -u root -p biovarase < migrations/021_add_technical_validation.sql
+
+# result_id capacity upgrade (INT → BIGINT UNSIGNED) - includes audit_results
+mysql -u root -p biovarase < migrations/022_result_id_to_bigint.sql
+
+# Cleanup Abbott data before 2026 (removes results, batches, audit_results orphans)
+mysql -u root -p biovarase < migrations/023_cleanup_abbott_pre_2026.sql
+# Then manually: DELETE FROM audit_results WHERE result_id NOT IN (SELECT result_id FROM results);
 ```
 
 ### Production Migration Guide (008-011)
