@@ -68,7 +68,15 @@ class UI(ChildView):
         # (site_id, comp_id, lab_id, section_id, ...)
         self.site_context = {}
 
+        # Search
+        self.search_var = tk.StringVar()
+        self.items_var = tk.StringVar()
+        self.all_items = []  # Full list for filtering: [(test_method_id, label), ...]
+
         self._build_ui()
+
+        # Bind search filtering
+        self.search_var.trace_add("write", self._on_search_changed)
 
         # Subscribe to tests changes (Observer pattern)
         self.engine.subscribe("tests_changed", self._on_tests_changed)
@@ -82,9 +90,23 @@ class UI(ChildView):
         frame = ttk.Frame(self, style="App.TFrame", padding=8)
         frame.pack(fill=tk.BOTH, expand=1)
 
-        sb = ttk.Scrollbar(frame, orient=tk.VERTICAL)
+        # Top bar: search + items count
+        frm_top = ttk.Frame(frame, style="App.TFrame")
+        frm_top.pack(fill=tk.X, pady=(0, 5))
+
+        ttk.Label(frm_top, text=_("Search:"), style="App.TLabel").pack(side=tk.LEFT)
+        self.entry_search = ttk.Entry(frm_top, textvariable=self.search_var, width=25)
+        self.entry_search.pack(side=tk.LEFT, padx=(5, 15))
+
+        ttk.Label(frm_top, textvariable=self.items_var, style="App.TLabel").pack(side=tk.LEFT)
+
+        # Listbox with scrollbar
+        frm_list = ttk.Frame(frame, style="App.TFrame")
+        frm_list.pack(fill=tk.BOTH, expand=1)
+
+        sb = ttk.Scrollbar(frm_list, orient=tk.VERTICAL)
         self.lstItems = tk.Listbox(
-            frame,
+            frm_list,
             yscrollcommand=sb.set,
             exportselection=False,
             font="TkFixedFont",  # Monospaced font for column alignment
@@ -227,12 +249,40 @@ class UI(ChildView):
         """
         rs = self.engine.read(True, sql, (lab_id, workstation_id)) or []
 
+        # Store all items for filtering
+        self.all_items = []
         for row in rs:
-            test_method_id = row["test_method_id"]
+            test_method_id = int(row["test_method_id"])
             label = self._format_label(row)
-            self.lstItems.insert(tk.END, label)
-            self.dict_items[idx] = int(test_method_id)
-            idx += 1
+            self.all_items.append((test_method_id, label))
+
+        # Apply current filter
+        self._filter_items()
+
+    def _filter_items(self):
+        """Filter items based on search text."""
+        self.lstItems.delete(0, tk.END)
+        self.dict_items = {}
+
+        search_text = self.search_var.get().lower().strip()
+
+        idx = 0
+        for test_method_id, label in self.all_items:
+            if not search_text or search_text in label.lower():
+                self.lstItems.insert(tk.END, label)
+                self.dict_items[idx] = test_method_id
+                idx += 1
+
+        total = len(self.all_items)
+        shown = self.lstItems.size()
+        if search_text:
+            self.items_var.set(f"{_('Items')}: {shown}/{total}")
+        else:
+            self.items_var.set(f"{_('Items')}: {total}")
+
+    def _on_search_changed(self, *args):
+        """Handle search text changes."""
+        self._filter_items()
 
     def _format_label(self, row: dict) -> str:
         """
