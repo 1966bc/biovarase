@@ -94,17 +94,6 @@ class UI(ParentView):
         pane_left = ttk.Frame(self.pw, style="App.TFrame")
         self.pw.add(pane_left, minsize=220, stretch="always")
 
-        # Search box
-        frm_search = ttk.Frame(pane_left, style="App.TFrame")
-        frm_search.pack(fill=tk.X, padx=2, pady=2)
-
-        ttk.Label(frm_search, text=_("Search:")).pack(side=tk.LEFT)
-        self.entry_search = ttk.Entry(frm_search, textvariable=self.search_var, width=20)
-        self.entry_search.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
-
-        # Clear search button
-        ttk.Button(frm_search, text="✕", width=2, command=self._clear_search).pack(side=tk.LEFT, padx=2)
-
         lbl_cnt = ttk.Label(pane_left, style="App.TLabel", textvariable=self.items)
         lbl_cnt.pack(fill=tk.X, padx=2, pady=2)
 
@@ -161,6 +150,15 @@ class UI(ParentView):
         pane_right = ttk.Frame(self.pw, style="App.TFrame")
         self.pw.add(pane_right, minsize=140, stretch="never")
 
+        # Search box
+        frm_search = ttk.Frame(pane_right, style="App.TFrame")
+        frm_search.pack(fill=tk.X, padx=5, pady=(5, 8))
+
+        ttk.Label(frm_search, text=_("Search:"), style="App.TLabel").pack(anchor=tk.W)
+        self.entry_search = ttk.Entry(frm_search, textvariable=self.search_var, width=15)
+        self.entry_search.pack(fill=tk.X)
+
+        # Buttons
         frm_buttons = ttk.Frame(pane_right, style="Panel.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
@@ -242,11 +240,6 @@ class UI(ParentView):
         """Handle search text change."""
         self._filter_tests()
         self._clear_methods()
-
-    def _clear_search(self):
-        """Clear search box."""
-        self.search_var.set("")
-        self.entry_search.focus_set()
 
     def _clear_methods(self):
         """Clear the methods tree."""
