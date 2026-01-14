@@ -42,6 +42,8 @@ class UI(ParentView):
         if self._reusing:
             return
 
+        self.transient(parent)
+
         # Store comparison results
         self.comparisons = []  # List of dicts with comparison data
         self.dict_items = {}   # Map treeview iid to comparison data
@@ -154,7 +156,6 @@ class UI(ParentView):
     def on_open(self):
         """Initialize view."""
         self.title(_("Bland-Altman Alert Scanner"))
-        self.attributes("-topmost", True)
 
     def _on_scan(self, _evt=None):
         """Start scanning all test/level/workstation combinations."""

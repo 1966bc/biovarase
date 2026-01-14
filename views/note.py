@@ -35,9 +35,6 @@ class UI(ChildView):
         """
         super().__init__(parent, name="note")
 
-        # Stay on top (needed when opened from daily_validation which is also topmost)
-        self.attributes("-topmost", True)
-
         self.index = index            # Treeview iid (note_id) or None
         self.can_edit = True          # Permission flag
 
