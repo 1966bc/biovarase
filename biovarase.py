@@ -210,16 +210,19 @@ class App(tk.Tk):
             return
         self._exit_in_progress = True
 
-        # Ensure the root window is focused and visible
+        # Use main window as parent (it's the visible window)
+        main_window = self.engine.dict_instances.get("main", root)
+
+        # Ensure the main window is focused and visible
         try:
-            root.lift()
-            root.focus_force()
+            main_window.lift()
+            main_window.focus_force()
         except (tk.TclError, AttributeError):
             pass
 
         # Confirmation dialog
         msg = _("Do you want to quit {app_name}?").format(app_name=root.title())
-        answer = messagebox.askokcancel(root.title(), msg, parent=root)
+        answer = messagebox.askokcancel(root.title(), msg, parent=main_window)
 
         if answer:
             # Safe shutdown of database connection and monitor thread
