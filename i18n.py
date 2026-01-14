@@ -33,6 +33,7 @@ TRANSLATIONS = {
     "Remove": {"it": "Rimuovi", "en": "Remove"},
     "Load": {"it": "Carica", "en": "Load"},
     "Loading...": {"it": "Caricamento...", "en": "Loading..."},
+    "Validating...": {"it": "Validazione...", "en": "Validating..."},
     "Next update": {"it": "Prossimo aggiornamento", "en": "Next update"},
     "Reset": {"it": "Reimposta", "en": "Reset"},
     "Apply": {"it": "Applica", "en": "Apply"},
@@ -106,8 +107,8 @@ TRANSLATIONS = {
     "Preferences": {"it": "Preferenze", "en": "Preferences"},
     "Daily Validation": {"it": "Validazione Giornaliera", "en": "Daily Validation"},
     "Batches": {"it": "Lotti", "en": "Batches"},
-    "Test Methods": {"it": "Metodi di Test", "en": "Test Methods"},
-    "Tests Methods Workstations": {"it": "Metodi Test Postazioni", "en": "Tests Methods Workstations"},
+    "Test Methods": {"it": "Test Laboratorio", "en": "Laboratory Tests"},
+    "Tests Methods Workstations": {"it": "Test Postazioni", "en": "Workstation Tests"},
     "Set Observations": {"it": "Imposta Osservazioni", "en": "Set Observations"},
     "Set Z Score": {"it": "Imposta Z Score", "en": "Set Z Score"},
 
@@ -228,7 +229,6 @@ TRANSLATIONS = {
     # Main Window
     # ==========================================================================
     "Tests": {"it": "Test", "en": "Tests"},
-    "Batches": {"it": "Lotti", "en": "Batches"},
     "Results": {"it": "Risultati", "en": "Results"},
     "Workstation Data Source": {"it": "Sorgente Dati Postazione", "en": "Workstation Data Source"},
     "Liv": {"it": "Liv", "en": "Lv"},
@@ -244,7 +244,6 @@ TRANSLATIONS = {
     "Control:": {"it": "Controllo:", "en": "Control:"},
     "Lot": {"it": "Lotto", "en": "Lot"},
     "Lot:": {"it": "Lotto:", "en": "Lot:"},
-    "Test Methods": {"it": "Metodi Test", "en": "Test Methods"},
     "Workstation": {"it": "Postazione", "en": "Workstation"},
     "Workstation:": {"it": "Postazione:", "en": "Workstation:"},
     "Equipment": {"it": "Strumento", "en": "Equipment"},
@@ -404,7 +403,7 @@ TRANSLATIONS = {
     # ==========================================================================
     # Workstation Test Methods Mapping
     # ==========================================================================
-    "Workstations — Test Methods Mapping": {"it": "Postazioni — Mappatura Metodi Test", "en": "Workstations — Test Methods Mapping"},
+    "Workstations — Test Methods Mapping": {"it": "Postazioni — Mappatura Test Laboratorio", "en": "Workstations — Laboratory Tests Mapping"},
     "Edit External Code": {"it": "Modifica Codice Esterno", "en": "Edit External Code"},
     "Remove Mapping": {"it": "Rimuovi Mappatura", "en": "Remove Mapping"},
     "External Code": {"it": "Codice Esterno", "en": "External Code"},
@@ -423,7 +422,6 @@ TRANSLATIONS = {
     "Method:": {"it": "Metodo:", "en": "Method:"},
     "Mandatory:": {"it": "Obbligatorio:", "en": "Mandatory:"},
     "Methods": {"it": "Metodi", "en": "Methods"},
-    "Test Methods": {"it": "Metodi Test", "en": "Test Methods"},
     "Tests": {"it": "Test", "en": "Tests"},
     "Goals": {"it": "Obiettivi", "en": "Goals"},
     "Update method for": {"it": "Modifica metodo per", "en": "Update method for"},
@@ -961,6 +959,9 @@ TRANSLATIONS = {
     "All mandatory OK": {"it": "Test obbligatori OK", "en": "All mandatory OK"},
     "Missing mandatory:": {"it": "Obbligatori mancanti:", "en": "Missing mandatory:"},
     "Auto-refresh paused": {"it": "Aggiornamento sospeso", "en": "Auto-refresh paused"},
+    "Auto-refresh stopped": {"it": "Aggiornamento fermato", "en": "Auto-refresh stopped"},
+    "Press Load to start": {"it": "Premi Carica per iniziare", "en": "Press Load to start"},
+    "Stop": {"it": "Stop", "en": "Stop"},
 
     # ==========================================================================
     # QC Report
@@ -1010,16 +1011,129 @@ TRANSLATIONS = {
         "it": "Puoi invalidare solo i risultati che hai validato tu.",
         "en": "You can only invalidate results you validated yourself."
     },
+    "No pending results selected.": {
+        "it": "Nessun risultato in attesa selezionato.",
+        "en": "No pending results selected."
+    },
+    "Validate {0} selected results?": {
+        "it": "Validare {0} risultati selezionati?",
+        "en": "Validate {0} selected results?"
+    },
+    "{0} results validated.": {
+        "it": "{0} risultati validati.",
+        "en": "{0} results validated."
+    },
+    "Validated: {0}\nFailed: {1}": {
+        "it": "Validati: {0}\nFalliti: {1}",
+        "en": "Validated: {0}\nFailed: {1}"
+    },
+    "Select a workstation and click Load": {
+        "it": "Seleziona una workstation e premi Carica",
+        "en": "Select a workstation and click Load"
+    },
+    "No results for this date": {
+        "it": "Nessun risultato per questa data",
+        "en": "No results for this date"
+    },
+    "Failed to load workstations:": {
+        "it": "Impossibile caricare le workstation:",
+        "en": "Failed to load workstations:"
+    },
+    "Failed to load results:": {
+        "it": "Impossibile caricare i risultati:",
+        "en": "Failed to load results:"
+    },
+    "Please load a workstation first.": {
+        "it": "Prima carica una workstation.",
+        "en": "Please load a workstation first."
+    },
+    "Please select one or more results.": {
+        "it": "Seleziona uno o più risultati.",
+        "en": "Please select one or more results."
+    },
+    "Please select a single result.": {
+        "it": "Seleziona un singolo risultato.",
+        "en": "Please select a single result."
+    },
+    "Invalidate this result?": {
+        "it": "Invalidare questo risultato?",
+        "en": "Invalidate this result?"
+    },
+    "Result invalidated.": {
+        "it": "Risultato invalidato.",
+        "en": "Result invalidated."
+    },
+    "Approve WS": {"it": "Approva WS", "en": "Approve WS"},
+    "Results:": {"it": "Risultati:", "en": "Results:"},
+    "all validated": {"it": "tutti validati", "en": "all validated"},
+    "Only problems": {"it": "Solo problemi", "en": "Only problems"},
+    "problems only": {"it": "solo problemi", "en": "problems only"},
+    "Quick:": {"it": "Rapido:", "en": "Quick:"},
+    "Add note '{0}' to selected result?": {
+        "it": "Aggiungere nota '{0}' al risultato selezionato?",
+        "en": "Add note '{0}' to selected result?"
+    },
+    "Add note '{0}' to {1} selected results?": {
+        "it": "Aggiungere nota '{0}' a {1} risultati selezionati?",
+        "en": "Add note '{0}' to {1} selected results?"
+    },
+    "Note added to {0} result(s).": {
+        "it": "Nota aggiunta a {0} risultato/i.",
+        "en": "Note added to {0} result(s)."
+    },
+    "Failed to add note:": {"it": "Impossibile aggiungere nota:", "en": "Failed to add note:"},
+    "Please select a single result.": {
+        "it": "Selezionare un singolo risultato.",
+        "en": "Please select a single result."
+    },
+    "Please select an action.": {"it": "Selezionare un'azione.", "en": "Please select an action."},
+    "+ Note": {"it": "+ Nota", "en": "+ Note"},
+    "Add Note": {"it": "Aggiungi Nota", "en": "Add Note"},
+    "Update Note": {"it": "Modifica Nota", "en": "Update Note"},
+    "Created by: {0}": {"it": "Creata da: {0}", "en": "Created by: {0}"},
+    "Created by: {0} (read-only)": {"it": "Creata da: {0} (sola lettura)", "en": "Created by: {0} (read-only)"},
+    "Created by: Unknown": {"it": "Creata da: Sconosciuto", "en": "Created by: Unknown"},
+    "You don't have permission to edit this note.": {
+        "it": "Non hai i permessi per modificare questa nota.",
+        "en": "You don't have permission to edit this note."
+    },
     "Copy": {"it": "Copia", "en": "Copy"},
     "Report copied to clipboard.": {
         "it": "Report copiato negli appunti.",
         "en": "Report copied to clipboard."
     },
     "Filter:": {"it": "Filtro:", "en": "Filter:"},
+    "Search:": {"it": "Cerca:", "en": "Search:"},
     "All": {"it": "Tutti", "en": "All"},
     "OK": {"it": "OK", "en": "OK"},
     "Warning": {"it": "Warning", "en": "Warning"},
     "Violation": {"it": "Violazione", "en": "Violation"},
+
+    # ==========================================================================
+    # Performance Dashboard
+    # ==========================================================================
+    "Performance Dashboard": {"it": "Lavagna Prestazioni", "en": "Performance Dashboard"},
+    "From:": {"it": "Da:", "en": "From:"},
+    "To:": {"it": "A:", "en": "To:"},
+    "Viol%": {"it": "Viol%", "en": "Viol%"},
+    "Warn%": {"it": "Warn%", "en": "Warn%"},
+    "Note%": {"it": "Note%", "en": "Note%"},
+    "CV%": {"it": "CV%", "en": "CV%"},
+    "Bias%": {"it": "Bias%", "en": "Bias%"},
+    "Actions Breakdown": {"it": "Dettaglio Azioni", "en": "Actions Breakdown"},
+    "No data for selected date range": {
+        "it": "Nessun dato per il periodo selezionato",
+        "en": "No data for selected date range"
+    },
+    "From date must be before To date.": {
+        "it": "La data iniziale deve precedere quella finale.",
+        "en": "From date must be before To date."
+    },
+    "No actions recorded": {"it": "Nessuna azione registrata", "en": "No actions recorded"},
+    "No data to export.": {"it": "Nessun dato da esportare.", "en": "No data to export."},
+    "File saved": {"it": "File salvato", "en": "File saved"},
+    "Export failed": {"it": "Esportazione fallita", "en": "Export failed"},
+    "Test Methods": {"it": "Test Laboratorio", "en": "Test Methods"},
 
     # ==========================================================================
     # QC Actions (Global Master Data)

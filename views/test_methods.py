@@ -52,6 +52,7 @@ class UI(ParentView):
             return
 
         self.resizable(True, True)
+        self.geometry("900x600")  # Wider and taller default size
 
         # Hotkeys
         self.bind("<Alt-c>", self.on_cancel)
@@ -60,10 +61,15 @@ class UI(ParentView):
 
         # State
         self.items = tk.StringVar()
+        self.search_var = tk.StringVar()
         self.selected_test = None
         self.child = None
+        self.all_tests = []  # Full list for filtering
 
         self._build_ui()
+
+        # Bind search filtering
+        self.search_var.trace_add("write", self._on_search_changed)
         self.show(on_screen=True)
         
 
@@ -80,9 +86,20 @@ class UI(ParentView):
         self.pw = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashwidth=6)
         self.pw.pack(fill=tk.BOTH, expand=1, padx=6, pady=6)
 
-        # --- Left pane: Tests 
+        # --- Left pane: Tests
         pane_left = ttk.Frame(self.pw, style="App.TFrame")
         self.pw.add(pane_left, minsize=220, stretch="always")
+
+        # Search box
+        frm_search = ttk.Frame(pane_left, style="App.TFrame")
+        frm_search.pack(fill=tk.X, padx=2, pady=2)
+
+        ttk.Label(frm_search, text=_("Search:")).pack(side=tk.LEFT)
+        self.entry_search = ttk.Entry(frm_search, textvariable=self.search_var, width=20)
+        self.entry_search.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+
+        # Clear search button
+        ttk.Button(frm_search, text="✕", width=2, command=self._clear_search).pack(side=tk.LEFT, padx=2)
 
         lbl_cnt = ttk.Label(pane_left, style="App.TLabel", textvariable=self.items)
         lbl_cnt.pack(fill=tk.X, padx=2, pady=2)
@@ -189,12 +206,43 @@ class UI(ParentView):
 
         rs = self.engine.read(True, SQL_TESTS, ()) or []
 
-        for idx, row in enumerate(rs):            
-            self.lstTests.insert(tk.END, row["description"])
-            self.dict_tests[idx] = row["test_id"]
+        # Store all tests for filtering
+        self.all_tests = [(row["test_id"], row["description"]) for row in rs]
 
-        self.items.set(f"{_('Tests')}: {self.lstTests.size()}")
+        # Apply current filter
+        self._filter_tests()
         self.selected_test = None
+
+    def _filter_tests(self):
+        """Filter tests based on search text."""
+        self.lstTests.delete(0, tk.END)
+        self.dict_tests = {}
+
+        search_text = self.search_var.get().lower().strip()
+
+        idx = 0
+        for test_id, description in self.all_tests:
+            if not search_text or search_text in description.lower():
+                self.lstTests.insert(tk.END, description)
+                self.dict_tests[idx] = test_id
+                idx += 1
+
+        total = len(self.all_tests)
+        shown = self.lstTests.size()
+        if search_text:
+            self.items.set(f"{_('Tests')}: {shown}/{total}")
+        else:
+            self.items.set(f"{_('Tests')}: {total}")
+
+    def _on_search_changed(self, *args):
+        """Handle search text change."""
+        self._filter_tests()
+        self._clear_methods()
+
+    def _clear_search(self):
+        """Clear search box."""
+        self.search_var.set("")
+        self.entry_search.focus_set()
 
     def _clear_methods(self):
         """Clear the methods tree."""

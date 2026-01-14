@@ -13,49 +13,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Author** | Giuseppe Costanzi (1966bc) - giuseppecostanzi@gmail.com |
 | **Standards** | ISO 15189:2022, ISO/TS 20914:2019, Westgard QC |
 
-## Development Notes (January 2026)
+## Key Patterns
 
-Note for future Claude instances working on this codebase:
-
-**Recent changes:**
-- Migration 013 added `org_id` to all tenant-scoped tables (results, batches, test_methods, workstations, categories)
-- All views now include `org_id` in INSERT/UPDATE operations via `_get_values()` or explicit SQL
-- Observer pattern implemented: `daily_validation` auto-refreshes when results change (`engine.notify("result_changed")`)
-- Window management: utility windows (daily_validation, bland_altman, result, batch, plots) use `-topmost` attribute
-- **Bug fix:** `notify()` is synchronous - extract needed data BEFORE calling notify if the callback modifies state (e.g., `dict_results.clear()`)
-- **Role-based access control (RBAC):** All list views (users, batches, workstations, categories) now filter data by user's org_id and role
-- **User management:** Lab Admin (role 3) can now manage users in their lab via Admin → Users menu
-- **Schema cleanup:** `lab_id` column completely removed from `batches` and `results` tables - only `org_id` is used
-- **Triggers updated (migration 020):** Audit triggers no longer reference `lab_id`
-- **Abbott import:** `abbott_import_v2.py` updated to use only `org_id`, filters by `test_methods.status = 1`
-- **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution to prevent DB conflicts
-- **Abbott import filter:** `--months` parameter filters files by date (default: 6 months, use `--months 0` for all)
-- **Main view:** `set_categories()` now filters by `tests.status = 1` in addition to `test_methods.status = 1`
-- **Main view:** Added "Recent Only" filter - shows only batches with results in the last 60 days (default on)
-- **Main view:** Batches LabelFrame shows count, e.g. "Batches (5)"
-- **Main view:** Subscribes to `test_method_changed` - refreshes tests combobox when test_method status changes
-- **Bland-Altman scanner:** Blocks scan if Abbott import is running (checks lock file)
-- **Bland-Altman scanner:** Rewritten without threading - uses `after()` cooperative multitasking to avoid DB segfaults
-- **Bland-Altman view:** Fixed `categories` queries to use `org_id` instead of `lab_id`
-- **Technical validation (migration 021):** Added dual validation workflow with 4 new fields:
-  - `tech_validated` (flag), `tech_validated_by` (FK users), `tech_validated_at` (timestamp), `operator_code` (machine code)
-  - Abbott import sets `tech_validated=1`, `operator_code` from workstation (ALCI-1/2/3)
-  - Manual entry sets `tech_validated_by` to logged-in user
-- **Daily validation:** New "Operator" column shows operator_code or technician name
-- **result_id type (migration 022):** Changed from `INT UNSIGNED` to `BIGINT UNSIGNED` (max 18 quintillion) - both `results` and `audit_results`
-- **Abbott import parameters:** Added `--days` and `--since` for flexible date filtering
-- **Cron import:** `run_abbott_import.sh` now uses `--days 7` (last week only, lightweight)
-- **Data cleanup (migration 023):** Removed Abbott data before 2026-01-01 from `results`, `batches`, and `audit_results` (orphans)
-
-**Testing:**
-- Run tests with venv: `./venv/bin/pytest tests/ -v`
-- 731 tests passing, 1 skipped
-
-**Key patterns to follow:**
+**Multi-tenant org_id usage:**
 - `org_id` = `lab_id` for lab-level data (results, batches, categories)
 - `org_id` = `section_id` for section-level data (test_methods, workstations)
 - Use `self.engine.get_lab_id()` to get current lab's org_id
 - Use `build_sql()` for dynamic INSERT/UPDATE (reads columns from DB schema)
+
+**Technical validation workflow:**
+- Abbott import sets `tech_validated=1`, `operator_code` from workstation (ALCI-1/2/3)
+- Manual entry sets `tech_validated_by` to logged-in user
+- Daily validation shows "Operator" column with operator_code or technician name
+
+**Notes system (migration 025):**
+- Notes have `created_by` field tracking who created the note
+- Only the creator (or admin, role=0) can edit a note
+- Notes are visible in daily_validation with `[N]` indicator in status column
+- Quick action combobox: add notes to multiple results at once
+- Observer pattern: `note_changed` event refreshes views
+
+**Performance Dashboard (`views/performance_dashboard.py`):**
+- Menu QC → Performance Dashboard (Cruscotto Prestazioni)
+- Shows aggregated QC metrics per test_method + workstation for a date range
+- Metrics: Total results, Viol% (|z|≥3), Warn% (|z|≥2), Note%, CV%, Bias%
+- Color coding: red (viol≥5%), yellow (viol≥2% or warn≥10%), green (OK)
+- Click column headers to sort
+- Select row to see action breakdown (which corrective actions were used)
+- Export to Excel
+
+**Test Methods view (`views/test_methods.py`):**
+- Search box to filter tests by name
+- Window size 900x600
+
+**Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution - other processes (Bland-Altman scanner) check this before DB access.
+
+**GUI cooperative multitasking:** Use `after()` instead of threading for DB operations to avoid segfaults.
 
 ## Language Policy
 
@@ -616,76 +609,6 @@ mysql -u root -p biovarase < migrations/023_cleanup_abbott_pre_2026.sql
 # Translate methods to English (international naming)
 mysql -u root -p biovarase < migrations/024_methods_to_english.sql
 ```
-
-### Production Migration Guide (008-011)
-
-**Step 1: Run migrations in order**
-```bash
-cd /path/to/biovarase/migrations
-mysql -u root -p biovarase < 008_add_lab_id_to_results.sql
-# If FK fails, continue to Step 2 before retrying
-mysql -u root -p biovarase < 009_add_lab_id_to_audit_batches.sql
-mysql -u root -p biovarase < 010_add_lab_id_to_audit_results.sql
-mysql -u root -p biovarase < 011_add_lab_id_to_test_methods.sql
-```
-
-**Step 2: Fix orphan data (if FK constraint fails)**
-```sql
--- Check which lab_ids exist
-SELECT lab_id, description FROM labs;
-
--- Check invalid lab_ids in batches
-SELECT DISTINCT lab_id, COUNT(*) FROM batches GROUP BY lab_id;
-
--- Check invalid lab_ids in results
-SELECT DISTINCT lab_id, COUNT(*) FROM results GROUP BY lab_id;
-
--- Option A: Delete orphan data (if test data)
-DELETE FROM results WHERE lab_id IS NULL OR lab_id NOT IN (SELECT lab_id FROM labs);
-DELETE FROM batches WHERE lab_id NOT IN (SELECT lab_id FROM labs);
-
--- Option B: Fix to valid lab_id (if real data)
-UPDATE batches SET lab_id = 2 WHERE lab_id NOT IN (SELECT lab_id FROM labs);
-UPDATE results SET lab_id = 2 WHERE lab_id IS NULL OR lab_id NOT IN (SELECT lab_id FROM labs);
-
--- Retry FK constraint
-ALTER TABLE results
-ADD CONSTRAINT fk_results_lab
-FOREIGN KEY (lab_id) REFERENCES labs(lab_id)
-ON DELETE RESTRICT ON UPDATE CASCADE;
-```
-
-**Step 3: Fix test_methods with section_id = 0**
-```sql
--- Check orphan test_methods
-SELECT tm.test_method_id, tm.section_id, COUNT(b.batch_id) as batches
-FROM test_methods tm
-LEFT JOIN batches b ON tm.test_method_id = b.test_method_id
-WHERE tm.section_id = 0
-GROUP BY tm.test_method_id;
-
--- If batches exist, fix to valid section/lab
-UPDATE test_methods SET section_id = 6, lab_id = 2 WHERE section_id = 0;
-
--- If no batches, delete
-DELETE FROM test_methods WHERE section_id = 0;
-```
-
-**Step 4: Verify**
-```sql
-SELECT 'results' AS tbl, COUNT(*) AS nulls FROM results WHERE lab_id IS NULL
-UNION ALL SELECT 'test_methods', COUNT(*) FROM test_methods WHERE lab_id IS NULL;
--- Should be 0 for both
-
-SHOW TRIGGERS;
--- Should show 4 triggers with lab_id in INSERT statements
-```
-
-Code already updated for lab_id support:
-- `views/result.py` `_get_values()` - includes lab_id from batch
-- `views/main.py` test data INSERT - includes lab_id from batch
-- `controller.py` `import_qc_file_auto()` - includes lab_id from context
-- `abbott_import_v2.py` / `abbott_import.py` - includes LAB_ID constant
 
 ## Key Files
 

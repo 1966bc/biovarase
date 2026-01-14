@@ -3,24 +3,23 @@
 # project:  biovarase
 # authors:  1966bc
 # mailto:   [giuseppecostanzi@gmail.com]
-# modify:   winter MMXXV - hierarchical treeview (workstations → results)
+# modify:   winter MMXXV - simplified workstation-based validation
 # -----------------------------------------------------------------------------
 """
 Daily QC Validation module.
 
-Hierarchical TreeView:
-- Parent nodes: Workstations with aggregated counts
-- Child nodes: Individual results (loaded on expand)
+Simplified approach:
+- Combobox to select workstation (shows pending count)
+- Flat TreeView showing results for selected workstation
+- Multiple selection for batch validation
 
 Features:
     - Role-based validation control (Admin/Superuser can validate)
     - Workstation-level approval with audit trail (daily_approvals table)
-    - Color coding: green=approved, yellow=pending, red=problems
-    - Expand/collapse to drill down into results
+    - Color coding: green=validated, yellow=pending, red=problems
 """
 
 import sys
-import threading
 import tkinter as tk
 
 from i18n import _
@@ -30,6 +29,8 @@ from tkinter import messagebox
 from datetime import datetime
 from calendarium import Calendarium
 import views.plots
+import views.notes
+import views.note
 
 
 # User roles - imported from engine for consistency
@@ -41,20 +42,17 @@ from engine import (
 ROLE_ADMIN = ROLE_APP_ADMIN
 ROLE_AUTOLOGIN = ROLE_VIEWER
 
-# Node type tags
-TAG_WORKSTATION = "ws"
-TAG_RESULT = "result"
-
 
 class UI(ParentView):
     """
-    Daily QC Validation window with hierarchical TreeView.
+    Daily QC Validation window with workstation selector.
 
-    Workstation nodes show:
-        - Name, equipment, result counts, approval status
+    User selects:
+        1. Date
+        2. Workstation from combobox
+        3. Clicks Load to see results
 
-    Result nodes (children) show:
-        - Test method, batch, result value, z-score, validation status
+    Results are shown in a flat TreeView for easy multi-selection.
     """
 
     def __init__(self, parent):
@@ -68,25 +66,24 @@ class UI(ParentView):
         self.attributes("-topmost", True)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.bind("<Escape>", self.on_close)
-        self.bind("<F5>", lambda e: self._load_data())
+        self.bind("<F5>", lambda e: self._on_load_click())
 
         # Internal state
         self.selected_date = None
+        self.selected_ws_id = None
         self.can_validate = False
-        self._refresh_job = None  # Auto-refresh timer
-        self._resume_refresh_job = None  # Resume timer after interaction
-        self._user_interacting = False  # Flag: user is interacting
 
         # Data dictionaries
-        self.dict_workstations = {}  # item_id -> workstation data
+        self.dict_workstations = {}  # combobox index -> workstation data
         self.dict_results = {}       # item_id -> result data
-        self.loaded_ws = set()       # workstation_ids already loaded
+        self.dict_actions = {}       # combobox index -> action data
 
         # Build UI
         self._build_ui()
 
-        # Subscribe to result changes
+        # Subscribe to result and note changes
         self.engine.subscribe("result_changed", self._on_result_changed)
+        self.engine.subscribe("note_changed", self._on_note_changed)
 
         self.show(on_screen=True)
 
@@ -98,34 +95,63 @@ class UI(ParentView):
         self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
         self.frm_main.pack(fill=tk.BOTH, expand=True)
 
-        # Top frame: filters
-        frm_top = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_top.pack(side=tk.TOP, fill=tk.X, **paddings)
+        # Top frame row 1: Date and Workstation selector
+        frm_row1 = ttk.Frame(self.frm_main, style="App.TFrame")
+        frm_row1.pack(side=tk.TOP, fill=tk.X, **paddings)
 
         # Date selector
-        ttk.Label(frm_top, text=_("Date:")).pack(side=tk.LEFT, **paddings)
+        ttk.Label(frm_row1, text=_("Date:")).pack(side=tk.LEFT, **paddings)
 
         bg = self.engine.get_rgb(240, 240, 237)
-        self.calendarium = Calendarium(frm_top, "", base_bg_color=bg)
+        self.calendarium = Calendarium(frm_row1, "", base_bg_color=bg)
         self.calendarium.pack(side=tk.LEFT, **paddings)
         self.calendarium.set_today()
 
+        # Bind date change to reload workstations
+        self.calendarium.day.trace_add("write", self._on_date_changed)
+        self.calendarium.month.trace_add("write", self._on_date_changed)
+        self.calendarium.year.trace_add("write", self._on_date_changed)
+
+        # Workstation selector
+        ttk.Label(frm_row1, text=_("Workstation:")).pack(side=tk.LEFT, padx=(15, 5))
+
+        self.cbx_workstation = ttk.Combobox(
+            frm_row1,
+            state="readonly",
+            width=20
+        )
+        self.cbx_workstation.pack(side=tk.LEFT, **paddings)
+        self.cbx_workstation.bind("<<ComboboxSelected>>", self._on_workstation_selected)
+
+        # Top frame row 2: Info, Filter, Load button, Role
+        frm_row2 = ttk.Frame(self.frm_main, style="App.TFrame")
+        frm_row2.pack(side=tk.TOP, fill=tk.X, **paddings)
+
+        # Workstation info label (shows totals when selected)
+        self.lbl_ws_info = ttk.Label(frm_row2, text="", foreground="blue")
+        self.lbl_ws_info.pack(side=tk.LEFT, **paddings)
+
+        # Filter checkbox - show only problems
+        self.var_only_problems = tk.BooleanVar(value=True)  # Default: show only problems
+        self.chk_only_problems = ttk.Checkbutton(
+            frm_row2,
+            text=_("Only problems"),
+            variable=self.var_only_problems
+        )
+        self.chk_only_problems.pack(side=tk.LEFT, padx=(15, 0))
+
         # Load button (Alt-C)
         self.btn_load = ttk.Button(
-            frm_top,
+            frm_row2,
             text=_("Load"),
-            command=self._load_data,
+            command=self._on_load_click,
             underline=0
         )
         self.btn_load.pack(side=tk.LEFT, padx=(10, 0))
-        self.bind("<Alt-c>", lambda e: self._load_data())
-
-        # Next refresh indicator
-        self.lbl_refresh = ttk.Label(frm_top, text="", foreground="gray")
-        self.lbl_refresh.pack(side=tk.RIGHT, **paddings)
+        self.bind("<Alt-c>", lambda e: self._on_load_click())
 
         # Role indicator
-        self.lbl_role = ttk.Label(frm_top, text="", foreground="blue")
+        self.lbl_role = ttk.Label(frm_row2, text="", foreground="blue")
         self.lbl_role.pack(side=tk.RIGHT, **paddings)
 
         # Middle frame: TreeView
@@ -136,11 +162,12 @@ class UI(ParentView):
         sb_vert = ttk.Scrollbar(frm_tree, orient=tk.VERTICAL)
         sb_horiz = ttk.Scrollbar(frm_tree, orient=tk.HORIZONTAL)
 
-        # TreeView with hierarchical structure
-        cols = ("equipment_batch", "time", "counts_result", "problems_sd", "operator", "status")
+        # TreeView - flat results list with multiple selection
+        cols = ("batch", "time", "result", "zscore", "operator", "status")
         self.tree = ttk.Treeview(
             frm_tree,
             columns=cols,
+            selectmode="extended",  # Allow Ctrl+Click / Shift+Click
             yscrollcommand=sb_vert.set,
             xscrollcommand=sb_horiz.set,
             height=18
@@ -149,20 +176,20 @@ class UI(ParentView):
         sb_horiz.config(command=self.tree.xview)
 
         # Column headers
-        self.tree.heading("#0", text=_("Workstation / Test"), anchor=tk.W)
-        self.tree.heading("equipment_batch", text=_("Equipment / Batch"), anchor=tk.W)
+        self.tree.heading("#0", text=_("Test"), anchor=tk.W)
+        self.tree.heading("batch", text=_("Batch"), anchor=tk.W)
         self.tree.heading("time", text=_("Time"), anchor=tk.CENTER)
-        self.tree.heading("counts_result", text=_("Counts / Result"), anchor=tk.CENTER)
-        self.tree.heading("problems_sd", text=_("Problems / Z-Score"), anchor=tk.CENTER)
+        self.tree.heading("result", text=_("Result"), anchor=tk.CENTER)
+        self.tree.heading("zscore", text=_("Z-Score"), anchor=tk.CENTER)
         self.tree.heading("operator", text=_("Operator"), anchor=tk.CENTER)
         self.tree.heading("status", text=_("Status"), anchor=tk.CENTER)
 
         # Column widths
-        self.tree.column("#0", width=200, anchor=tk.W)
-        self.tree.column("equipment_batch", width=140, anchor=tk.W)
-        self.tree.column("time", width=50, anchor=tk.CENTER)
-        self.tree.column("counts_result", width=100, anchor=tk.CENTER)
-        self.tree.column("problems_sd", width=80, anchor=tk.CENTER)
+        self.tree.column("#0", width=180, anchor=tk.W)
+        self.tree.column("batch", width=120, anchor=tk.W)
+        self.tree.column("time", width=60, anchor=tk.CENTER)
+        self.tree.column("result", width=80, anchor=tk.CENTER)
+        self.tree.column("zscore", width=80, anchor=tk.CENTER)
         self.tree.column("operator", width=80, anchor=tk.CENTER)
         self.tree.column("status", width=120, anchor=tk.CENTER)
 
@@ -175,26 +202,14 @@ class UI(ParentView):
         frm_tree.columnconfigure(0, weight=1)
 
         # Bindings
-        self.tree.bind("<<TreeviewOpen>>", self._on_expand)
-        self.tree.bind("<<TreeviewSelect>>", self._on_user_interaction)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
 
         # Statistics frame
         frm_stats = ttk.Frame(self.frm_main, style="App.TFrame")
         frm_stats.pack(side=tk.TOP, fill=tk.X, **paddings)
 
-        self.lbl_stats = ttk.Label(frm_stats, text="")
+        self.lbl_stats = ttk.Label(frm_stats, text=_("Select a workstation and click Load"))
         self.lbl_stats.pack(side=tk.LEFT)
-
-        # Mandatory tests indicator (clickable)
-        self.lbl_mandatory = ttk.Label(
-            frm_stats,
-            text="",
-            foreground="red",
-            cursor="hand2"
-        )
-        self.lbl_mandatory.pack(side=tk.RIGHT, padx=(20, 0))
-        self.lbl_mandatory.bind("<Button-1>", self._on_show_missing_mandatory)
 
         # Buttons frame
         frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
@@ -202,7 +217,7 @@ class UI(ParentView):
 
         self.btn_approve = ttk.Button(
             frm_buttons,
-            text=_("Approve"),
+            text=_("Approve WS"),
             command=self._on_approve_workstation
         )
         self.btn_approve.pack(side=tk.LEFT, **paddings)
@@ -221,16 +236,42 @@ class UI(ParentView):
         )
         self.btn_invalidate.pack(side=tk.LEFT, **paddings)
 
+        # Separator
+        ttk.Separator(frm_buttons, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=10)
+
+        # Notes section
         ttk.Button(
             frm_buttons,
-            text=_("Export"),
-            command=self._on_export
+            text=_("Notes"),
+            command=self._on_open_notes
         ).pack(side=tk.LEFT, **paddings)
 
         ttk.Button(
             frm_buttons,
-            text=_("History"),
-            command=self._on_show_history
+            text=_("+ Note"),
+            command=self._on_add_note
+        ).pack(side=tk.LEFT, padx=2)
+
+        # Quick action combobox
+        ttk.Label(frm_buttons, text=_("Quick:")).pack(side=tk.LEFT, padx=(10, 2))
+        self.cbx_quick_action = ttk.Combobox(
+            frm_buttons,
+            state="readonly",
+            width=18
+        )
+        self.cbx_quick_action.pack(side=tk.LEFT, padx=2)
+
+        ttk.Button(
+            frm_buttons,
+            text="+",
+            width=2,
+            command=self._on_quick_action
+        ).pack(side=tk.LEFT, padx=2)
+
+        ttk.Button(
+            frm_buttons,
+            text=_("Export"),
+            command=self._on_export
         ).pack(side=tk.LEFT, **paddings)
 
         ttk.Button(
@@ -242,67 +283,43 @@ class UI(ParentView):
     def on_open(self):
         """Entry point when opening the window."""
         self._check_user_permissions()
+        self._load_actions()
         self.calendarium.set_today()
-        self._start_auto_refresh()
+        self._load_workstations()
         self.deiconify()
         self.lift()
 
-    def _start_auto_refresh(self):
-        """Start auto-refresh every 30 seconds."""
-        # Skip if user is interacting
-        if self._user_interacting:
-            self._refresh_job = self.after(30000, self._start_auto_refresh)
-            return
+    def _load_actions(self):
+        """Load available actions into quick action combobox."""
+        try:
+            sql = """
+                SELECT action_id, code, description
+                FROM actions
+                WHERE status = 1
+                ORDER BY description
+            """
+            rows = self.engine.read(True, sql, ())
 
-        self._load_data(preserve_expansion=True)
-        # Calculate and display next refresh time
-        from datetime import timedelta
-        next_refresh = datetime.now() + timedelta(seconds=30)
-        self.lbl_refresh.config(
-            text=f"{_('Next update')}: {next_refresh.strftime('%H:%M:%S')}"
-        )
-        self._refresh_job = self.after(30000, self._start_auto_refresh)
+            self.dict_actions.clear()
+            display_values = []
 
-    def _stop_auto_refresh(self):
-        """Stop auto-refresh timer."""
-        if self._refresh_job:
-            self.after_cancel(self._refresh_job)
-            self._refresh_job = None
-        if self._resume_refresh_job:
-            self.after_cancel(self._resume_refresh_job)
-            self._resume_refresh_job = None
-        self._user_interacting = False
-        self.lbl_refresh.config(text="")
+            for idx, row in enumerate(rows or []):
+                self.dict_actions[idx] = row
+                display_values.append(_(row["description"]))
 
-    def _on_user_interaction(self, evt=None):
-        """Handle user interaction - pause auto-refresh for 60 seconds."""
-        self._user_interacting = True
-        self.lbl_refresh.config(
-            text=f"⏸ {_('Auto-refresh paused')}",
-            foreground="orange"
-        )
+            self.cbx_quick_action["values"] = display_values
+            if display_values:
+                self.cbx_quick_action.current(0)
 
-        # Cancel previous resume timer
-        if self._resume_refresh_job:
-            self.after_cancel(self._resume_refresh_job)
-
-        # Schedule resume after 60 seconds of inactivity
-        self._resume_refresh_job = self.after(60000, self._resume_auto_refresh)
-
-    def _resume_auto_refresh(self):
-        """Resume auto-refresh after inactivity period."""
-        self._user_interacting = False
-        self._resume_refresh_job = None
-        self.lbl_refresh.config(foreground="gray")
-        # Force immediate refresh
-        if self._refresh_job:
-            self.after_cancel(self._refresh_job)
-        self._start_auto_refresh()
+        except Exception as e:
+            self.engine.on_log(
+                "_load_actions",
+                e, type(e), sys.modules[__name__]
+            )
 
     def _check_user_permissions(self):
         """Check user role and enable/disable validation controls."""
         try:
-            # Use engine's permission helper (roles 0-4 can validate)
             self.can_validate = self.engine.can_validate_qc()
 
             if self.can_validate:
@@ -337,283 +354,308 @@ class UI(ParentView):
         except Exception:
             return None
 
+    def _on_date_changed(self, *args):
+        """Handle date change - reload workstations."""
+        # Only reload if date is valid
+        if self._get_selected_date() is not None:
+            self._load_workstations()
+
     # =========================================================================
-    # DATA LOADING
+    # WORKSTATION LOADING
     # =========================================================================
 
-    def _get_expanded_ws_ids(self):
-        """Get list of currently expanded workstation IDs."""
-        expanded = []
-        for item_id in self.tree.get_children():
-            if self.tree.item(item_id, "open"):
-                row = self.dict_workstations.get(item_id)
-                if row:
-                    expanded.append(row["workstation_id"])
-        return expanded
-
-    def _expand_ws_ids(self, ws_ids):
-        """Expand workstation nodes by their IDs."""
-        for item_id, row in self.dict_workstations.items():
-            if row["workstation_id"] in ws_ids:
-                self.tree.item(item_id, open=True)
-                # Trigger load of children
-                self._on_expand(None, item_id)
-
-    def _on_expand(self, evt, item_id=None):
-        """Handle expand event - load results for workstation."""
-        # Pause auto-refresh only on user action (not programmatic)
-        if evt is not None:
-            self._on_user_interaction()
-
-        if item_id is None:
-            item_id = self.tree.focus()
-        if not item_id:
-            return
-
-        # Check if this is a workstation node
-        tags = self.tree.item(item_id, "tags")
-        if TAG_WORKSTATION not in tags:
-            return
-
-        row = self.dict_workstations.get(item_id)
-        if not row:
-            return
-
-        ws_id = row["workstation_id"]
-
-        # Already loaded?
-        if ws_id in self.loaded_ws:
-            return
-
-        # Remove dummy child
-        for child in self.tree.get_children(item_id):
-            self.tree.delete(child)
-
-        # Load results
-        self._load_results_for_workstation(item_id, ws_id)
-        self.loaded_ws.add(ws_id)
-
-    def _load_data(self, preserve_expansion=False):
-        """Load workstation summary for selected date (threaded)."""
+    def _load_workstations(self):
+        """Load workstations into combobox with pending counts."""
         selected_date = self._get_selected_date()
         if selected_date is None:
-            messagebox.showwarning(_("Validation"), _("Please select a valid date."))
             return
 
-        # Save expanded state if requested
-        expanded_ws_ids = self._get_expanded_ws_ids() if preserve_expansion else []
-
         self.selected_date = selected_date
-        self.tree.delete(*self.tree.get_children())
         self.dict_workstations.clear()
-        self.dict_results.clear()
-        self.loaded_ws.clear()
+        self.cbx_workstation.set("")
+        self.cbx_workstation["values"] = []
 
-        # Show loading state
-        self.lbl_stats.config(text=_("Loading..."))
-        self.btn_load.config(state=tk.DISABLED)
-
-        # Run query in background thread
-        def fetch_data():
-            try:
-                sql = """
-                    SELECT
-                        w.workstation_id,
-                        w.description AS workstation_name,
-                        e.description AS equipment_name,
-                        COUNT(r.result_id) AS total_results,
-                        SUM(CASE WHEN r.validated = 1 THEN 1 ELSE 0 END) AS validated_count,
-                        SUM(CASE WHEN r.validated = 0 THEN 1 ELSE 0 END) AS pending_count,
-                        SUM(CASE
-                            WHEN r.validated = 0 AND b.sd > 0
-                                 AND ABS(r.result - b.target) > (b.sd * 3)
-                            THEN 1 ELSE 0
-                        END) AS problem_count,
-                        da.approval_id,
-                        da.approved_by,
-                        da.approved_at,
-                        u.first_name,
-                        u.last_name
-                    FROM workstations w
-                    INNER JOIN equipments e ON w.equipment_id = e.equipment_id
-                    INNER JOIN organizations section ON section.org_id = w.org_id
-                    LEFT JOIN results r ON r.workstation_id = w.workstation_id
-                        AND DATE(r.received) = ?
-                        AND r.status = 1
-                        AND r.is_delete = 0
-                    LEFT JOIN batches b ON r.batch_id = b.batch_id
-                    LEFT JOIN daily_approvals da ON da.workstation_id = w.workstation_id
-                        AND da.approval_date = ?
-                    LEFT JOIN users u ON da.approved_by = u.user_id
-                    WHERE w.status = 1
-                        AND section.parent_id = ?
-                        AND section.org_type = 'section'
-                    GROUP BY w.workstation_id, w.description, e.description,
-                             da.approval_id, da.approved_by, da.approved_at,
-                             u.first_name, u.last_name
-                    HAVING total_results > 0
-                    ORDER BY w.description
-                """
-
-                lab_id = self.engine.current_ids.get("lab_id")
-                args = (selected_date.isoformat(), selected_date.isoformat(), lab_id)
-                rows = self.engine.read(True, sql, args)
-
-                # Update UI from main thread
-                self.after(0, lambda: self._populate_tree(rows, expanded_ws_ids))
-
-            except Exception as e:
-                self.engine.on_log(
-                    "_load_data",
-                    e, type(e), sys.modules[__name__]
-                )
-                self.after(0, lambda: self._on_load_error(e))
-
-        thread = threading.Thread(target=fetch_data, daemon=True)
-        thread.start()
-
-    def _populate_tree(self, rows, expanded_ws_ids):
-        """Populate tree with fetched data (called from main thread)."""
-        try:
-            if rows is None:
-                rows = []
-
-            total_ws = 0
-            approved_ws = 0
-
-            for row in rows:
-                total_ws += 1
-                self._insert_workstation_node(row)
-                if row["approval_id"]:
-                    approved_ws += 1
-
-            self.lbl_stats.config(
-                text=f"Workstation: {total_ws}  |  {_('Validated:')} {approved_ws}  |  {_('Pending:')} {total_ws - approved_ws}"
-            )
-
-            # Check mandatory tests
-            self._update_mandatory_indicator()
-
-            # Restore expanded state
-            if expanded_ws_ids:
-                self._expand_ws_ids(expanded_ws_ids)
-
-        finally:
-            self.btn_load.config(state=tk.NORMAL)
-
-    def _on_load_error(self, error):
-        """Handle load error (called from main thread)."""
-        self.btn_load.config(state=tk.NORMAL)
-        self.lbl_stats.config(text="")
-        messagebox.showerror(_("Error"), f"{_('Failed to load data:')}\n{error}")
-
-    def _insert_workstation_node(self, row):
-        """Insert a workstation as parent node."""
-        ws_id = row["workstation_id"]
-        ws_name = row["workstation_name"]
-        eq_name = row["equipment_name"]
-        total = row["total_results"] or 0
-        validated = row["validated_count"] or 0
-        pending = row["pending_count"] or 0
-        problems = row["problem_count"] or 0
-        approval_id = row["approval_id"]
-
-        # Status text and color
-        if approval_id:
-            approved_by = f"{row['first_name'] or ''} {row['last_name'] or ''}".strip()
-            status_text = f"✓ {approved_by}"
-            color = self.engine.get_rgb(200, 255, 200)  # Green
-        elif problems > 0:
-            status_text = _("Problems")
-            color = self.engine.get_rgb(255, 160, 160)  # Red
-        elif pending > 0:
-            status_text = _("Pending")
-            color = self.engine.get_rgb(255, 255, 180)  # Yellow
-        else:
-            status_text = _("All validated")
-            color = self.engine.get_rgb(200, 255, 200)  # Green
-
-        counts_text = f"{total} tot / {pending} pend"
-        problems_text = f"{problems} prob" if problems > 0 else ""
-
-        # time and operator columns empty for workstations
-        values = (eq_name, "", counts_text, problems_text, "", status_text)
-        tags = (TAG_WORKSTATION, color)
-
-        # Insert with dummy child so it's expandable
-        item_id = self.tree.insert(
-            "", tk.END,
-            text=ws_name,
-            values=values,
-            tags=tags,
-            open=False
-        )
-
-        # Add dummy child for expand arrow
-        self.tree.insert(item_id, tk.END, text="Loading...")
-
-        # Configure color
-        self.tree.tag_configure(color, background=color)
-
-        # Store data
-        self.dict_workstations[item_id] = row
-
-    def _load_results_for_workstation(self, parent_id, ws_id):
-        """Load individual results as children of workstation node."""
         try:
             sql = """
                 SELECT
-                    r.result_id,
-                    r.batch_id,
-                    r.workstation_id,
-                    r.result,
-                    r.received,
-                    r.validated,
-                    r.validated_by,
-                    r.tech_validated,
-                    r.tech_validated_by,
-                    r.operator_code,
-                    b.target,
-                    b.sd,
-                    b.lot_number,
-                    b.description AS level,
-                    t.description AS test_description,
-                    s.sample,
-                    u.first_name AS validated_first_name,
-                    u.last_name AS validated_last_name,
-                    tu.first_name AS tech_first_name,
-                    tu.last_name AS tech_last_name
-                FROM results r
-                INNER JOIN batches b ON r.batch_id = b.batch_id
-                INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
-                INNER JOIN tests t ON tm.test_id = t.test_id
-                INNER JOIN samples s ON tm.sample_id = s.sample_id
-                LEFT JOIN users u ON r.validated_by = u.user_id
-                LEFT JOIN users tu ON r.tech_validated_by = tu.user_id
-                WHERE r.workstation_id = ?
-                  AND DATE(r.received) = ?
-                  AND r.status = 1
-                  AND r.is_delete = 0
-                ORDER BY t.description, r.received
+                    w.workstation_id,
+                    w.description AS workstation_name,
+                    e.description AS equipment_name,
+                    COUNT(r.result_id) AS total_results,
+                    SUM(CASE WHEN r.validated = 0 THEN 1 ELSE 0 END) AS pending_count,
+                    SUM(CASE
+                        WHEN b.sd > 0 AND ABS(r.result - b.target) > (b.sd * 3)
+                        THEN 1 ELSE 0
+                    END) AS count_3sd,
+                    SUM(CASE
+                        WHEN b.sd > 0 AND ABS(r.result - b.target) > (b.sd * 2)
+                             AND ABS(r.result - b.target) <= (b.sd * 3)
+                        THEN 1 ELSE 0
+                    END) AS count_2sd,
+                    da.approval_id
+                FROM workstations w
+                INNER JOIN equipments e ON w.equipment_id = e.equipment_id
+                INNER JOIN organizations section ON section.org_id = w.org_id
+                LEFT JOIN results r ON r.workstation_id = w.workstation_id
+                    AND DATE(r.received) = ?
+                    AND r.status = 1
+                    AND r.is_delete = 0
+                LEFT JOIN batches b ON r.batch_id = b.batch_id
+                LEFT JOIN daily_approvals da ON da.workstation_id = w.workstation_id
+                    AND da.approval_date = ?
+                WHERE w.status = 1
+                    AND section.parent_id = ?
+                    AND section.org_type = 'section'
+                GROUP BY w.workstation_id, w.description, e.description, da.approval_id
+                HAVING total_results > 0
+                ORDER BY w.description
             """
 
-            args = (ws_id, self.selected_date.isoformat())
+            lab_id = self.engine.current_ids.get("lab_id")
+            args = (selected_date.isoformat(), selected_date.isoformat(), lab_id)
             rows = self.engine.read(True, sql, args)
 
-            if rows is None:
-                rows = []
+            if not rows:
+                self.lbl_stats.config(text=_("No results for this date"))
+                self.lbl_ws_info.config(text="")
+                return
 
-            for row in rows:
-                self._insert_result_node(parent_id, row)
+            display_values = []
+            for idx, row in enumerate(rows):
+                display_values.append(row["workstation_name"])
+                self.dict_workstations[idx] = row
+
+            self.cbx_workstation["values"] = display_values
+
+            # Auto-select first workstation with pending results
+            selected_idx = 0
+            for idx, row in self.dict_workstations.items():
+                if (row["pending_count"] or 0) > 0:
+                    selected_idx = idx
+                    break
+
+            if display_values:
+                self.cbx_workstation.current(selected_idx)
+                self._update_ws_info(selected_idx)
+
+            self.lbl_stats.config(
+                text=_("Select a workstation and click Load")
+            )
 
         except Exception as e:
             self.engine.on_log(
-                "_load_results_for_workstation",
+                "_load_workstations",
                 e, type(e), sys.modules[__name__]
             )
+            messagebox.showerror(_("Error"), f"{_('Failed to load workstations:')}\n{e}")
 
-    def _insert_result_node(self, parent_id, row):
-        """Insert a result as child node under workstation."""
+    def _on_workstation_selected(self, evt=None):
+        """Handle workstation selection from combobox."""
+        idx = self.cbx_workstation.current()
+        if idx >= 0:
+            self._update_ws_info(idx)
+
+    def _update_ws_info(self, idx):
+        """Update workstation info label with totals, pending and QC problems."""
+        row = self.dict_workstations.get(idx)
+        if not row:
+            self.lbl_ws_info.config(text="")
+            return
+
+        total = row["total_results"] or 0
+        pending = row["pending_count"] or 0
+        count_3sd = row["count_3sd"] or 0
+        count_2sd = row["count_2sd"] or 0
+        approved = row["approval_id"] is not None
+
+        if approved:
+            self.lbl_ws_info.config(
+                text=f"✓ {_('Approved')} ({total} tot)",
+                foreground="green"
+            )
+        elif count_3sd > 0:
+            # Critical: has >3SD violations
+            parts = [f"{total} tot"]
+            if pending > 0:
+                parts.append(f"{pending} pend")
+            parts.append(f"⚠ {count_3sd} >3SD")
+            if count_2sd > 0:
+                parts.append(f"{count_2sd} >2SD")
+            self.lbl_ws_info.config(
+                text=", ".join(parts),
+                foreground="red"
+            )
+        elif count_2sd > 0:
+            # Warning: has >2SD
+            parts = [f"{total} tot"]
+            if pending > 0:
+                parts.append(f"{pending} pend")
+            parts.append(f"⚠ {count_2sd} >2SD")
+            self.lbl_ws_info.config(
+                text=", ".join(parts),
+                foreground="orange"
+            )
+        elif pending > 0:
+            self.lbl_ws_info.config(
+                text=f"{total} tot, {pending} pending",
+                foreground="orange"
+            )
+        else:
+            self.lbl_ws_info.config(
+                text=f"✓ {total} tot, {_('all validated')}",
+                foreground="green"
+            )
+
+    def _on_load_click(self):
+        """Handle Load button click - load results for selected workstation."""
+        # First refresh workstations list
+        self._load_workstations()
+
+        # Then load results
+        idx = self.cbx_workstation.current()
+        if idx < 0:
+            messagebox.showwarning(_("Validation"), _("Please select a workstation."), parent=self)
+            return
+
+        row = self.dict_workstations.get(idx)
+        if not row:
+            return
+
+        self.selected_ws_id = row["workstation_id"]
+        self._load_results()
+
+    # =========================================================================
+    # RESULTS LOADING
+    # =========================================================================
+
+    def _load_results(self):
+        """Load results for selected workstation."""
+        if not self.selected_ws_id or not self.selected_date:
+            return
+
+        self.tree.delete(*self.tree.get_children())
+        self.dict_results.clear()
+
+        try:
+            # Build SQL with optional filter for problems only (|Z-score| >= 2)
+            only_problems = self.var_only_problems.get()
+
+            if only_problems:
+                # Filter: show only results with |Z-score| >= 2
+                sql = """
+                    SELECT
+                        r.result_id,
+                        r.batch_id,
+                        r.workstation_id,
+                        r.result,
+                        r.received,
+                        r.validated,
+                        r.validated_by,
+                        r.tech_validated,
+                        r.tech_validated_by,
+                        r.operator_code,
+                        b.target,
+                        b.sd,
+                        b.lot_number,
+                        b.description AS level,
+                        b.test_method_id,
+                        t.description AS test_description,
+                        t.test_id,
+                        s.sample,
+                        u.first_name AS validated_first_name,
+                        u.last_name AS validated_last_name,
+                        tu.first_name AS tech_first_name,
+                        tu.last_name AS tech_last_name,
+                        (SELECT COUNT(*) FROM notes n WHERE n.result_id = r.result_id AND n.status = 1) AS note_count
+                    FROM results r
+                    INNER JOIN batches b ON r.batch_id = b.batch_id
+                    INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+                    INNER JOIN tests t ON tm.test_id = t.test_id
+                    INNER JOIN samples s ON tm.sample_id = s.sample_id
+                    LEFT JOIN users u ON r.validated_by = u.user_id
+                    LEFT JOIN users tu ON r.tech_validated_by = tu.user_id
+                    WHERE r.workstation_id = ?
+                      AND DATE(r.received) = ?
+                      AND r.status = 1
+                      AND r.is_delete = 0
+                      AND b.sd > 0
+                      AND ABS(r.result - b.target) >= (b.sd * 2)
+                    ORDER BY ABS(r.result - b.target) / b.sd DESC, t.description
+                """
+            else:
+                # Show all results
+                sql = """
+                    SELECT
+                        r.result_id,
+                        r.batch_id,
+                        r.workstation_id,
+                        r.result,
+                        r.received,
+                        r.validated,
+                        r.validated_by,
+                        r.tech_validated,
+                        r.tech_validated_by,
+                        r.operator_code,
+                        b.target,
+                        b.sd,
+                        b.lot_number,
+                        b.description AS level,
+                        b.test_method_id,
+                        t.description AS test_description,
+                        t.test_id,
+                        s.sample,
+                        u.first_name AS validated_first_name,
+                        u.last_name AS validated_last_name,
+                        tu.first_name AS tech_first_name,
+                        tu.last_name AS tech_last_name,
+                        (SELECT COUNT(*) FROM notes n WHERE n.result_id = r.result_id AND n.status = 1) AS note_count
+                    FROM results r
+                    INNER JOIN batches b ON r.batch_id = b.batch_id
+                    INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+                    INNER JOIN tests t ON tm.test_id = t.test_id
+                    INNER JOIN samples s ON tm.sample_id = s.sample_id
+                    LEFT JOIN users u ON r.validated_by = u.user_id
+                    LEFT JOIN users tu ON r.tech_validated_by = tu.user_id
+                    WHERE r.workstation_id = ?
+                      AND DATE(r.received) = ?
+                      AND r.status = 1
+                      AND r.is_delete = 0
+                    ORDER BY t.description, r.received
+                """
+
+            args = (self.selected_ws_id, self.selected_date.isoformat())
+            rows = self.engine.read(True, sql, args)
+
+            if not rows:
+                rows = []
+
+            total = 0
+            validated = 0
+            pending = 0
+
+            for row in rows:
+                total += 1
+                if row["validated"] == 1:
+                    validated += 1
+                else:
+                    pending += 1
+                self._insert_result_row(row)
+
+            # Show filter status in stats
+            filter_text = f" ({_('problems only')})" if only_problems else ""
+            self.lbl_stats.config(
+                text=f"{_('Results:')} {total}{filter_text}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
+            )
+
+        except Exception as e:
+            self.engine.on_log(
+                "_load_results",
+                e, type(e), sys.modules[__name__]
+            )
+            messagebox.showerror(_("Error"), f"{_('Failed to load results:')}\n{e}")
+
+    def _insert_result_row(self, row):
+        """Insert a result row into the TreeView."""
         result_val = float(row["result"])
         target = float(row["target"])
         sd = float(row["sd"])
@@ -638,7 +680,7 @@ class UI(ParentView):
             zscore = 0
             zscore_str = "-"
 
-        # Operator info (machine code or technician name)
+        # Operator info
         operator_code = row.get("operator_code")
         if operator_code:
             operator_str = operator_code
@@ -646,19 +688,23 @@ class UI(ParentView):
             tech_name = f"{row.get('tech_first_name') or ''} {row.get('tech_last_name') or ''}".strip()
             operator_str = tech_name if tech_name else "-"
 
-        # Status
+        # Note indicator (using text instead of emoji for Tcl compatibility)
+        note_count = row.get("note_count", 0) or 0
+        note_indicator = "[N] " if note_count > 0 else ""
+
+        # Status and color
         if validated == 1:
             validated_by = f"{row.get('validated_first_name') or ''} {row.get('validated_last_name') or ''}".strip()
-            status_text = f"✓ {validated_by}" if validated_by else "✓"
+            status_text = f"{note_indicator}✓ {validated_by}" if validated_by else f"{note_indicator}✓"
             color = self.engine.get_rgb(200, 255, 200)  # Green
         elif abs(zscore) >= 3:
-            status_text = "⚠ >3SD"
+            status_text = f"{note_indicator}⚠ >3SD"
             color = self.engine.get_rgb(255, 160, 160)  # Red
         elif abs(zscore) >= 2:
-            status_text = "Pending"
+            status_text = f"{note_indicator}{_('Pending')}"
             color = self.engine.get_rgb(255, 255, 180)  # Yellow
         else:
-            status_text = "Pending"
+            status_text = f"{note_indicator}{_('Pending')}"
             color = None
 
         test_name = f"{test_desc}-{sample}"
@@ -666,15 +712,15 @@ class UI(ParentView):
         result_str = f"{result_val:.2f}"
 
         values = (batch_info, time_str, result_str, zscore_str, operator_str, status_text)
-        tags = [TAG_RESULT]
+        tags = []
         if color:
             tags.append(color)
 
         item_id = self.tree.insert(
-            parent_id, tk.END,
-            text=f"  {test_name}",
+            "", tk.END,
+            text=test_name,
             values=values,
-            tags=tuple(tags)
+            tags=tuple(tags) if tags else ()
         )
 
         if color:
@@ -687,40 +733,44 @@ class UI(ParentView):
     # ACTIONS
     # =========================================================================
 
-    def _get_selected_item(self):
-        """Get selected item and its type."""
-        selection = self.tree.selection()
-        if not selection:
-            return None, None, None
+    def _select_result_or_next(self, result_id):
+        """
+        After validation, try to select:
+        1. The same result if still visible
+        2. Otherwise, the first pending result
+        3. Otherwise, the first result in the list
+        """
+        # Try to find the validated result
+        for item_id, row in self.dict_results.items():
+            if row["result_id"] == result_id:
+                self.tree.selection_set(item_id)
+                self.tree.focus(item_id)
+                self.tree.see(item_id)
+                return
 
-        item_id = selection[0]
-        tags = self.tree.item(item_id, "tags")
+        # Not found (filtered out) - select first pending result
+        for item_id, row in self.dict_results.items():
+            if row["validated"] == 0:
+                self.tree.selection_set(item_id)
+                self.tree.focus(item_id)
+                self.tree.see(item_id)
+                return
 
-        if TAG_WORKSTATION in tags:
-            return item_id, TAG_WORKSTATION, self.dict_workstations.get(item_id)
-        elif TAG_RESULT in tags:
-            return item_id, TAG_RESULT, self.dict_results.get(item_id)
-
-        return None, None, None
+        # No pending - select first result if any
+        children = self.tree.get_children()
+        if children:
+            self.tree.selection_set(children[0])
+            self.tree.focus(children[0])
+            self.tree.see(children[0])
 
     def _on_double_click(self, evt):
-        """
-        Handle double-click on result:
-        - If |z-score| < 2 (OK): validate directly
-        - If |z-score| >= 2 (problem): show Levey-Jennings chart
-        """
+        """Handle double-click on result."""
         item_id = self.tree.identify_row(evt.y)
         if not item_id:
             return
 
-        tags = self.tree.item(item_id, "tags")
-        if TAG_RESULT not in tags:
-            # Double-click on workstation - just expand/collapse
-            return
-
         row = self.dict_results.get(item_id)
         if not row:
-            messagebox.showwarning(_("Error"), _("Result data not found."))
             return
 
         # Calculate z-score
@@ -743,44 +793,37 @@ class UI(ParentView):
             messagebox.showinfo(_("Validation"), _("This result is already validated."))
             return
 
-        self._validate_result(row["result_id"], item_id)
+        self._validate_single_result(row["result_id"])
 
     def _show_lj_chart(self, row):
-        """Open Levey-Jennings chart for the result's test method and workstation."""
+        """Open Levey-Jennings chart for the result's test method."""
         try:
             batch_id = row["batch_id"]
             workstation_id = row["workstation_id"]
 
             # Get test_method_id from batch
-            sql_batch = """
-                SELECT test_method_id FROM batches WHERE batch_id = ?
-            """
+            sql_batch = "SELECT test_method_id FROM batches WHERE batch_id = ?"
             batch_row = self.engine.read(False, sql_batch, (batch_id,))
             if not batch_row:
-                messagebox.showwarning(_("Error"), _("Batch not found: {0}").format(batch_id))
                 return
 
             test_method_id = batch_row["test_method_id"]
 
-            # Get test_method details
             selected_test_method = self.engine.get_selected(
                 "test_methods", "test_method_id", test_method_id
             )
             if not selected_test_method:
-                messagebox.showwarning(_("Error"), _("Test method not found: {0}").format(test_method_id))
                 return
 
-            # Get workstation details (legacy tuple format)
+            # Get workstation details
             sql_ws = """
                 SELECT workstation_id, description, status, description, serial
                 FROM workstations WHERE workstation_id = ?
             """
             ws_row = self.engine.read(False, sql_ws, (workstation_id,))
             if not ws_row:
-                messagebox.showwarning(_("Error"), _("Workstation not found: {0}").format(workstation_id))
                 return
 
-            # Convert to tuple for plots.py compatibility
             selected_workstation = (
                 ws_row["workstation_id"],
                 ws_row["description"],
@@ -789,10 +832,8 @@ class UI(ParentView):
                 ws_row["serial"]
             )
 
-            # Get observations count from config
             observations = self.engine.get_observations() or 30
 
-            # Open plots window
             plots_window = views.plots.UI(self)
             plots_window.on_open(
                 selected_test_method,
@@ -805,7 +846,6 @@ class UI(ParentView):
                 "_show_lj_chart",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror(_("Error"), f"{_('Failed to open chart:')}\n{e}")
 
     def _on_approve_workstation(self):
         """Approve selected workstation."""
@@ -813,25 +853,19 @@ class UI(ParentView):
             messagebox.showinfo(_("Validation"), _("You don't have permission to approve."))
             return
 
-        item_id, item_type, row = self._get_selected_item()
+        if not self.selected_ws_id:
+            messagebox.showinfo(_("Approve"), _("Please load a workstation first."), parent=self)
+            return
 
-        if item_type != TAG_WORKSTATION:
-            messagebox.showinfo(_("Approve"), _("Please select a workstation."))
+        idx = self.cbx_workstation.current()
+        row = self.dict_workstations.get(idx)
+        if not row:
             return
 
         # Check if already approved
         if row["approval_id"]:
             messagebox.showinfo(_("Approve"), _("This workstation is already approved for today."))
             return
-
-        # Check for problems
-        if (row["problem_count"] or 0) > 0:
-            if not messagebox.askyesno(
-                _("Warning"),
-                _("This workstation has {0} result(s) beyond ±3SD.\n\n"
-                "Are you sure you want to approve it anyway?").format(row['problem_count'])
-            ):
-                return
 
         ws_name = row["workstation_name"]
         pending = row["pending_count"] or 0
@@ -840,15 +874,14 @@ class UI(ParentView):
         if pending > 0:
             msg += _("\n\nThis will also validate {0} pending result(s).").format(pending)
 
-        if not messagebox.askyesno(_("Confirm Approval"), msg):
+        if not messagebox.askyesno(_("Confirm Approval"), msg, parent=self):
             return
 
         try:
             user_id = self.engine.log_user.get("user_id")
             ws_id = row["workstation_id"]
-            lab_id = self.engine.current_ids.get("lab_id")
 
-            # 1. Validate all pending results for this workstation
+            # 1. Validate all pending results
             if pending > 0:
                 sql_validate = """
                     UPDATE results r
@@ -868,9 +901,6 @@ class UI(ParentView):
                     messagebox.showerror(_("Error"), msg)
                     return
 
-                # Notify observers about result changes
-                self.engine.notify("result_changed", ws_id)
-
             # 2. Insert approval record
             sql_approve = """
                 INSERT INTO daily_approvals (approval_date, workstation_id, approved_by)
@@ -883,8 +913,11 @@ class UI(ParentView):
                 messagebox.showerror(_("Error"), msg)
                 return
 
-            messagebox.showinfo(_("Success"), _("Workstation '{0}' approved.").format(ws_name))
-            self._load_data(preserve_expansion=True)
+            messagebox.showinfo(_("Success"), _("Workstation '{0}' approved.").format(ws_name), parent=self)
+
+            # Reload
+            self._load_workstations()
+            self._load_results()
 
         except Exception as e:
             self.engine.on_log(
@@ -894,34 +927,46 @@ class UI(ParentView):
             messagebox.showerror(_("Error"), f"{_('Failed to approve:')}\n{e}")
 
     def _on_validate_result(self):
-        """Validate selected result."""
+        """Validate selected result(s)."""
         if not self.can_validate:
             messagebox.showinfo(_("Validation"), _("You don't have permission to validate."))
             return
 
-        item_id, item_type, row = self._get_selected_item()
-
-        if item_type != TAG_RESULT:
-            messagebox.showinfo(_("Validate"), _("Please select a result."))
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo(_("Validate"), _("Please select one or more results."), parent=self)
             return
 
-        if row["validated"] == 1:
-            messagebox.showinfo(_("Validation"), _("This result is already validated."))
+        # Collect pending results
+        results_to_validate = []
+        for item_id in selection:
+            row = self.dict_results.get(item_id)
+            if row and row["validated"] == 0:
+                results_to_validate.append(row["result_id"])
+
+        if not results_to_validate:
+            messagebox.showinfo(_("Validation"), _("No pending results selected."), parent=self)
             return
 
-        self._validate_result(row["result_id"], item_id)
+        # Single result
+        if len(results_to_validate) == 1:
+            self._validate_single_result(results_to_validate[0])
+            return
 
-    def _validate_result(self, result_id, item_id):
+        # Multiple results - ask confirmation
+        if not messagebox.askyesno(
+            _("Confirm"),
+            _("Validate {0} selected results?").format(len(results_to_validate)),
+            parent=self
+        ):
+            return
+
+        self._validate_batch(results_to_validate)
+
+    def _validate_single_result(self, result_id):
         """Validate a single result."""
         try:
             user_id = self.engine.log_user.get("user_id")
-
-            # Get ws_id BEFORE notify (which clears dict_results via _on_result_changed)
-            row = self.dict_results.get(item_id)
-            if not row:
-                messagebox.showerror(_("Error"), _("Result data not found."))
-                return
-            ws_id = row["workstation_id"]
 
             sql = """
                 UPDATE results
@@ -937,72 +982,60 @@ class UI(ParentView):
                 messagebox.showerror(_("Error"), msg)
                 return
 
-            # Check if all results are now validated → auto-approve WS
-            # (must be done before notify, which reloads data)
-            self._check_auto_approve_workstation(ws_id, user_id)
-
-            # Notify observers - this calls _on_result_changed which reloads data
-            # No manual tree update needed as _load_data is called by the observer
-            self.engine.notify("result_changed", result_id)
+            # Reload and reposition
+            self._load_workstations()
+            self._load_results()
+            self._select_result_or_next(result_id)
 
         except Exception as e:
             self.engine.on_log(
-                "_validate_result",
+                "_validate_single_result",
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror(_("Error"), f"{_('Failed to validate:')}\n{e}")
 
-    def _check_auto_approve_workstation(self, ws_id, user_id):
-        """Check if all results are validated and offer to approve workstation."""
+    def _validate_batch(self, result_ids):
+        """Validate multiple results with single UPDATE."""
         try:
-            lab_id = self.engine.current_ids.get("lab_id")
+            user_id = self.engine.log_user.get("user_id")
+            count = len(result_ids)
 
-            # Check if already approved
-            sql_approved = """
-                SELECT approval_id FROM daily_approvals
-                WHERE workstation_id = ? AND approval_date = ?
+            # Single UPDATE with IN clause - no loop
+            placeholders = ",".join(["?"] * count)
+            sql = f"""
+                UPDATE results
+                SET validated = 1,
+                    validated_by = ?,
+                    validated_at = NOW()
+                WHERE result_id IN ({placeholders})
             """
-            approved = self.engine.read(True, sql_approved, (ws_id, self.selected_date.isoformat()))
-            if approved:
-                return  # Already approved
 
-            # Count pending results
-            sql_pending = """
-                SELECT COUNT(*) AS pending
-                FROM results r
-                WHERE r.workstation_id = ?
-                  AND DATE(r.received) = ?
-                  AND r.validated = 0
-                  AND r.status = 1
-                  AND r.is_delete = 0
-            """
-            result = self.engine.read(True, sql_pending, (ws_id, self.selected_date.isoformat()))
-            pending = result[0]["pending"] if result else 0
+            args = [user_id] + list(result_ids)
+            result = self.engine.write(sql, tuple(args))
 
-            if pending > 0:
-                return  # Still has pending results
+            if result is None:
+                err = self.engine.last_write_error
+                msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+                messagebox.showerror(_("Error"), msg, parent=self)
+                return
 
-            # All validated! Offer to approve workstation
-            if messagebox.askyesno(
-                _("All Validated"),
-                _("All results for this workstation are now validated.\n\n"
-                "Approve the workstation?")
-            ):
-                sql_approve = """
-                    INSERT INTO daily_approvals (approval_date, workstation_id, approved_by)
-                    VALUES (?, ?, ?)
-                """
-                result = self.engine.write(sql_approve, (self.selected_date.isoformat(), ws_id, user_id))
-                if result is None:
-                    err = self.engine.last_write_error
-                    msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
-                    messagebox.showerror(_("Error"), msg)
+            messagebox.showinfo(
+                _("Success"),
+                _("{0} results validated.").format(count),
+                parent=self
+            )
+
+            # Reload and reposition to first validated or next pending
+            self._load_workstations()
+            self._load_results()
+            self._select_result_or_next(result_ids[0])
 
         except Exception as e:
             self.engine.on_log(
-                "_check_auto_approve_workstation",
+                "_validate_batch",
                 e, type(e), sys.modules[__name__]
             )
+            messagebox.showerror(_("Error"), f"{_('Failed to validate:')}\n{e}")
 
     def _on_invalidate(self):
         """Invalidate a validated result."""
@@ -1010,48 +1043,37 @@ class UI(ParentView):
             messagebox.showinfo(_("Validation"), _("You don't have permission to invalidate."))
             return
 
-        item_id, item_type, row = self._get_selected_item()
+        selection = self.tree.selection()
+        if not selection or len(selection) != 1:
+            messagebox.showinfo(_("Invalidate"), _("Please select a single result."))
+            return
 
-        if item_type != TAG_RESULT:
-            messagebox.showinfo(_("Invalidate"), _("Please select a result."))
+        item_id = selection[0]
+        row = self.dict_results.get(item_id)
+        if not row:
             return
 
         if row["validated"] == 0:
             messagebox.showinfo(_("Invalidate"), _("This result is not validated."))
             return
 
-        # Check if user can invalidate this result
+        # Check permissions
         current_user_id = self.engine.log_user.get("user_id")
         current_user_role = self.engine.log_user.get("role")
         validated_by = row.get("validated_by")
 
-        # Only admin or the user who validated can invalidate
         if current_user_role != 0 and validated_by != current_user_id:
             messagebox.showwarning(
                 _("Invalidate"),
-                _("You can only invalidate results you validated yourself.")
+                _("You can only invalidate results you validated yourself."),
+                parent=self
             )
             return
 
-        ws_id = row["workstation_id"]
-
-        # Check if workstation is approved
-        ws_approved = self._is_workstation_approved(ws_id)
-
-        if ws_approved:
-            msg = _(
-                "Invalidate result {0}?\n\n"
-                "This workstation is approved.\n"
-                "The approval will be revoked."
-            ).format(row['result_id'])
-        else:
-            msg = _("Invalidate result {0}?").format(row['result_id'])
-
-        if not messagebox.askyesno(_("Confirm"), msg):
+        if not messagebox.askyesno(_("Confirm"), _("Invalidate this result?"), parent=self):
             return
 
         try:
-            # Invalidate the result
             sql = """
                 UPDATE results
                 SET validated = 0,
@@ -1063,29 +1085,16 @@ class UI(ParentView):
             if result is None:
                 err = self.engine.last_write_error
                 msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
-                messagebox.showerror(_("Error"), msg)
+                messagebox.showerror(_("Error"), msg, parent=self)
                 return
 
-            # Notify observers
-            self.engine.notify("result_changed", row["result_id"])
+            messagebox.showinfo(_("Success"), _("Result invalidated."), parent=self)
 
-            # Revoke workstation approval if it was approved
-            if ws_approved:
-                sql_revoke = """
-                    DELETE FROM daily_approvals
-                    WHERE workstation_id = ? AND approval_date = ?
-                """
-                result = self.engine.write(sql_revoke, (ws_id, self.selected_date.isoformat()))
-                if result is None:
-                    err = self.engine.last_write_error
-                    msg = self.engine.get_user_friendly_db_error(err) if err else _("Delete failed.")
-                    messagebox.showerror(_("Error"), msg)
-                    return
-                messagebox.showinfo(_("Success"), _("Result invalidated. Workstation approval revoked."))
-            else:
-                messagebox.showinfo(_("Success"), _("Result invalidated."))
-
-            self._load_data(preserve_expansion=True)
+            # Reload and reposition
+            result_id = row["result_id"]
+            self._load_workstations()
+            self._load_results()
+            self._select_result_or_next(result_id)
 
         except Exception as e:
             self.engine.on_log(
@@ -1093,18 +1102,6 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror(_("Error"), f"{_('Failed to invalidate:')}\n{e}")
-
-    def _is_workstation_approved(self, ws_id):
-        """Check if workstation is approved for selected date."""
-        try:
-            sql = """
-                SELECT approval_id FROM daily_approvals
-                WHERE workstation_id = ? AND approval_date = ?
-            """
-            result = self.engine.read(True, sql, (ws_id, self.selected_date.isoformat()))
-            return bool(result)
-        except Exception:
-            return False
 
     def _on_export(self):
         """Export daily validation data to Excel."""
@@ -1122,316 +1119,158 @@ class UI(ParentView):
             messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
 
     # =========================================================================
-    # VALIDATION HISTORY
+    # NOTES
     # =========================================================================
 
-    def _on_show_history(self):
-        """Show validation history for selected date."""
-        if not self.selected_date:
-            messagebox.showinfo(_("History"), _("Please load data first."))
+    def _on_open_notes(self):
+        """Open notes view for selected result."""
+        selection = self.tree.selection()
+        if not selection or len(selection) != 1:
+            messagebox.showinfo(_("Notes"), _("Please select a single result."), parent=self)
             return
 
-        history = self._get_validation_history()
-
-        # Create popup window
-        popup = tk.Toplevel(self)
-        popup.title(f"Validation History - {self.selected_date}")
-        popup.geometry("800x450")
-        popup.transient(self)
-
-        # Main frame with grid layout
-        frm = ttk.Frame(popup, padding=10)
-        frm.pack(fill=tk.BOTH, expand=True)
-        frm.rowconfigure(1, weight=1)
-        frm.columnconfigure(0, weight=1)
-
-        # Info label (row 0)
-        ttk.Label(
-            frm,
-            text=f"Validation actions for {self.selected_date}",
-            font=("TkDefaultFont", 10, "bold")
-        ).grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
-
-        # Treeview with scrollbar (row 1)
-        frm_tree = ttk.Frame(frm)
-        frm_tree.grid(row=1, column=0, sticky=tk.NSEW)
-        frm_tree.rowconfigure(0, weight=1)
-        frm_tree.columnconfigure(0, weight=1)
-
-        sb = ttk.Scrollbar(frm_tree, orient=tk.VERTICAL)
-        cols = ("time", "user", "test", "workstation", "action", "result_value")
-        tree = ttk.Treeview(frm_tree, columns=cols, show="headings", yscrollcommand=sb.set, height=15)
-        sb.config(command=tree.yview)
-
-        tree.heading("time", text="Time", anchor=tk.CENTER)
-        tree.heading("user", text="User", anchor=tk.W)
-        tree.heading("test", text="Test", anchor=tk.W)
-        tree.heading("workstation", text="Workstation", anchor=tk.W)
-        tree.heading("action", text="Action", anchor=tk.CENTER)
-        tree.heading("result_value", text="Value", anchor=tk.E)
-
-        tree.column("time", width=60, anchor=tk.CENTER)
-        tree.column("user", width=120, anchor=tk.W)
-        tree.column("test", width=180, anchor=tk.W)
-        tree.column("workstation", width=150, anchor=tk.W)
-        tree.column("action", width=80, anchor=tk.CENTER)
-        tree.column("result_value", width=80, anchor=tk.E)
-
-        tree.grid(row=0, column=0, sticky=tk.NSEW)
-        sb.grid(row=0, column=1, sticky=tk.NS)
-
-        # Populate
-        for row in history:
-            action = "Validated" if row["validated"] == 1 else "Invalidated"
-            color = self.engine.get_rgb(200, 255, 200) if row["validated"] == 1 else self.engine.get_rgb(255, 200, 200)
-
-            values = (
-                row["time_str"],
-                row["user_name"],
-                row["test_name"],
-                row["workstation_name"],
-                action,
-                f"{row['result_value']:.2f}" if row["result_value"] else ""
-            )
-            item = tree.insert("", tk.END, values=values, tags=(color,))
-            tree.tag_configure(color, background=color)
-
-        # Stats (row 2)
-        validated_count = sum(1 for r in history if r["validated"] == 1)
-        invalidated_count = sum(1 for r in history if r["validated"] == 0)
-
-        ttk.Label(
-            frm,
-            text=f"Total: {len(history)}  |  Validated: {validated_count}  |  Invalidated: {invalidated_count}"
-        ).grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
-
-        # Buttons (row 3)
-        frm_btn = ttk.Frame(frm)
-        frm_btn.grid(row=3, column=0, sticky=tk.EW, pady=(10, 0))
-
-        ttk.Button(
-            frm_btn,
-            text="Export",
-            command=lambda: self._export_history(history)
-        ).pack(side=tk.LEFT, padx=5)
-
-        ttk.Button(
-            frm_btn,
-            text="Close",
-            command=popup.destroy
-        ).pack(side=tk.RIGHT, padx=5)
-
-    def _get_validation_history(self):
-        """Get validation history from audit_results for selected date."""
-        try:
-            lab_id = self.engine.current_ids.get("lab_id")
-
-            sql = """
-                SELECT
-                    ar.log_time,
-                    ar.validated,
-                    ar.result AS result_value,
-                    u.first_name,
-                    u.last_name,
-                    t.description AS test_description,
-                    s.sample,
-                    w.description AS workstation_name
-                FROM audit_results ar
-                INNER JOIN results r ON ar.result_id = r.result_id
-                INNER JOIN batches b ON r.batch_id = b.batch_id
-                INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
-                INNER JOIN tests t ON tm.test_id = t.test_id
-                INNER JOIN samples s ON tm.sample_id = s.sample_id
-                INNER JOIN workstations w ON r.workstation_id = w.workstation_id
-                INNER JOIN organizations section ON section.org_id = w.org_id
-                LEFT JOIN users u ON ar.validated_by = u.user_id
-                WHERE DATE(ar.log_time) = ?
-                  AND ar.validated_by IS NOT NULL
-                  AND section.parent_id = ?
-                  AND section.org_type = 'section'
-                ORDER BY ar.log_time DESC
-            """
-
-            rows = self.engine.read(True, sql, (self.selected_date.isoformat(), lab_id))
-
-            if not rows:
-                return []
-
-            history = []
-            for row in rows:
-                log_time = row["log_time"]
-                if isinstance(log_time, datetime):
-                    time_str = log_time.strftime("%H:%M")
-                else:
-                    time_str = str(log_time)[:5] if log_time else ""
-
-                user_name = f"{row['first_name'] or ''} {row['last_name'] or ''}".strip() or "Unknown"
-                test_name = f"{row['test_description']}-{row['sample']}"
-
-                history.append({
-                    "time_str": time_str,
-                    "user_name": user_name,
-                    "test_name": test_name,
-                    "workstation_name": row["workstation_name"],
-                    "validated": row["validated"],
-                    "result_value": row["result_value"]
-                })
-
-            return history
-
-        except Exception as e:
-            self.engine.on_log(
-                "_get_validation_history",
-                e, type(e), sys.modules[__name__]
-            )
-            return []
-
-    def _export_history(self, history):
-        """Export validation history to Excel."""
-        if not history:
-            messagebox.showinfo(_("Export"), _("No data to export."))
+        item_id = selection[0]
+        row = self.dict_results.get(item_id)
+        if not row:
             return
 
+        # Prepare context for notes view (it expects selected_test, selected_batch, selected_result)
+        self.selected_test = {"description": row["test_description"], "test_id": row.get("test_id")}
+        self.selected_batch = {
+            "lot_number": row.get("lot_number", ""),
+            "description": row.get("level", ""),
+            "batch_id": row["batch_id"],
+            "test_method_id": row.get("test_method_id")
+        }
+        self.selected_result = row
+
+        # Open notes view
         try:
-            from openpyxl import Workbook
-            from openpyxl.styles import Font, PatternFill
-            import os
-
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Validation History"
-
-            # Header
-            headers = ["Time", "User", "Test", "Workstation", "Action", "Value"]
-            ws.append(headers)
-            for cell in ws[1]:
-                cell.font = Font(bold=True)
-
-            # Data
-            for row in history:
-                action = "Validated" if row["validated"] == 1 else "Invalidated"
-                ws.append([
-                    row["time_str"],
-                    row["user_name"],
-                    row["test_name"],
-                    row["workstation_name"],
-                    action,
-                    row["result_value"]
-                ])
-
-            # Column widths
-            ws.column_dimensions['A'].width = 8
-            ws.column_dimensions['B'].width = 20
-            ws.column_dimensions['C'].width = 25
-            ws.column_dimensions['D'].width = 20
-            ws.column_dimensions['E'].width = 12
-            ws.column_dimensions['F'].width = 10
-
-            # Save
-            filename = f"validation_history_{self.selected_date}.xlsx"
-            filepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), filename)
-            wb.save(filepath)
-
-            messagebox.showinfo(_("Export"), _("History exported to:\n{0}").format(filename))
-
-            # Open file
-            if sys.platform == "win32":
-                os.startfile(filepath)
-            else:
-                import subprocess
-                subprocess.run(["xdg-open", filepath], check=False)
-
+            notes_window = views.notes.UI(self)
+            notes_window.on_open()
         except Exception as e:
             self.engine.on_log(
-                "_export_history",
+                "_on_open_notes",
                 e, type(e), sys.modules[__name__]
             )
-            messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
 
-    # =========================================================================
-    # MANDATORY TESTS
-    # =========================================================================
+    def _on_add_note(self):
+        """Open note editor to add a new note to selected result."""
+        selection = self.tree.selection()
+        if not selection or len(selection) != 1:
+            messagebox.showinfo(_("Notes"), _("Please select a single result."), parent=self)
+            return
 
-    def _update_mandatory_indicator(self):
-        """Update the mandatory tests indicator label."""
-        missing = self._get_missing_mandatory()
-        self.missing_mandatory = missing  # Store for click handler
+        item_id = selection[0]
+        row = self.dict_results.get(item_id)
+        if not row:
+            return
 
-        if missing:
-            self.lbl_mandatory.config(
-                text=f"⚠ {_('Missing mandatory:')} {len(missing)} (click)",
-                foreground="red"
+        # Prepare context for note editor
+        self.selected_test = {"description": row["test_description"], "test_id": row.get("test_id")}
+        self.selected_batch = {
+            "lot_number": row.get("lot_number", ""),
+            "description": row.get("level", ""),
+            "batch_id": row["batch_id"],
+            "test_method_id": row.get("test_method_id")
+        }
+        self.selected_result = row
+        self.selected_item = None  # None = INSERT mode
+
+        # Open note editor directly
+        try:
+            note_window = views.note.UI(self, index=None)
+            note_window.on_open()
+        except Exception as e:
+            self.engine.on_log(
+                "_on_add_note",
+                e, type(e), sys.modules[__name__]
             )
+
+    def _on_quick_action(self):
+        """Add a quick note with selected action to selected result(s)."""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo(_("Notes"), _("Please select one or more results."), parent=self)
+            return
+
+        action_idx = self.cbx_quick_action.current()
+        if action_idx < 0:
+            messagebox.showinfo(_("Notes"), _("Please select an action."), parent=self)
+            return
+
+        action = self.dict_actions.get(action_idx)
+        if not action:
+            return
+
+        action_id = action["action_id"]
+        action_desc = _(action["description"])
+
+        # Confirm
+        count = len(selection)
+        if count == 1:
+            msg = _("Add note '{0}' to selected result?").format(action_desc)
         else:
-            self.lbl_mandatory.config(
-                text=f"✓ {_('All mandatory OK')}",
-                foreground="green"
+            msg = _("Add note '{0}' to {1} selected results?").format(action_desc, count)
+
+        if not messagebox.askyesno(_("Confirm"), msg, parent=self):
+            return
+
+        # Insert notes
+        try:
+            import datetime
+            today = datetime.date.today()
+            user_id = self.engine.log_user.get("user_id")
+
+            for item_id in selection:
+                row = self.dict_results.get(item_id)
+                if not row:
+                    continue
+
+                result_id = row["result_id"]
+
+                sql = """
+                    INSERT INTO notes (result_id, action_id, description, modified, status, created_by, created_at)
+                    VALUES (?, ?, '', ?, 1, ?, NOW())
+                """
+                self.engine.write(sql, (result_id, action_id, today, user_id))
+
+            messagebox.showinfo(
+                _("Success"),
+                _("Note added to {0} result(s).").format(count),
+                parent=self
             )
 
-    def _get_missing_mandatory(self):
-        """Get list of mandatory tests not executed for selected date."""
-        if not self.selected_date:
-            return []
+            # Reload to show note indicators
+            self._load_results()
 
-        try:
-            # Get mandatory tests for current section
-            mandatory = self.engine.get_mandatory()
-            if not mandatory:
-                return []
-
-            # Get tests executed today
-            lab_id = self.engine.current_ids.get("lab_id")
-            sql = """
-                SELECT DISTINCT t.description
-                FROM results r
-                INNER JOIN batches b ON r.batch_id = b.batch_id
-                INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
-                INNER JOIN tests t ON tm.test_id = t.test_id
-                INNER JOIN workstations w ON r.workstation_id = w.workstation_id
-                INNER JOIN organizations section ON section.org_id = w.org_id
-                WHERE DATE(r.received) = ?
-                  AND r.status = 1
-                  AND r.is_delete = 0
-                  AND section.parent_id = ?
-                  AND section.org_type = 'section'
-            """
-            rows = self.engine.read(True, sql, (self.selected_date.isoformat(), lab_id))
-
-            executed = set()
-            if rows:
-                executed = {row["description"] for row in rows}
-
-            # Find missing
-            missing = [t for t in mandatory if t not in executed]
-            return missing
+            # Reselect first item
+            if selection:
+                first_row = self.dict_results.get(selection[0])
+                if first_row:
+                    self._select_result_or_next(first_row["result_id"])
 
         except Exception as e:
             self.engine.on_log(
-                "_get_missing_mandatory",
+                "_on_quick_action",
                 e, type(e), sys.modules[__name__]
             )
-            return []
-
-    def _on_show_missing_mandatory(self, evt=None):
-        """Show popup with list of missing mandatory tests."""
-        if not hasattr(self, 'missing_mandatory') or not self.missing_mandatory:
-            messagebox.showinfo(_("Mandatory Tests"), _("All mandatory tests have been executed."))
-            return
-
-        missing_list = "\n".join(f"  • {t}" for t in self.missing_mandatory)
-        messagebox.showwarning(
-            _("Missing Mandatory Tests"),
-            _("The following mandatory tests have not been executed:\n\n{0}").format(missing_list)
-        )
+            messagebox.showerror(_("Error"), f"{_('Failed to add note:')}\n{e}", parent=self)
 
     def on_close(self, evt=None):
         """Close the window."""
-        self._stop_auto_refresh()
         self.engine.unsubscribe("result_changed", self._on_result_changed)
+        self.engine.unsubscribe("note_changed", self._on_note_changed)
         self.engine.dict_instances.pop(self.winfo_name(), None)
         self.destroy()
 
     def _on_result_changed(self, result_id):
-        """Handle result_changed event - reload data if window is visible."""
-        if self.winfo_exists() and self.winfo_viewable():
-            self._load_data(preserve_expansion=True)
+        """Handle result_changed event - reload if visible."""
+        if self.winfo_exists() and self.winfo_viewable() and self.selected_ws_id:
+            self._load_workstations()
+            self._load_results()
+
+    def _on_note_changed(self, note_id=None):
+        """Handle note_changed event - reload to update note indicators."""
+        if self.winfo_exists() and self.winfo_viewable() and self.selected_ws_id:
+            self._load_results()
