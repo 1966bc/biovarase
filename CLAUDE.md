@@ -52,8 +52,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - "Only problems" filter: shows "No problems in X results" when filter active but no problems found
 - Query counts only results with complete chain (batch → test_method → test)
 
-**Window management:**
-- Use `transient(parent)` for child windows (proper z-order, follows parent when minimized)
+**Window management (GUI policy):**
+
+| Type | transient | grab_set | resizable | Examples |
+|------|-----------|----------|-----------|----------|
+| Modal dialog | ✓ | ✓ | False | lab_selector, observations, set_zscore |
+| Utility dialog | ✓ | ✗ | False | notes, export_notes, analytical |
+| Work window | ✗ | ✗ | True | performance_dashboard, daily_validation, plots, batches |
+| Editor (ChildView) | ✓ | ✗ | False | batch, result, note, goal |
+
+**Important:** `transient()` breaks resize on Windows! Never use it for windows that need to resize.
+
+- Modal dialogs: block interaction with parent until closed
+- Utility dialogs: small popups, fixed size, stay with parent
+- Work windows: independent, resizable, appear in taskbar
 - Avoid `-topmost` except for critical alerts
 
 **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution - other processes (Bland-Altman scanner) check this before DB access.
