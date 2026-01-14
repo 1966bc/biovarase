@@ -78,8 +78,15 @@ class LookupUI(ParentView):
         self.selected_item = None
         self.items = tk.StringVar()
 
+        # Search
+        self.search_var = tk.StringVar()
+        self.all_items = []  # Full list for filtering: [(pk, description, status), ...]
+
         # --- Build interface ------------------------------------------------
         self._build_ui()
+
+        # Bind search filtering
+        self.search_var.trace_add("write", self._on_search_changed)
 
         # Set reasonable window size for table display
         min_width = 600
@@ -139,21 +146,32 @@ class LookupUI(ParentView):
         self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         sb.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Right panel: buttons
+        # Right panel: search + buttons
+        frm_right = ttk.Frame(frm_main, style="App.TFrame")
+        frm_right.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
+
+        # Search box
+        frm_search = ttk.Frame(frm_right, style="App.TFrame")
+        frm_search.pack(fill=tk.X, pady=(0, 8))
+
+        ttk.Label(frm_search, text=_("Search:"), style="App.TLabel").pack(anchor=tk.W)
+        self.txSearch = ttk.Entry(frm_search, textvariable=self.search_var, width=15)
+        self.txSearch.pack(fill=tk.X)
+
+        # Buttons
         frm_buttons = ttk.Frame(
-            frm_main,
+            frm_right,
             style="App.TFrame",
             relief=tk.GROOVE,
             padding=8,
         )
+        frm_buttons.pack(fill=tk.Y, expand=True)
 
         self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
         self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
         self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self.on_item_activated)
-
-        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -189,13 +207,40 @@ class LookupUI(ParentView):
         )
 
         rows = self.engine.read(True, sql, ()) or []
-        for index, row in enumerate(rows):
-            self.lstItems.insert(tk.END, row["description"])
-            if row.get("status", 1) != 1:
-                self.lstItems.itemconfig(index, {"bg": "light gray"})
-            self.dict_items[index] = row["pk"]
 
-        self.items.set(f"{_('Items')}: {self.lstItems.size()}")
+        # Store all items for filtering
+        self.all_items = [(row["pk"], row["description"], row.get("status", 1)) for row in rows]
+
+        # Apply current filter
+        self._filter_items()
+
+    def _filter_items(self):
+        """Filter items based on search text."""
+        self.lstItems.delete(0, tk.END)
+        self.dict_items.clear()
+
+        search_text = self.search_var.get().lower().strip()
+
+        idx = 0
+        for pk, description, status in self.all_items:
+            if not search_text or search_text in description.lower():
+                self.lstItems.insert(tk.END, description)
+                if status != 1:
+                    self.lstItems.itemconfig(idx, {"bg": "light gray"})
+                self.dict_items[idx] = pk
+                idx += 1
+
+        total = len(self.all_items)
+        shown = self.lstItems.size()
+        if search_text:
+            self.items.set(f"{_('Items')}: {shown}/{total}")
+        else:
+            self.items.set(f"{_('Items')}: {total}")
+
+    def _on_search_changed(self, *args):
+        """Handle search text changes."""
+        self._filter_items()
+        self.selected_item = None
 
     # ------------------------------------------------------------------
     # Listbox handlers
