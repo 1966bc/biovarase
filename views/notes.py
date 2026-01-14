@@ -30,6 +30,9 @@ class UI(ParentView):
         if self._reusing:
             return
 
+        # Stay on top (needed when opened from daily_validation which is also topmost)
+        self.attributes("-topmost", True)
+
         self.table = "notes"
         self.primary_key = "note_id"
 

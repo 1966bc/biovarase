@@ -87,6 +87,7 @@ import views.daily_validation
 import views.bland_altman
 import views.bland_altman_alert
 import views.qc_report
+import views.performance_dashboard
 
 
 NO_DATA = "No data"
@@ -296,7 +297,8 @@ class Main(tk.Toplevel):
                  (_("Tea"), 0, self.on_tea),
                  (_("Bland-Altman"), 0, self.on_bland_altman),
                  (_("Bland-Altman Scanner"), 0, self.on_bland_altman_alert),
-                 (_("QC Report"), 0, self.on_qc_report),)
+                 (_("QC Report"), 0, self.on_qc_report),
+                 (_("Performance Dashboard"), 0, self.on_performance_dashboard),)
 
         for i in items:
             m_plots.add_command(label=i[0], underline=i[1], command=i[2])
@@ -304,17 +306,17 @@ class Main(tk.Toplevel):
         # === EDIT MENU (if can_modify) ===
         if m_edit:
             items = [
-                (_("Batches"), 0, self.on_batches),
-                (_("Categories"), 0, self.on_categories),
-                (_("Test Methods"), 0, self.on_test_methods),
-                (_("Tests Methods Workstations"), 0, self.on_workstation_test_methods),
-                (_("Workstations"), 0, self.on_workstations),
+                (_("Batches"), 0, self.on_batches),              # B / L(otti)
+                (_("Categories"), 0, self.on_categories),        # C / C(ategorie)
+                (_("Test Methods"), 5, self.on_test_methods),    # L(ab) / L(aboratorio)
+                (_("Tests Methods Workstations"), 12, self.on_workstation_test_methods),  # T(ests) / P(ostazioni)
+                (_("Workstations"), 0, self.on_workstations),    # W / P(ostazioni)
             ]
             # Settings only for lab admins+
             if is_lab_admin:
                 items.extend([
-                    (_("Set Observations"), 0, self.on_observations),
-                    (_("Set Z Score"), 0, self.on_set_zscore),
+                    (_("Set Observations"), 4, self.on_observations),   # O / O(sservazioni)
+                    (_("Set Z Score"), 4, self.on_set_zscore),          # Z / Z
                 ])
 
             for i in sorted(items, key=operator.itemgetter(0)):
@@ -2115,6 +2117,10 @@ class Main(tk.Toplevel):
     def on_qc_report(self):
         """Open QC Report generator window."""
         views.qc_report.UI(self).on_open()
+
+    def on_performance_dashboard(self):
+        """Open Performance Dashboard window."""
+        views.performance_dashboard.UI(self).on_open()
 
     def on_export_notes(self) -> None:
         views.export_notes.UI(self).on_open()

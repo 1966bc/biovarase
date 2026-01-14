@@ -33,7 +33,7 @@ Biovarase is a comprehensive QC (Quality Control) management application designe
 - **Cross-Platform** - Linux and Windows 10/11 support
 - **MariaDB Backend** - Robust relational database
 - **Tkinter GUI** - Native desktop interface
-- **Automated Testing** - 87 tests with pytest infrastructure
+- **Automated Testing** - 731 tests with pytest infrastructure
 - **Log Rotation** - Automatic log management (10MB limit, 5 file retention)
 
 ---
@@ -115,10 +115,13 @@ python3 biovarase.py
 
 ### User Roles
 
-- **Admin (role=0)**: Full system access, configuration
-- **Superuser (role=1)**: QC validation, data management
-- **Technician (role=2)**: Data entry, result viewing
-- **Viewer (role=3)**: Read-only access (autologin)
+- **App Admin (role=0)**: Full system access, global master data
+- **Country Admin (role=1)**: Country-level administration
+- **Regional Admin (role=2)**: Region-level administration
+- **Lab Admin (role=3)**: Lab configuration, user management
+- **Superuser (role=4)**: QC validation, batch management
+- **Technician (role=5)**: Data entry only
+- **Viewer (role=6)**: Read-only access
 
 ---
 

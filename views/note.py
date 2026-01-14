@@ -13,6 +13,7 @@ linked to a QC result. It is opened by the master window
 `views.notes.UI`.
 """
 
+import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -20,18 +21,25 @@ from i18n import _
 from calendarium import Calendarium
 from views.child_view import ChildView
 
+# Role constants
+ROLE_APP_ADMIN = 0
+
 
 class UI(ChildView):
     """Editor window for a single note (insert / update)."""
 
     def __init__(self, parent, index=None):
         """
-        :param parent: master window (views.notes.UI)
+        :param parent: master window (views.notes.UI or views.daily_validation.UI)
         :param index:  note_id (Treeview iid) or None for INSERT
         """
         super().__init__(parent, name="note")
 
+        # Stay on top (needed when opened from daily_validation which is also topmost)
+        self.attributes("-topmost", True)
+
         self.index = index            # Treeview iid (note_id) or None
+        self.can_edit = True          # Permission flag
 
         # Hotkeys
         self.bind("<Alt-s>", self._on_save)
@@ -109,17 +117,22 @@ class UI(ChildView):
         )
         self.chkStatus.grid(row=r, column=c, sticky="w", **pad)
 
+        # Creator info (shown only for existing notes)
+        r += 1
+        self.lbl_creator = ttk.Label(frm_left, text="", foreground="gray")
+        self.lbl_creator.grid(row=r, column=0, columnspan=2, sticky=tk.W, **pad)
+
         # Right: buttons
         right = ttk.Frame(self.frm_main, style="App.TFrame")
         right.grid(row=0, column=1, sticky=tk.NS, **pad)
 
-        btn_save = ttk.Button(
+        self.btn_save = ttk.Button(
             right,
             text=_("Save"),
             style="App.TButton",
             command=self._on_save,
         )
-        btn_save.grid(row=0, column=0, sticky="ew", pady=4)
+        self.btn_save.grid(row=0, column=0, sticky="ew", pady=4)
 
         btn_cancel = ttk.Button(
             right,
@@ -134,7 +147,7 @@ class UI(ChildView):
         """
         Initialize editor using parent selections.
 
-        The master window (frames.notes.UI) is expected to expose:
+        The master window (views.notes.UI or views.daily_validation.UI) is expected to expose:
             - selected_test
             - selected_batch
             - selected_result
@@ -148,15 +161,68 @@ class UI(ChildView):
         self._set_actions()
 
         if self.index is not None and self.selected_note:
-            msg = "Update {0}".format(self.winfo_name().title())
+            msg = _("Update Note")
             self._set_values_from_selected_note()
+            self._check_edit_permission()
         else:
-            msg = "Add {0}".format(self.winfo_name().title())
+            msg = _("Add Note")
             self.status.set(1)
             self.modified.set_today()
+            self.lbl_creator.config(text="")
+            self.can_edit = True
 
         self.title(msg)
         self.cbActions.focus()
+
+    def _check_edit_permission(self):
+        """Check if current user can edit this note."""
+        self.can_edit = True
+        current_user_id = self.engine.log_user.get("user_id")
+        current_role = self.engine.log_user.get("role")
+
+        # Admin can always edit
+        if current_role == ROLE_APP_ADMIN:
+            self.can_edit = True
+            return
+
+        # Get note creator
+        created_by = self.selected_note.get("created_by")
+
+        if created_by is None:
+            # Old notes without creator - allow editing
+            self.can_edit = True
+            self.lbl_creator.config(text=_("Created by: Unknown"))
+            return
+
+        # Check if current user is the creator
+        if created_by == current_user_id:
+            self.can_edit = True
+        else:
+            self.can_edit = False
+            # Disable editing controls
+            self.cbActions.config(state="disabled")
+            self.txDescription.config(state="disabled")
+            self.chkStatus.config(state="disabled")
+            self.btn_save.config(state="disabled")
+
+        # Show creator name
+        try:
+            sql = "SELECT first_name, last_name FROM users WHERE user_id = ?"
+            user = self.engine.read(False, sql, (created_by,))
+            if user:
+                creator_name = f"{user['first_name']} {user['last_name']}"
+                if not self.can_edit:
+                    self.lbl_creator.config(
+                        text=_("Created by: {0} (read-only)").format(creator_name),
+                        foreground="orange"
+                    )
+                else:
+                    self.lbl_creator.config(
+                        text=_("Created by: {0}").format(creator_name),
+                        foreground="gray"
+                    )
+        except Exception:
+            pass
 
     # ------------------------------------------------------ Data loading ----
     def _set_actions(self):
@@ -265,6 +331,15 @@ class UI(ChildView):
     # ------------------------------------------------------------ Save ------
     def _on_save(self, _evt=None):
         """Validate, confirm and write data to the `notes` table."""
+        # Check permission
+        if not self.can_edit:
+            messagebox.showwarning(
+                self.engine.app_title,
+                _("You don't have permission to edit this note."),
+                parent=self,
+            )
+            return
+
         # Generic field validation
         if not self.engine.on_fields_control(self):
             return
@@ -294,18 +369,30 @@ class UI(ChildView):
         ):
             return
 
-        # --- Build SQL with build_sql (DBMS) --------------------------
+        # --- Custom SQL for INSERT/UPDATE with created_by support ---
         try:
-            # Convert to list to allow append for UPDATE
-            args = list(values)
+            result_id, action_id, description, modified_date, status = values
+            user_id = self.engine.log_user.get("user_id")
 
             if self.index is not None:
-                # UPDATE: build_sql handles field ordering and adds WHERE on PK
-                sql = self.engine.build_sql(self.parent.table, op="update")
-                args.append(int(self.index))
+                # UPDATE - don't change created_by
+                sql = """
+                    UPDATE notes
+                    SET action_id = ?,
+                        description = ?,
+                        modified = ?,
+                        status = ?
+                    WHERE note_id = ?
+                """
+                args = (action_id, description, modified_date, status, int(self.index))
             else:
-                # INSERT
-                sql = self.engine.build_sql(self.parent.table, op="insert")
+                # INSERT - set created_by and created_at
+                sql = """
+                    INSERT INTO notes
+                    (result_id, action_id, description, modified, status, created_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())
+                """
+                args = (result_id, action_id, description, modified_date, status, user_id)
 
             last_id = self.engine.write(sql, args)
             if last_id is None:
@@ -317,7 +404,11 @@ class UI(ChildView):
                 messagebox.showerror(self.engine.app_title, msg, parent=self)
                 return
 
-            # Reload master Treeview
+            # Notify observers (daily_validation, main, etc.)
+            note_id = last_id if self.index is None else int(self.index)
+            self.engine.notify("note_changed", note_id)
+
+            # Reload master Treeview (if parent has _set_values, e.g. notes.py)
             if hasattr(self.parent, "_set_values"):
                 self.parent._set_values()
 
