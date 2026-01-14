@@ -358,8 +358,10 @@ class UI(ParentView):
                                e, type(e), __name__)
 
     def _on_tests_changed(self, *args):
-        """Refresh tests listbox when a test is added/updated."""
+        """Refresh tests listbox and methods treeview when a test is added/updated."""
         self._load_tests()
+        if self.selected_test:
+            self._load_methods_for_selected_test()
 
     def on_cancel(self, _evt=None):
         self.engine.unsubscribe("tests_changed", self._on_tests_changed)
