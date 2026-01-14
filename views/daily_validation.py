@@ -140,7 +140,7 @@ class UI(ParentView):
         )
         self.chk_only_problems.pack(side=tk.LEFT, padx=(15, 0))
 
-        # Load button (Alt-C)
+        # Load button (Alt-L)
         self.btn_load = ttk.Button(
             frm_row2,
             text=_("Load"),
@@ -148,7 +148,7 @@ class UI(ParentView):
             underline=0
         )
         self.btn_load.pack(side=tk.LEFT, padx=(10, 0))
-        self.bind("<Alt-c>", lambda e: self._on_load_click())
+        self.bind("<Alt-l>", lambda e: self._on_load_click())
 
         # Role indicator
         self.lbl_role = ttk.Label(frm_row2, text="", foreground="blue")
