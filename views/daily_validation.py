@@ -581,6 +581,8 @@ class UI(ParentView):
                       AND DATE(r.received) = ?
                       AND r.status = 1
                       AND r.is_delete = 0
+                      AND t.status = 1
+                      AND tm.status = 1
                       AND b.sd > 0
                       AND ABS(r.result - b.target) >= (b.sd * 2)
                     ORDER BY ABS(r.result - b.target) / b.sd DESC, t.description
@@ -623,6 +625,8 @@ class UI(ParentView):
                       AND DATE(r.received) = ?
                       AND r.status = 1
                       AND r.is_delete = 0
+                      AND t.status = 1
+                      AND tm.status = 1
                     ORDER BY t.description, r.received
                 """
 

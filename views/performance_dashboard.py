@@ -53,6 +53,7 @@ SQL_RESULTS = """
       AND r.status = 1
       AND r.is_delete = 0
       AND tm.status = 1
+      AND t.status = 1
     ORDER BY t.description, w.description, r.received
 """
 

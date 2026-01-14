@@ -514,6 +514,8 @@ class UI(ParentView):
             LEFT JOIN units
                 ON test_methods.unit_id = units.unit_id
             WHERE workstation_test_methods.workstation_id = ?
+              AND tests.status = 1
+              AND test_methods.status = 1
             ORDER BY tests.description ASC;
         """
 
