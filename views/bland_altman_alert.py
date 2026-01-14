@@ -42,7 +42,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.transient(parent)
+        # Note: transient() removed - breaks resize on Windows
 
         # Store comparison results
         self.comparisons = []  # List of dicts with comparison data

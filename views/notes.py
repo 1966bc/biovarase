@@ -31,6 +31,7 @@ class UI(ParentView):
             return
 
         self.transient(parent)
+        self.resizable(False, False)
 
         self.table = "notes"
         self.primary_key = "note_id"
