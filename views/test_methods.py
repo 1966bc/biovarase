@@ -52,7 +52,7 @@ class UI(ParentView):
             return
 
         self.resizable(True, True)
-        self.geometry("900x650")
+        self.geometry("900x600")
 
         # Hotkeys
         self.bind("<Alt-c>", self.on_cancel)
