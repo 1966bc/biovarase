@@ -34,6 +34,8 @@ class UI(ParentView):
         if self._reusing:
             return
 
+        self.transient(parent)
+
         # Data structures
         self.dict_categories = {}
         self.dict_tests = {}
@@ -183,7 +185,6 @@ class UI(ParentView):
                 - ws2_id: int
         """
         self.title(_("Bland-Altman Comparison"))
-        self.attributes("-topmost", True)
         self._load_categories()
 
         # If preselect data provided, auto-select and calculate

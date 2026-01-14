@@ -27,7 +27,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.attributes("-topmost", True)
+        self.transient(parent)
 
         self.selected_workstation = None
         self.selected_test_method = None

@@ -262,7 +262,6 @@ class UI(ChildView):
             )
 
         self.title(msg)
-        self.attributes("-topmost", True)
 
         # Make sure the window is visible and on top
         self.deiconify()

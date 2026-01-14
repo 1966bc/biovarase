@@ -90,6 +90,7 @@ class UI(ParentView):
             self.on_open()
             return
 
+        self.transient(parent)
         self.resizable(True, True)
         self.geometry("1000x600")
         self.minsize(800, 400)

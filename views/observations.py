@@ -35,7 +35,6 @@ class UI(ParentView):
 
         self.transient(parent)
         self.resizable(False, False)
-        self.attributes("-topmost", True)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.bind("<Escape>", self._on_close)
         self.bind("<Alt-c>", self._on_close)

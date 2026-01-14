@@ -63,7 +63,7 @@ class UI(ParentView):
             return
 
         self.title(_("Daily QC Validation"))
-        self.attributes("-topmost", True)
+        self.transient(parent)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.bind("<Escape>", self.on_close)
         self.bind("<F5>", lambda e: self._on_load_click())

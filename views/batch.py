@@ -314,7 +314,6 @@ class UI(ChildView):
             title = "Insert Batch"
 
         self.title(msg)
-        self.attributes("-topmost", True)
         self.after_idle(self._focus_entry)
 
     def _focus_entry(self):
