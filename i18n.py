@@ -1134,6 +1134,11 @@ TRANSLATIONS = {
     "File saved": {"it": "File salvato", "en": "File saved"},
     "Export failed": {"it": "Esportazione fallita", "en": "Export failed"},
     "Test Methods": {"it": "Test Laboratorio", "en": "Test Methods"},
+    "Filter:": {"it": "Filtro:", "en": "Filter:"},
+    "All": {"it": "Tutti", "en": "All"},
+    "Critical": {"it": "Critici", "en": "Critical"},
+    "Good": {"it": "Ok", "en": "Good"},
+    "Showing": {"it": "Visualizzati", "en": "Showing"},
 
     # ==========================================================================
     # QC Actions (Global Master Data)
