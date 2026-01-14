@@ -333,6 +333,8 @@ class UI(ParentView):
               AND section.org_type = 'section'
               AND w.status = 1
               AND e.status = 1
+              AND t.status = 1
+              AND tm.status = 1
               AND b.description IS NOT NULL
               AND b.description != ''
             GROUP BY t.test_id, b.description, w.workstation_id

@@ -207,6 +207,7 @@ class UI(ChildView):
             WHERE wtm.workstation_id = ?
               AND tm.status = 1
               AND b.status = 1
+              AND t.status = 1
             ORDER BY t.description, s.description
         """
 

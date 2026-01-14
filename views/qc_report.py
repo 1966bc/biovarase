@@ -249,6 +249,8 @@ class UI(ParentView):
               AND r.status = 1
               AND r.is_delete = 0
               AND b.org_id = ?
+              AND t.status = 1
+              AND tm.status = 1
             ORDER BY t.description, w.description
         """
         rows = self.engine.read(True, sql, (selected_date.isoformat(), lab_id))
