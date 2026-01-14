@@ -34,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Observer pattern: `note_changed` event refreshes views
 
 **Performance Dashboard (`views/performance_dashboard.py`):**
-- Menu QC → Performance Dashboard (Lavagna Prestazioni)
+- Menu QC → Performance Dashboard (IT: Performance)
 - Shows aggregated QC metrics per test_method + workstation for a date range
 - Metrics: Total results, Viol% (|z|≥3), Warn% (|z|≥2), Note%, CV%, Bias%
 - Color coding: red (viol≥5%), yellow (viol≥2% or warn≥10%), green (OK)
