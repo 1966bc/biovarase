@@ -150,17 +150,21 @@ class UI(ParentView):
         pane_right = ttk.Frame(self.pw, style="App.TFrame")
         self.pw.add(pane_right, minsize=140, stretch="never")
 
+        # Container for search + buttons (centered)
+        frm_actions = ttk.Frame(pane_right, style="App.TFrame")
+        frm_actions.pack(fill=tk.Y, padx=5, pady=5)
+
         # Search box
-        frm_search = ttk.Frame(pane_right, style="App.TFrame")
-        frm_search.pack(fill=tk.X, padx=5, pady=(5, 8))
+        frm_search = ttk.Frame(frm_actions, style="App.TFrame")
+        frm_search.pack(fill=tk.X, pady=(0, 8))
 
         ttk.Label(frm_search, text=_("Search:"), style="App.TLabel").pack(anchor=tk.W)
         self.entry_search = ttk.Entry(frm_search, textvariable=self.search_var, width=15)
         self.entry_search.pack(fill=tk.X)
 
         # Buttons
-        frm_buttons = ttk.Frame(pane_right, style="Panel.TFrame")
-        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
+        frm_buttons = ttk.Frame(frm_actions, style="Panel.TFrame", relief=tk.GROOVE, padding=8)
+        frm_buttons.pack(fill=tk.X)
 
         self.engine.add_button(frm_buttons, _("Goals"), self.on_analytical_goal, "<Alt-g>", self)
         self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
