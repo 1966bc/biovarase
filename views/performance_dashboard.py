@@ -155,6 +155,25 @@ class UI(ParentView):
             command=self._on_export,
         ).pack(side=tk.LEFT, **padd)
 
+        # Color filter
+        ttk.Label(frm_top, text=_("Filter:"), style="App.TLabel").pack(side=tk.LEFT, padx=(15, 5))
+        self.filter_var = tk.StringVar(value="all")
+        self.cbx_filter = ttk.Combobox(
+            frm_top,
+            textvariable=self.filter_var,
+            state="readonly",
+            width=12,
+            values=[
+                _("All"),
+                _("Critical"),    # Red
+                _("Warning"),     # Yellow
+                _("Good"),        # Green
+            ],
+        )
+        self.cbx_filter.current(0)
+        self.cbx_filter.pack(side=tk.LEFT, **padd)
+        self.cbx_filter.bind("<<ComboboxSelected>>", self._on_filter_changed)
+
         ttk.Button(
             frm_top,
             text=_("Close"),
@@ -415,6 +434,10 @@ class UI(ParentView):
         self.dict_items.clear()
         self.lst_details.delete(0, tk.END)
 
+        # Get current filter
+        filter_idx = self.cbx_filter.current()
+        # 0 = All, 1 = Critical (red), 2 = Warning (yellow), 3 = Good (green)
+
         # Prepare data for sorting
         items = []
         for key, data in self.aggregated.items():
@@ -438,9 +461,18 @@ class UI(ParentView):
         if self.sort_column:
             items = self._sort_items(items)
 
-        # Insert into tree
+        # Insert into tree (with filter)
+        shown_count = 0
         for key, data in items:
             tags = self._get_row_tag(data["viol_pct"], data["warn_pct"])
+
+            # Apply filter
+            if filter_idx == 1 and tags[0] != "high_violation":
+                continue
+            elif filter_idx == 2 and tags[0] != "medium_violation":
+                continue
+            elif filter_idx == 3 and tags[0] != "good":
+                continue
 
             cv = data["cv_pct"]
             bias = data["bias_pct"]
@@ -458,6 +490,16 @@ class UI(ParentView):
 
             item_id = self.tree.insert("", tk.END, values=values, tags=tags)
             self.dict_items[item_id] = data
+            shown_count += 1
+
+        # Update status with filter info
+        total_count = len(self.aggregated)
+        if self.current_from and self.current_to:
+            period = f"{self.current_from.strftime('%d/%m/%Y')} - {self.current_to.strftime('%d/%m/%Y')}"
+            if filter_idx > 0:
+                self.status_var.set(f"{_('Showing')}: {shown_count}/{total_count} | {period}")
+            else:
+                self.status_var.set(f"{_('Test Methods')}: {total_count} | {period}")
 
     def _get_row_tag(self, viol_pct, warn_pct):
         """Return color tag based on violation/warning rates."""
@@ -498,6 +540,10 @@ class UI(ParentView):
             self.sort_column = col
             self.sort_reverse = False
 
+        self._populate_tree()
+
+    def _on_filter_changed(self, evt=None):
+        """Handle filter combobox selection change."""
         self._populate_tree()
 
     def _on_tree_select(self, evt=None):
