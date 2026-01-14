@@ -1112,7 +1112,7 @@ TRANSLATIONS = {
     # ==========================================================================
     # Performance Dashboard
     # ==========================================================================
-    "Performance Dashboard": {"it": "Lavagna Prestazioni", "en": "Performance Dashboard"},
+    "Performance Dashboard": {"it": "Performance", "en": "Performance Dashboard"},
     "From:": {"it": "Da:", "en": "From:"},
     "To:": {"it": "A:", "en": "To:"},
     "Viol%": {"it": "Viol%", "en": "Viol%"},
