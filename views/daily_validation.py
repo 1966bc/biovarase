@@ -63,7 +63,7 @@ class UI(ParentView):
             return
 
         self.title(_("Daily QC Validation"))
-        self.transient(parent)
+        # Note: transient() removed - breaks resize on Windows
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.bind("<Escape>", self.on_close)
         self.bind("<F5>", lambda e: self._on_load_click())

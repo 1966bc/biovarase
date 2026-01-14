@@ -90,7 +90,7 @@ class UI(ParentView):
             self.on_open()
             return
 
-        self.transient(parent)
+        # Note: transient() removed - breaks resize on Windows
         self.resizable(True, True)
         self.geometry("1000x600")
         self.minsize(800, 400)

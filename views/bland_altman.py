@@ -34,7 +34,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.transient(parent)
+        # Note: transient() removed - breaks resize on Windows
 
         # Data structures
         self.dict_categories = {}
