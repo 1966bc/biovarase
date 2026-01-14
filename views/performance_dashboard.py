@@ -253,6 +253,9 @@ class UI(ParentView):
         self.lst_details.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         sb_details.config(command=self.lst_details.yview)
 
+        # Sizegrip for resize handle
+        ttk.Sizegrip(self).place(relx=1.0, rely=1.0, anchor="se")
+
     def on_open(self):
         """Initialize with default date range (last 30 days)."""
         # Set default date range
