@@ -542,7 +542,7 @@ class PreviewDialog(tk.Toplevel):
         self.engine = parent.engine
 
         self.title(_("Report Preview"))
-        self.transient(parent)
+        # Note: transient() removed - breaks resize on Windows
         self.grab_set()
 
         self.resizable(True, True)

@@ -27,7 +27,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.transient(parent)
+        # Note: transient() removed - breaks resize on Windows
 
         self.selected_workstation = None
         self.selected_test_method = None
