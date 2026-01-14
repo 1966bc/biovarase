@@ -69,6 +69,10 @@ class UI(ChildView):
         self.site_context = {}
 
         self._build_ui()
+
+        # Subscribe to tests changes (Observer pattern)
+        self.engine.subscribe("tests_changed", self._on_tests_changed)
+
         self.show()
 
     # ------------------------------------------------------------------
@@ -432,6 +436,13 @@ class UI(ChildView):
         """
         return
 
+    def _on_tests_changed(self, *args):
+        """Refresh list when a test is added/updated."""
+        lab_id = self.site_context.get("lab_id")
+        workstation_id = self.workstation.get("workstation_id") if self.workstation else None
+        if lab_id and workstation_id:
+            self.set_values(lab_id, workstation_id)
+
     def on_cancel(self, _evt=None):
         """
         Close the window using Engine's safe_close method.
@@ -439,4 +450,5 @@ class UI(ChildView):
         Args:
             _evt: Optional Tkinter event (for keyboard binding)
         """
+        self.engine.unsubscribe("tests_changed", self._on_tests_changed)
         self.engine.safe_close(self)
