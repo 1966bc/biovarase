@@ -36,6 +36,7 @@ class UI(ParentView):
         self.child = None
 
         self.resizable(True, True)
+        self.geometry("900x750")
         self.bind("<Alt-c>", self.on_cancel)
 
         self._build_ui()
