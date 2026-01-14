@@ -546,7 +546,7 @@ class UI(ParentView):
             self.lst_details.insert(tk.END, f"{action}: {count} ({pct:.0f}%)")
 
     def _on_export(self, evt=None):
-        """Export dashboard data to Excel."""
+        """Show export preview dialog."""
         if not self.dict_items:
             messagebox.showwarning(
                 self.engine.app_title,
@@ -555,9 +555,97 @@ class UI(ParentView):
             )
             return
 
+        # Create preview window
+        preview = tk.Toplevel(self)
+        preview.title(_("Export Preview"))
+        preview.transient(self)
+        preview.geometry("800x500")
+        preview.minsize(600, 400)
+
+        # Header frame
+        frm_header = ttk.Frame(preview, style="App.TFrame")
+        frm_header.pack(fill=tk.X, padx=10, pady=5)
+
+        period_text = ""
+        if self.current_from and self.current_to:
+            period_text = f"{self.current_from.strftime('%d/%m/%Y')} - {self.current_to.strftime('%d/%m/%Y')}"
+
+        ttk.Label(
+            frm_header,
+            text=f"{_('Performance Dashboard')} - {period_text}",
+            style="App.TLabel",
+            font=("TkDefaultFont", 12, "bold"),
+        ).pack(side=tk.LEFT)
+
+        # Text widget with scrollbar
+        frm_text = ttk.Frame(preview, style="App.TFrame")
+        frm_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        sb = ttk.Scrollbar(frm_text, orient=tk.VERTICAL)
+        sb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        txt = tk.Text(frm_text, yscrollcommand=sb.set, font=("Courier", 10), wrap=tk.NONE)
+        txt.pack(fill=tk.BOTH, expand=True)
+        sb.config(command=txt.yview)
+
+        # Configure tags for colors
+        txt.tag_configure("header", font=("Courier", 10, "bold"), background="#d0d0d0")
+        txt.tag_configure("high_violation", background="#ffcccc")
+        txt.tag_configure("medium_violation", background="#fff2cc")
+        txt.tag_configure("good", background="#ccffcc")
+
+        # Build preview content
+        headers = f"{'Test':<35} {'WS':<10} {'Tot':>5} {'Viol%':>7} {'Warn%':>7} {'Note%':>7} {'CV%':>7} {'Bias%':>8}\n"
+        separator = "-" * 95 + "\n"
+
+        txt.insert(tk.END, headers, "header")
+        txt.insert(tk.END, separator)
+
+        for item_id in self.tree.get_children():
+            data = self.dict_items.get(item_id)
+            if not data:
+                continue
+
+            values = self.tree.item(item_id, "values")
+            tag = self._get_row_tag(data["viol_pct"], data["warn_pct"])[0]
+
+            line = f"{values[0]:<35} {values[1]:<10} {values[2]:>5} {values[3]:>7} {values[4]:>7} {values[5]:>7} {values[6]:>7} {values[7]:>8}\n"
+            txt.insert(tk.END, line, tag)
+
+        txt.config(state=tk.DISABLED)
+
+        # Horizontal scrollbar
+        sb_h = ttk.Scrollbar(frm_text, orient=tk.HORIZONTAL, command=txt.xview)
+        sb_h.pack(side=tk.BOTTOM, fill=tk.X)
+        txt.config(xscrollcommand=sb_h.set)
+
+        # Button frame
+        frm_buttons = ttk.Frame(preview, style="App.TFrame")
+        frm_buttons.pack(fill=tk.X, padx=10, pady=10)
+
+        ttk.Button(
+            frm_buttons,
+            text=_("Save Excel"),
+            command=lambda: self._save_excel(preview),
+        ).pack(side=tk.LEFT, padx=5)
+
+        ttk.Button(
+            frm_buttons,
+            text=_("Close"),
+            command=preview.destroy,
+        ).pack(side=tk.RIGHT, padx=5)
+
+        # Center preview on parent
+        preview.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - preview.winfo_width()) // 2
+        y = self.winfo_y() + (self.winfo_height() - preview.winfo_height()) // 2
+        preview.geometry(f"+{x}+{y}")
+
+    def _save_excel(self, preview_window=None):
+        """Save data to Excel with colored rows."""
         try:
             from openpyxl import Workbook
-            from openpyxl.styles import Font, Alignment, PatternFill
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         except ImportError:
             messagebox.showerror(
                 self.engine.app_title,
@@ -571,7 +659,7 @@ class UI(ParentView):
             parent=self,
             defaultextension=".xlsx",
             filetypes=[("Excel files", "*.xlsx")],
-            initialfile=f"performance_dashboard_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            initialfile=f"performance_{datetime.now().strftime('%Y%m%d')}.xlsx",
         )
 
         if not filepath:
@@ -580,7 +668,21 @@ class UI(ParentView):
         try:
             wb = Workbook()
             ws = wb.active
-            ws.title = "Performance Dashboard"
+            ws.title = "Performance"
+
+            # Define fills for coloring
+            fill_high = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
+            fill_medium = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
+            fill_good = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid")
+            fill_header = PatternFill(start_color="D0D0D0", end_color="D0D0D0", fill_type="solid")
+
+            header_font = Font(bold=True)
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin'),
+            )
 
             # Headers
             headers = [
@@ -594,17 +696,41 @@ class UI(ParentView):
                 _("Bias%"),
             ]
 
-            header_font = Font(bold=True)
             for col, header in enumerate(headers, 1):
                 cell = ws.cell(row=1, column=col, value=header)
                 cell.font = header_font
+                cell.fill = fill_header
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal="center")
 
-            # Data rows
+            # Data rows with colors
             row_num = 2
             for item_id in self.tree.get_children():
+                data = self.dict_items.get(item_id)
                 values = self.tree.item(item_id, "values")
+
+                # Determine fill based on violation level
+                if data:
+                    viol_pct = data.get("viol_pct", 0)
+                    warn_pct = data.get("warn_pct", 0)
+                    if viol_pct >= 5.0:
+                        row_fill = fill_high
+                    elif viol_pct >= 2.0 or warn_pct >= 10.0:
+                        row_fill = fill_medium
+                    else:
+                        row_fill = fill_good
+                else:
+                    row_fill = None
+
                 for col, val in enumerate(values, 1):
-                    ws.cell(row=row_num, column=col, value=val)
+                    cell = ws.cell(row=row_num, column=col, value=val)
+                    cell.border = thin_border
+                    if row_fill:
+                        cell.fill = row_fill
+                    # Align numeric columns to right
+                    if col >= 3:
+                        cell.alignment = Alignment(horizontal="right")
+
                 row_num += 1
 
             # Auto-fit columns
@@ -621,6 +747,9 @@ class UI(ParentView):
 
             wb.save(filepath)
 
+            if preview_window:
+                preview_window.destroy()
+
             messagebox.showinfo(
                 self.engine.app_title,
                 f"{_('File saved')}: {filepath}",
@@ -629,7 +758,7 @@ class UI(ParentView):
 
         except Exception as e:
             self.engine.on_log(
-                "_on_export",
+                "_save_excel",
                 e,
                 type(e),
                 __name__,
