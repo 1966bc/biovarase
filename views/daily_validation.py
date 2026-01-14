@@ -381,14 +381,14 @@ class UI(ParentView):
                     w.workstation_id,
                     w.description AS workstation_name,
                     e.description AS equipment_name,
-                    COUNT(r.result_id) AS total_results,
-                    SUM(CASE WHEN r.validated = 0 THEN 1 ELSE 0 END) AS pending_count,
+                    COUNT(CASE WHEN t.test_id IS NOT NULL THEN r.result_id END) AS total_results,
+                    SUM(CASE WHEN r.validated = 0 AND t.test_id IS NOT NULL THEN 1 ELSE 0 END) AS pending_count,
                     SUM(CASE
-                        WHEN b.sd > 0 AND ABS(r.result - b.target) > (b.sd * 3)
+                        WHEN t.test_id IS NOT NULL AND b.sd > 0 AND ABS(r.result - b.target) > (b.sd * 3)
                         THEN 1 ELSE 0
                     END) AS count_3sd,
                     SUM(CASE
-                        WHEN b.sd > 0 AND ABS(r.result - b.target) > (b.sd * 2)
+                        WHEN t.test_id IS NOT NULL AND b.sd > 0 AND ABS(r.result - b.target) > (b.sd * 2)
                              AND ABS(r.result - b.target) <= (b.sd * 3)
                         THEN 1 ELSE 0
                     END) AS count_2sd,
@@ -401,6 +401,9 @@ class UI(ParentView):
                     AND r.status = 1
                     AND r.is_delete = 0
                 LEFT JOIN batches b ON r.batch_id = b.batch_id
+                LEFT JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+                LEFT JOIN tests t ON tm.test_id = t.test_id
+                LEFT JOIN samples s ON tm.sample_id = s.sample_id
                 LEFT JOIN daily_approvals da ON da.workstation_id = w.workstation_id
                     AND da.approval_date = ?
                 WHERE w.status = 1
