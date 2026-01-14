@@ -52,7 +52,7 @@ class UI(ParentView):
             return
 
         self.resizable(True, True)
-        self.geometry("900x700")  # Wider and taller default size
+        self.geometry("900x750")  # Wider and taller default size
 
         # Hotkeys
         self.bind("<Alt-c>", self.on_cancel)
