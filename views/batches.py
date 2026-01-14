@@ -116,6 +116,7 @@ class UI(ParentView):
 
         self._loaded: bool = False
         self.resizable(True, True)
+        self.geometry("900x650")
 
         # Selection state
         self.child: Optional[tk.Toplevel] = None
