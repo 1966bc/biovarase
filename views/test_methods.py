@@ -70,6 +70,10 @@ class UI(ParentView):
 
         # Bind search filtering
         self.search_var.trace_add("write", self._on_search_changed)
+
+        # Subscribe to tests changes (Observer pattern)
+        self.engine.subscribe("tests_changed", self._on_tests_changed)
+
         self.show(on_screen=True)
         
 
@@ -356,5 +360,10 @@ class UI(ParentView):
             self.engine.on_log("test_methods.refresh_context_from_section",
                                e, type(e), __name__)
 
+    def _on_tests_changed(self, *args):
+        """Refresh tests listbox when a test is added/updated."""
+        self._load_tests()
+
     def on_cancel(self, _evt=None):
+        self.engine.unsubscribe("tests_changed", self._on_tests_changed)
         super().on_cancel()
