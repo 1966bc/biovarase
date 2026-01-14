@@ -34,17 +34,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Observer pattern: `note_changed` event refreshes views
 
 **Performance Dashboard (`views/performance_dashboard.py`):**
-- Menu QC → Performance Dashboard (IT: Performance)
+- Menu QC → Performances (IT: Performances)
 - Shows aggregated QC metrics per test_method + workstation for a date range
 - Metrics: Total results, Viol% (|z|≥3), Warn% (|z|≥2), Note%, CV%, Bias%
 - Color coding: red (viol≥5%), yellow (viol≥2% or warn≥10%), green (OK)
+- Color filter combobox: All, Critical (red), Warning (yellow), Good (green)
 - Click column headers to sort
 - Select row to see action breakdown (which corrective actions were used)
-- Export to Excel
+- Export with preview: shows colored table before saving, Excel has colored rows
 
 **Test Methods view (`views/test_methods.py`):**
 - Search box to filter tests by name
-- Window size 900x600
+- Window size 900x750
+
+**Daily Validation (`views/daily_validation.py`):**
+- Hotkey: Alt-L to load (underline on "L" in Load button)
+- "Only problems" filter: shows "No problems in X results" when filter active but no problems found
+- Query counts only results with complete chain (batch → test_method → test)
+
+**Window management:**
+- Use `transient(parent)` for child windows (proper z-order, follows parent when minimized)
+- Avoid `-topmost` except for critical alerts
 
 **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution - other processes (Bland-Altman scanner) check this before DB access.
 
