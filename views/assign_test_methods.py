@@ -167,7 +167,7 @@ class UI(ChildView):
         self.show()
 
         try:
-            self.lstItems.focus_set()
+            self.entry_search.focus_set()
         except Exception:
             pass
 
@@ -456,6 +456,9 @@ class UI(ChildView):
             # Refill this dialog (so the just-assigned method disappears from list)
             lab_id = self.site_context.get("lab_id")
             self.set_values(lab_id, workstation_id)
+
+            # Return focus to search box
+            self.entry_search.focus_set()
 
         except Exception as exc:
             messagebox.showerror(
