@@ -158,12 +158,13 @@ class Tools:
             ref_width = parent.winfo_width()
             ref_height = parent.winfo_height()
 
+        # Use winfo_width/height (respects geometry()) instead of reqwidth/reqheight
         min_w, min_h = window.wm_minsize()
-        width = max(window.winfo_reqwidth(), min_w)
-        height = max(window.winfo_reqheight(), min_h)
+        width = max(window.winfo_width(), min_w)
+        height = max(window.winfo_height(), min_h)
         x = ref_x + (ref_width - width) // 2
         y = ref_y + (ref_height - height) // 2
-        window.geometry(f"{width}x{height}+{x}+{y}")
+        window.geometry(f"+{x}+{y}")  # Only set position, keep size
 
     def safe_close(self, win: Any) -> None:
         """
