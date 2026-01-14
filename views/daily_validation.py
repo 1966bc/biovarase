@@ -642,10 +642,25 @@ class UI(ParentView):
                 self._insert_result_row(row)
 
             # Show filter status in stats
-            filter_text = f" ({_('problems only')})" if only_problems else ""
-            self.lbl_stats.config(
-                text=f"{_('Results:')} {total}{filter_text}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
-            )
+            if only_problems:
+                # Get total results from workstation info
+                idx = self.cbx_workstation.current()
+                ws_data = self.dict_workstations.get(idx, {})
+                ws_total = ws_data.get("total_results", 0) or 0
+
+                if total == 0 and ws_total > 0:
+                    # No problems found but there are results
+                    self.lbl_stats.config(
+                        text=f"{_('No problems in')} {ws_total} {_('results')}"
+                    )
+                else:
+                    self.lbl_stats.config(
+                        text=f"{_('Problems:')} {total}/{ws_total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
+                    )
+            else:
+                self.lbl_stats.config(
+                    text=f"{_('Results:')} {total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
+                )
 
         except Exception as e:
             self.engine.on_log(

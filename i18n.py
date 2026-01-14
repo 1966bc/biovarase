@@ -1068,6 +1068,8 @@ TRANSLATIONS = {
     "all validated": {"it": "tutti validati", "en": "all validated"},
     "Only problems": {"it": "Solo problemi", "en": "Only problems"},
     "problems only": {"it": "solo problemi", "en": "problems only"},
+    "No problems in": {"it": "Nessun problema su", "en": "No problems in"},
+    "Problems:": {"it": "Problemi:", "en": "Problems:"},
     "Quick:": {"it": "Rapido:", "en": "Quick:"},
     "Add note '{0}' to selected result?": {
         "it": "Aggiungere nota '{0}' al risultato selezionato?",
