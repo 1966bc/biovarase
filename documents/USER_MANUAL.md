@@ -16,6 +16,7 @@
 6. [Operatività Quotidiana](#6-operatività-quotidiana)
    - [6.5 Validazione Giornaliera (Daily Validation)](#65-validazione-giornaliera-daily-validation)
 7. [Grafici e Analisi](#7-grafici-e-analisi)
+   - [7.5 Performances (Dashboard Prestazioni)](#75-performances-dashboard-prestazioni)
 8. [Export Dati](#8-export-dati)
 9. [Amministrazione](#9-amministrazione)
 10. [Integrazione Strumenti](#10-integrazione-strumenti)
@@ -511,6 +512,118 @@ Permette di confrontare i risultati di due workstation diverse per lo stesso tes
 
 PCC > 0.970: riga verde (buona correlazione)
 PCC < 0.970: riga rossa (correlazione insufficiente)
+
+### 7.5 Performances (Dashboard Prestazioni)
+
+`Menu → QC → Performances`
+
+La dashboard Performances permette di monitorare le prestazioni dei metodi analitici nel tempo, identificando test problematici e trend di instabilità.
+
+**Interfaccia:**
+
+```
++-------------------------------------------------------------------------+
+|                            Performances                                  |
++-------------------------------------------------------------------------+
+| Da: [__/__/____]  A: [__/__/____]  [Aggiorna]  [Esporta]       [Chiudi] |
++-------------------------------------------------------------------------+
+| Test            | WS     | Tot | Viol% | Warn% | Note% | CV%  | Bias%  |
+|-----------------|--------|-----|-------|-------|-------|------|--------|
+| Glucose - Siero | ALCI-1 | 150 | 2.0%  | 4.7%  | 6.7%  | 3.2% | +1.5%  |
+| Glucose - Siero | ALCI-2 | 142 | 1.4%  | 3.5%  | 5.6%  | 2.8% | -0.8%  |
+| Creatinina - S  | ALCI-1 | 145 | 0.7%  | 2.1%  | 4.1%  | 2.1% | +0.3%  |
++-------------------------------------------------------------------------+
+| Dettaglio Azioni:                                                       |
+| - Controlli ripetuti: 5 (50%)                                          |
+| - Ricalibrazione: 3 (30%)                                              |
++-------------------------------------------------------------------------+
+```
+
+**Selezione periodo:**
+
+1. **Da**: Data inizio periodo (default: 30 giorni fa)
+2. **A**: Data fine periodo (default: oggi)
+3. **Aggiorna**: Ricarica i dati per il periodo selezionato
+
+**Colonne della tabella:**
+
+| Colonna | Significato | Come interpretare |
+|---------|-------------|-------------------|
+| **Test** | Nome del test + tipo campione | Es. "Glucose - Siero" |
+| **WS** | Workstation/strumento | Es. ALCI-1, ALCI-2 |
+| **Tot** | Totale risultati QC nel periodo | Volume di lavoro |
+| **Viol%** | % risultati oltre ±3SD | **Critico** se > 5% |
+| **Warn%** | % risultati tra ±2SD e ±3SD | Attenzione se > 10% |
+| **Note%** | % risultati con note/azioni | Indica interventi richiesti |
+| **CV%** | Coefficiente di variazione osservato | Precisione del metodo |
+| **Bias%** | Scostamento medio dal target | Accuratezza (+ = alto, - = basso) |
+
+**Codifica colori:**
+
+| Colore | Significato | Azione suggerita |
+|--------|-------------|------------------|
+| **Rosso** | Viol% ≥ 5% | Intervento urgente necessario |
+| **Giallo** | Viol% ≥ 2% oppure Warn% ≥ 10% | Monitorare attentamente |
+| **Verde** | Tutto nella norma | Nessuna azione richiesta |
+
+**Ordinamento:**
+
+Clicca su qualsiasi intestazione di colonna per ordinare:
+- Primo click: ordine crescente
+- Secondo click: ordine decrescente
+
+**Suggerimento:** Ordina per "Viol%" decrescente per vedere subito i test più problematici.
+
+**Dettaglio azioni:**
+
+Selezionando una riga, il pannello inferiore mostra quali azioni correttive sono state registrate per quel test/workstation:
+- Tipo di azione (es. "Controlli ripetuti", "Ricalibrazione")
+- Conteggio e percentuale sul totale
+
+**Esportazione:**
+
+Il pulsante **Esporta** salva i dati in formato Excel (.xlsx) per archiviazione, analisi o report periodici.
+
+**Esempi d'uso:**
+
+1. **Identificare test problematici:**
+   - Ordina per Viol% decrescente
+   - Le righe rosse in cima sono da verificare
+
+2. **Confrontare workstation:**
+   - Cerca lo stesso test su workstation diverse
+   - Differenze significative indicano problemi strumentali
+
+3. **Monitoraggio mensile:**
+   - Seleziona primo e ultimo giorno del mese
+   - Esporta e confronta con i mesi precedenti
+
+**Interpretazione metriche:**
+
+| Viol% | Interpretazione |
+|-------|-----------------|
+| < 1% | Eccellente |
+| 1-2% | Buono |
+| 2-5% | Da monitorare |
+| > 5% | Problematico |
+
+| Warn% | Interpretazione |
+|-------|-----------------|
+| < 5% | Eccellente |
+| 5-10% | Buono |
+| > 10% | Da monitorare |
+
+| CV% | Interpretazione |
+|-----|-----------------|
+| Confronta con CV% target del lotto | Valuta stabilità del metodo |
+
+| Bias% | Significato |
+|-------|-------------|
+| Positivo (+) | Risultati mediamente alti |
+| Negativo (-) | Risultati mediamente bassi |
+| Vicino a 0% | Buona accuratezza |
+
+**Nota:** Un bias costante può indicare necessità di ricalibrazione.
 
 ---
 
