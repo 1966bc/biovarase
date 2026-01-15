@@ -707,13 +707,13 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
 
     def busy(self, caller):
         """Set busy cursor and force GUI update."""
-        caller.config(cursor="watch")
-        caller.update_idletasks()
+        caller.config(cursor="wait")
+        caller.update()
 
     def not_busy(self, caller):
         """Restore default cursor and force GUI update."""
         caller.config(cursor="")
-        caller.update_idletasks()
+        caller.update()
 
     def set_log_user(self, rs: Dict[str, Any]) -> None:
         """
