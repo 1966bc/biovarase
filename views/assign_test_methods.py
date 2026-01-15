@@ -48,6 +48,7 @@ class UI(ChildView):
     COL_SAMPLE_WIDTH = 12    # Sample type (e.g., "Serum", "Plasma")
     COL_METHOD_WIDTH = 25    # Method (e.g., "Enzymatic", "HPLC-MS/MS")
     COL_UNIT_WIDTH = 10      # Unit (e.g., "mg/dL", "ng/mL")
+    COL_CATEGORY_WIDTH = 15  # Category (e.g., "Chemistry", "Hematology")
     COL_SPACING = 2          # Spaces between columns
 
     # ------------------------------------------------------------------
@@ -120,7 +121,7 @@ class UI(ChildView):
 
         # Set reasonable window size for table display
         self.update_idletasks()
-        min_width = 900   # Wide enough for all columns (40+10+12+25+10 + spacing)
+        min_width = 1020  # Wide enough for all columns (40+10+12+25+10+15 + spacing)
         min_height = 600  # Show ~20-25 rows comfortably
         self.minsize(min_width, min_height)
         
@@ -223,7 +224,8 @@ class UI(ChildView):
                 test_methods.code                        AS code,
                 samples.description                      AS sample_description,
                 methods.description                      AS method_description,
-                units.description                        AS unit
+                units.description                        AS unit,
+                IFNULL(categories.description, '')       AS category
             FROM tests
             JOIN test_methods
                 ON tests.test_id = test_methods.test_id
@@ -235,6 +237,8 @@ class UI(ChildView):
                 ON test_methods.method_id = methods.method_id
             JOIN units
                 ON test_methods.unit_id = units.unit_id
+            LEFT JOIN categories
+                ON test_methods.category_id = categories.category_id
             WHERE tests.status = 1
               AND test_methods.status = 1
               AND section.parent_id = ?
@@ -294,6 +298,7 @@ class UI(ChildView):
             3) Sample type
             4) Method
             5) Unit
+            6) Category
 
         Args:
             row: Dictionary with test method data from database
@@ -307,6 +312,7 @@ class UI(ChildView):
         sample_desc = (row.get("sample_description") or "").strip()
         method_desc = (row.get("method_description") or "").strip()
         unit        = (row.get("unit") or "").strip()
+        category    = (row.get("category") or "").strip()
 
         # Truncate to column widths (prevent overflow)
         test_desc   = test_desc[:self.COL_TEST_WIDTH]
@@ -314,6 +320,7 @@ class UI(ChildView):
         sample_desc = sample_desc[:self.COL_SAMPLE_WIDTH]
         method_desc = method_desc[:self.COL_METHOD_WIDTH]
         unit        = unit[:self.COL_UNIT_WIDTH]
+        category    = category[:self.COL_CATEGORY_WIDTH]
 
         # Build formatted string with fixed-width columns
         spacing = " " * self.COL_SPACING
@@ -327,6 +334,8 @@ class UI(ChildView):
             f"{method_desc:<{self.COL_METHOD_WIDTH}}"
             f"{spacing}"
             f"{unit:<{self.COL_UNIT_WIDTH}}"
+            f"{spacing}"
+            f"{category:<{self.COL_CATEGORY_WIDTH}}"
         )
         return label
 
@@ -341,7 +350,7 @@ class UI(ChildView):
             raw: Formatted string from Listbox.get()
 
         Returns:
-            Dictionary with parsed fields: test, code, sample, method, unit
+            Dictionary with parsed fields: test, code, sample, method, unit, category
         """
         pos = 0
 
@@ -361,15 +370,20 @@ class UI(ChildView):
         method = raw[pos:pos + self.COL_METHOD_WIDTH].strip()
         pos += self.COL_METHOD_WIDTH + self.COL_SPACING
 
-        # Extract unit (rest of string)
-        unit = raw[pos:].strip()
+        # Extract unit
+        unit = raw[pos:pos + self.COL_UNIT_WIDTH].strip()
+        pos += self.COL_UNIT_WIDTH + self.COL_SPACING
+
+        # Extract category (rest of string)
+        category = raw[pos:].strip()
 
         return {
             "test": test,
             "code": code,
             "sample": sample,
             "method": method,
-            "unit": unit
+            "unit": unit,
+            "category": category
         }
 
     # ------------------------------------------------------------------
