@@ -36,6 +36,114 @@ import mariadb
 from typing import Optional, Union, List, Dict, Tuple, Any
 
 
+class BackgroundConnection:
+    """
+    Dedicated database connection for background thread operations.
+
+    Provides the same read/write interface as DBMS but with its own
+    independent connection. This allows background threads to execute
+    queries without blocking the main thread's connection.
+
+    Usage:
+        bg_conn = engine.get_background_connection()
+        try:
+            rows = bg_conn.read(True, "SELECT * FROM tests", ())
+            # ... do work ...
+        finally:
+            bg_conn.close()
+
+    Note:
+        Always close the connection when done to free resources.
+    """
+
+    def __init__(self, user, password, host, port, database, on_log=None):
+        """Create a new background connection."""
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
+        self.database = database
+        self.on_log = on_log or (lambda *args: None)
+        self.con = None
+        self._connect()
+
+    def _connect(self):
+        """Establish the database connection."""
+        try:
+            self.con = mariadb.connect(
+                user=self.user,
+                password=self.password,
+                host=self.host,
+                port=self.port,
+                database=self.database,
+                autocommit=True
+            )
+        except Exception as e:
+            self.on_log("BackgroundConnection._connect", e, type(e), __name__)
+            self.con = None
+
+    def read(self, fetch, sql, args=()):
+        """Execute SELECT query. Same interface as DBMS.read()."""
+        if self.con is None:
+            return None
+
+        cursor = None
+        try:
+            cursor = self.con.cursor(dictionary=True)
+            cursor.execute(sql, args)
+            if fetch:
+                return cursor.fetchall()
+            else:
+                return cursor.fetchone()
+        except Exception as e:
+            self.on_log("BackgroundConnection.read", e, type(e), __name__)
+            return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+
+    def write(self, sql, args=()):
+        """Execute DML statement. Same interface as DBMS.write()."""
+        if self.con is None:
+            return None
+
+        cursor = None
+        try:
+            cursor = self.con.cursor()
+            cursor.execute(sql, args)
+            return cursor.lastrowid if cursor.lastrowid else cursor.rowcount
+        except Exception as e:
+            self.on_log("BackgroundConnection.write", e, type(e), __name__)
+            return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+
+    def close(self):
+        """Close the connection and free resources."""
+        if self.con:
+            try:
+                self.con.close()
+            except Exception:
+                pass
+            self.con = None
+
+    def __enter__(self):
+        """Context manager support."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close connection on context exit."""
+        self.close()
+        return False
+
+
 class DBMS:
     """
     Database Management System base layer for MariaDB operations.
@@ -142,6 +250,32 @@ class DBMS:
             caller = f.f_back.f_code.co_name if f and f.f_back else "<top>"
             self.on_log(function, e, type(e), sys.modules[__name__], caller)
             return None
+
+    def get_background_connection(self) -> BackgroundConnection:
+        """
+        Create a new independent database connection for background operations.
+
+        Returns a BackgroundConnection instance with the same credentials as
+        the main connection. Use this for long-running operations in worker
+        threads to avoid blocking the main thread.
+
+        Returns:
+            BackgroundConnection: New connection instance
+
+        Example:
+            def worker():
+                with self.engine.get_background_connection() as bg:
+                    rows = bg.read(True, "SELECT * FROM results", ())
+                    # ... process data ...
+        """
+        return BackgroundConnection(
+            user=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            database=self.database,
+            on_log=self.on_log
+        )
 
     def _ensure_connection(self) -> None:
         """

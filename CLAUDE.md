@@ -71,7 +71,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Abbott import lock:** Creates `/tmp/abbott_import.lock` during execution - other processes (Bland-Altman scanner) check this before DB access.
 
-**GUI cooperative multitasking:** Use `after()` instead of threading for DB operations to avoid segfaults.
+**Background operations with threading:**
+For long-running operations (exports, reports) that need animated progress bars:
+
+1. Use `BackgroundConnection` for dedicated DB connection in worker thread
+2. Use `queue.Queue` for thread-to-main communication
+3. Use `after()` to poll the queue from main thread
+
+```python
+import threading
+import queue
+
+def _on_export(self):
+    def worker():
+        # Dedicated connection for this thread
+        with self.engine.get_background_connection() as bg:
+            rows = bg.read(True, "SELECT ...", ())
+            # ... process data ...
+        self.async_queue.put(("done", result))
+
+    def check_queue():
+        try:
+            status, data = self.async_queue.get_nowait()
+            self._stop_progress()
+            # handle result
+        except queue.Empty:
+            self.after(50, check_queue)
+
+    self._start_progress()
+    threading.Thread(target=worker, daemon=True).start()
+    self.after(50, check_queue)
+```
+
+**Progress bar pattern:**
+```python
+# In view's __init__:
+self.progress = ttk.Progressbar(frm, mode="indeterminate", length=120)
+
+# Use engine helpers:
+self.engine.start_progress(self.progress, self)
+self.engine.stop_progress(self.progress, self)
+```
 
 ## Language Policy
 
