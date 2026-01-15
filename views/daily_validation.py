@@ -631,11 +631,12 @@ class UI(ParentView):
             else:
                 stats_text = f"{_('Results:')} {total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
 
-            # Add >3SD / >2SD info and set color
+            # Add approval status and >3SD / >2SD info, set color based on actual state
             if approved:
                 stats_text = f"✓ {_('Approved')}  |  " + stats_text
-                self.lbl_stats.config(text=stats_text, foreground="green")
-            elif count_3sd > 0:
+
+            # Color based on actual problems (not just approval status)
+            if count_3sd > 0:
                 stats_text += f"  |  ⚠ {count_3sd} >3SD"
                 if count_2sd > 0:
                     stats_text += f", {count_2sd} >2SD"
@@ -646,6 +647,7 @@ class UI(ParentView):
             elif pending > 0:
                 self.lbl_stats.config(text=stats_text, foreground="orange")
             else:
+                # All OK - green only if no problems
                 self.lbl_stats.config(text=stats_text, foreground="green")
 
         except Exception as e:
