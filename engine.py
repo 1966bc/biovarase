@@ -715,6 +715,28 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         caller.config(cursor="")
         caller.update()
 
+    def start_progress(self, progress_widget, caller):
+        """Show and start a progress bar animation.
+
+        Args:
+            progress_widget: ttk.Progressbar widget to animate
+            caller: Window to update
+        """
+        progress_widget.pack(side="right", padx=(10, 0))
+        progress_widget.start(10)
+        caller.update()
+
+    def stop_progress(self, progress_widget, caller):
+        """Stop and hide a progress bar.
+
+        Args:
+            progress_widget: ttk.Progressbar widget to stop
+            caller: Window to update
+        """
+        progress_widget.stop()
+        progress_widget.pack_forget()
+        caller.update()
+
     def set_log_user(self, rs: Dict[str, Any]) -> None:
         """
         Set the logged-in user information.

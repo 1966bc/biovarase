@@ -469,15 +469,11 @@ class UI(ParentView):
 
     def _start_progress(self):
         """Show and start the progress bar animation."""
-        self.progress.pack(side=tk.RIGHT, padx=(10, 0))
-        self.progress.start(10)
-        self.update()
+        self.engine.start_progress(self.progress, self)
 
     def _stop_progress(self):
         """Stop and hide the progress bar."""
-        self.progress.stop()
-        self.progress.pack_forget()
-        self.update()
+        self.engine.stop_progress(self.progress, self)
 
     def _on_load_click(self):
         """Handle Load button click - load results for selected workstation."""
