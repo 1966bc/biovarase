@@ -8,28 +8,29 @@
 ## Indice
 
 1. [Edge Cases (Casi Limite)](#edge-cases-casi-limite)
-2. [Design Patterns](#design-patterns)
+2. [Gotcha (Trabocchetti)](#gotcha-trabocchetti)
+3. [Design Patterns](#design-patterns)
    - [Observer Pattern](#observer-pattern)
    - [Singleton Pattern](#singleton-pattern)
    - [Mixin Pattern](#mixin-pattern)
-3. [Testing](#testing)
+4. [Testing](#testing)
    - [Unit Test vs Integration Test](#unit-test-vs-integration-test)
    - [Test Coverage](#test-coverage)
    - [Mock e Stub](#mock-e-stub)
-4. [Sicurezza](#sicurezza)
+5. [Sicurezza](#sicurezza)
    - [SQL Injection](#sql-injection)
    - [Bcrypt e Hashing](#bcrypt-e-hashing)
-5. [Architettura](#architettura)
+6. [Architettura](#architettura)
    - [Separazione delle Responsabilità](#separazione-delle-responsabilità)
    - [Multi-Tenant](#multi-tenant)
    - [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
-6. [Python Avanzato](#python-avanzato)
+7. [Python Avanzato](#python-avanzato)
    - [Decoratori](#decoratori)
    - [Context Manager](#context-manager)
    - [hasattr e Introspezione](#hasattr-e-introspezione)
-7. [Database](#database)
+8. [Database](#database)
    - [Gestione delle Transazioni](#gestione-delle-transazioni)
-8. [Concorrenza](#concorrenza)
+9. [Concorrenza](#concorrenza)
    - [Threading e Race Conditions](#threading-e-race-conditions)
    - [Queue per Comunicazione Thread](#queue-per-comunicazione-thread)
 
@@ -146,6 +147,214 @@ def _highlight_expiration(self, ws, row_idx, expiration_date, received_date, ...
 4. MONITORA - Log e alert per casi anomali in produzione
 5. DOCUMENTA - Scrivi cosa succede nei casi limite
 ```
+
+---
+
+## Gotcha (Trabocchetti)
+
+### Cosa sono
+
+I **gotcha** sono trappole nascoste o comportamenti inaspettati che "catturano" lo sviluppatore. Il termine viene dall'inglese "got you!" (ti ho preso!).
+
+A differenza degli edge cases (casi limite prevedibili), i gotcha sono:
+- **Controintuitivi** - Il codice sembra corretto ma non funziona come ti aspetti
+- **Documentati male** - Spesso non sono evidenti dalla documentazione ufficiale
+- **Specifici del contesto** - Dipendono da framework, libreria o architettura usata
+- **Fonte di bug subdoli** - Funzionano "quasi sempre", falliscono in casi specifici
+
+### Gotcha in Biovarase
+
+#### 1. `notify()` è sincrono
+
+**Il problema:**
+```python
+# Ti aspetti che notify() sia asincrono, invece è SINCRONO
+# I callback vengono eseguiti IMMEDIATAMENTE, non "dopo"
+
+# SBAGLIATO - KeyError!
+self.engine.notify("result_changed", result_id)
+ws_id = self.dict_results[item_id]["workstation_id"]  # Il dizionario è già stato svuotato!
+```
+
+**Perché succede:**
+Il callback `_on_result_changed` di un'altra view viene eseguito durante `notify()`, e quel callback chiama `on_open()` che svuota `dict_results`.
+
+**Soluzione:**
+```python
+# CORRETTO - Estrai i valori PRIMA di notify()
+ws_id = self.dict_results[item_id]["workstation_id"]
+self.engine.notify("result_changed", result_id)
+# Ora ws_id è al sicuro
+```
+
+**Regola:** Estrai sempre i dati necessari PRIMA di chiamare `notify()`.
+
+---
+
+#### 2. `transient()` rompe il resize su Windows
+
+**Il problema:**
+```python
+# Su Linux funziona perfettamente
+# Su Windows la finestra NON si ridimensiona!
+
+self.transient(parent)  # Lega la finestra al parent
+self.resizable(True, True)  # Non funziona su Windows!
+```
+
+**Perché succede:**
+È un bug/limitazione di Tk su Windows. Quando una finestra è `transient`, Windows ignora `resizable()`.
+
+**Soluzione:**
+```python
+# Per finestre che DEVONO ridimensionarsi: NON usare transient()
+# Usa transient() SOLO per dialog modali a dimensione fissa
+
+# Tabella decisionale:
+# | Tipo finestra      | transient | resizable |
+# |--------------------|-----------|-----------|
+# | Modal dialog       | Sì        | No        |
+# | Utility popup      | Sì        | No        |
+# | Finestra di lavoro | No        | Sì        |
+```
+
+**Regola:** Mai `transient()` + `resizable(True)` insieme.
+
+---
+
+#### 3. Accesso posizionale ai risultati DB
+
+**Il problema:**
+```python
+# Sembra funzionare, ma è fragile
+row = cursor.fetchone()
+name = row[0]      # Funziona... finché non cambi la query
+email = row[1]     # Se aggiungi una colonna, tutto si rompe!
+```
+
+**Perché è pericoloso:**
+- Se cambi l'ordine delle colonne nella SELECT, il codice si rompe silenziosamente
+- Se aggiungi colonne, gli indici slittano
+- Nessun errore a compile-time, bug a runtime
+
+**Soluzione:**
+```python
+# CORRETTO - Sempre accesso per nome
+row = cursor.fetchone()
+name = row["name"]    # Esplicito, non dipende dall'ordine
+email = row["email"]  # Aggiungi colonne senza problemi
+```
+
+**Regola:** Mai `row[0]`, sempre `row["campo"]`.
+
+---
+
+#### 4. `on_open()` nel `__init__`
+
+**Il problema:**
+```python
+class MyView(ParentView):
+    def __init__(self, parent):
+        super().__init__(parent, name="myview")
+        self._build_ui()
+        self.on_open()  # SBAGLIATO!
+```
+
+**Perché è pericoloso:**
+- `on_open()` potrebbe essere chiamato prima che la UI sia completamente costruita
+- Se `on_open()` fallisce, la finestra rimane in stato inconsistente
+- Con `ParentView`, se la finestra esiste già, `on_open()` viene chiamato due volte
+
+**Soluzione:**
+```python
+class MyView(ParentView):
+    def __init__(self, parent):
+        super().__init__(parent, name="myview")
+        if self._reusing:
+            return  # Finestra già esistente, esce
+        self._build_ui()
+        self.show()  # show() chiamerà on_open() internamente
+```
+
+**Regola:** Mai chiamare `on_open()` in `__init__()`.
+
+---
+
+#### 5. Dimenticare `unsubscribe()`
+
+**Il problema:**
+```python
+class MyView:
+    def __init__(self):
+        self.engine.subscribe("batch_changed", self.on_batch_changed)
+        # ...
+
+    def on_cancel(self):
+        self.destroy()  # MEMORY LEAK! Il callback resta registrato
+```
+
+**Perché succede:**
+Il callback mantiene un riferimento a `self`. Anche dopo `destroy()`, l'oggetto non viene garbage-collected perché il dizionario dei subscribers lo tiene in vita.
+
+**Conseguenze:**
+- Memory leak
+- Il callback "fantasma" continua a essere chiamato
+- Errori `TclError: invalid command name` quando il callback prova ad accedere a widget distrutti
+
+**Soluzione:**
+```python
+def on_cancel(self):
+    self.engine.unsubscribe("batch_changed", self.on_batch_changed)
+    self.destroy()
+```
+
+**Regola:** Ogni `subscribe()` deve avere il suo `unsubscribe()` in `on_cancel()`.
+
+---
+
+#### 6. Query senza filtro `org_id`
+
+**Il problema:**
+```python
+# SBAGLIATO - Ritorna TUTTI i batch di TUTTI i laboratori!
+sql = "SELECT * FROM batches WHERE status = 1"
+rows = self.engine.read(True, sql, ())
+```
+
+**Perché è grave:**
+In un sistema multi-tenant, un utente del Lab A vedrebbe i dati del Lab B. Violazione di privacy e potenzialmente di normative (GDPR, HIPAA).
+
+**Soluzione:**
+```python
+# CORRETTO - Filtra sempre per org_id
+lab_id = self.engine.current_ids.get("lab_id")
+sql = "SELECT * FROM batches WHERE status = 1 AND org_id = ?"
+rows = self.engine.read(True, sql, (lab_id,))
+```
+
+**Regola:** Ogni query su dati tenant-scoped DEVE avere `WHERE org_id = ?`.
+
+---
+
+### Come evitare i gotcha
+
+```
+1. LEGGI IL CLAUDE.md - Documenta i gotcha noti
+2. CODE REVIEW - Un secondo paio di occhi li trova
+3. TEST - I test di integrazione rivelano comportamenti inaspettati
+4. CHIEDI - Se qualcosa sembra strano, probabilmente c'è un gotcha
+5. DOCUMENTA - Quando ne trovi uno nuovo, aggiungilo qui!
+```
+
+### Differenza tra Edge Case e Gotcha
+
+| Aspetto | Edge Case | Gotcha |
+|---------|-----------|--------|
+| **Prevedibilità** | Puoi anticiparlo pensando ai limiti | Ti sorprende |
+| **Documentazione** | Spesso documentato | Raramente documentato |
+| **Causa** | Dati estremi/inusuali | Comportamento controintuitivo del framework |
+| **Esempio** | Divisione per zero | `notify()` sincrono |
+| **Soluzione** | Validazione input | Conoscere il framework |
 
 ---
 
@@ -1543,6 +1752,7 @@ def on_cancel(self):
 | **Duck Typing** | "Se cammina come un'anatra..." - Tipo basato su comportamento |
 | **EAFP** | Easier to Ask Forgiveness than Permission - try/except |
 | **Fixture** | Setup predefinito per i test |
+| **Gotcha** | Trappola nascosta o comportamento inaspettato che "cattura" lo sviluppatore (da "got you!") |
 | **Hash** | Trasformazione one-way di dati |
 | **Introspezione** | Capacità del codice di esaminare se stesso a runtime |
 | **LBYL** | Look Before You Leap - Controllare prima di agire (hasattr) |
