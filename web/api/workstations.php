@@ -81,11 +81,15 @@ try {
             MAX(r.received) AS last_result
         FROM results r
         JOIN batches b ON r.batch_id = b.batch_id
+        JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+        JOIN tests t ON tm.test_id = t.test_id
         WHERE r.org_id = :lab_id
           AND DATE(r.received) >= :date_from
           AND DATE(r.received) <= :date_to
           AND r.status = 1
           AND r.is_delete = 0
+          AND t.status = 1
+          AND tm.status = 1
         GROUP BY r.workstation_id
     ";
 
