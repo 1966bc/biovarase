@@ -447,8 +447,17 @@ class UI(ParentView):
             messagebox.showerror(_("Error"), f"{_('Failed to load workstations:')}\n{e}")
 
     def _on_workstation_selected(self, evt=None):
-        """Handle workstation selection from combobox (placeholder for future use)."""
-        pass
+        """Handle workstation selection - auto-load results."""
+        idx = self.cbx_workstation.current()
+        if idx < 0:
+            return
+
+        row = self.dict_workstations.get(idx)
+        if not row:
+            return
+
+        self.selected_ws_id = row["workstation_id"]
+        self._load_results()
 
     def _on_load_click(self):
         """Handle Load button click - load results for selected workstation."""
