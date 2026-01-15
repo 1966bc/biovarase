@@ -333,7 +333,7 @@ class Exporter:
         sql = """
             SELECT
                 b.batch_id,
-                b.lab_id,
+                b.org_id,
                 b.control_id,
                 b.test_method_id,
                 b.workstation_id,
