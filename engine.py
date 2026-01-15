@@ -706,10 +706,14 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         return os.path.join(os.path.dirname(__file__), file)
 
     def busy(self, caller):
+        """Set busy cursor and force GUI update."""
         caller.config(cursor="watch")
+        caller.update_idletasks()
 
     def not_busy(self, caller):
+        """Restore default cursor and force GUI update."""
         caller.config(cursor="")
+        caller.update_idletasks()
 
     def set_log_user(self, rs: Dict[str, Any]) -> None:
         """
