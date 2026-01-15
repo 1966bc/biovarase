@@ -2652,6 +2652,26 @@ class Main(tk.Toplevel):
 
         messagebox.showinfo(_("Section Changed"), f"{_('Now working in:')} {display_name}", parent=self)
 
+    def _close_all_windows(self):
+        """Close all child windows when changing lab context."""
+        # Get list of window names (excluding main)
+        windows_to_close = [
+            name for name in list(self.engine.dict_instances.keys())
+            if name != self.winfo_name()
+        ]
+
+        for name in windows_to_close:
+            try:
+                window = self.engine.dict_instances.get(name)
+                if window and window.winfo_exists():
+                    # Call on_cancel if available, otherwise destroy
+                    if hasattr(window, "on_cancel"):
+                        window.on_cancel()
+                    else:
+                        window.destroy()
+            except Exception:
+                pass
+
     def on_change_lab(self, _evt=None):
         """Change Laboratory - Admin only. Switch to different laboratory without logout."""
         from views.lab_selector import LabSelectorDialog
