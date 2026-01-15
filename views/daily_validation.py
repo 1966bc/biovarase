@@ -123,13 +123,9 @@ class UI(ParentView):
         self.cbx_workstation.pack(side=tk.LEFT, **paddings)
         self.cbx_workstation.bind("<<ComboboxSelected>>", self._on_workstation_selected)
 
-        # Top frame row 2: Info, Filter, Load button, Role
+        # Top frame row 2: Filter, Load button, Role
         frm_row2 = ttk.Frame(self.frm_main, style="App.TFrame")
         frm_row2.pack(side=tk.TOP, fill=tk.X, **paddings)
-
-        # Workstation info label (shows totals when selected)
-        self.lbl_ws_info = ttk.Label(frm_row2, text="", foreground="blue")
-        self.lbl_ws_info.pack(side=tk.LEFT, **paddings)
 
         # Filter checkbox - show only problems
         self.var_only_problems = tk.BooleanVar(value=True)  # Default: show only problems
@@ -420,7 +416,6 @@ class UI(ParentView):
 
             if not rows:
                 self.lbl_stats.config(text=_("No results for this date"))
-                self.lbl_ws_info.config(text="")
                 return
 
             display_values = []
@@ -439,7 +434,6 @@ class UI(ParentView):
 
             if display_values:
                 self.cbx_workstation.current(selected_idx)
-                self._update_ws_info(selected_idx)
 
             self.lbl_stats.config(
                 text=_("Select a workstation and click Load")
@@ -453,61 +447,8 @@ class UI(ParentView):
             messagebox.showerror(_("Error"), f"{_('Failed to load workstations:')}\n{e}")
 
     def _on_workstation_selected(self, evt=None):
-        """Handle workstation selection from combobox."""
-        idx = self.cbx_workstation.current()
-        if idx >= 0:
-            self._update_ws_info(idx)
-
-    def _update_ws_info(self, idx):
-        """Update workstation info label with totals, pending and QC problems."""
-        row = self.dict_workstations.get(idx)
-        if not row:
-            self.lbl_ws_info.config(text="")
-            return
-
-        total = row["total_results"] or 0
-        pending = row["pending_count"] or 0
-        count_3sd = row["count_3sd"] or 0
-        count_2sd = row["count_2sd"] or 0
-        approved = row["approval_id"] is not None
-
-        if approved:
-            self.lbl_ws_info.config(
-                text=f"✓ {_('Approved')} ({total} tot)",
-                foreground="green"
-            )
-        elif count_3sd > 0:
-            # Critical: has >3SD violations
-            parts = [f"{total} tot"]
-            if pending > 0:
-                parts.append(f"{pending} pend")
-            parts.append(f"⚠ {count_3sd} >3SD")
-            if count_2sd > 0:
-                parts.append(f"{count_2sd} >2SD")
-            self.lbl_ws_info.config(
-                text=", ".join(parts),
-                foreground="red"
-            )
-        elif count_2sd > 0:
-            # Warning: has >2SD
-            parts = [f"{total} tot"]
-            if pending > 0:
-                parts.append(f"{pending} pend")
-            parts.append(f"⚠ {count_2sd} >2SD")
-            self.lbl_ws_info.config(
-                text=", ".join(parts),
-                foreground="orange"
-            )
-        elif pending > 0:
-            self.lbl_ws_info.config(
-                text=f"{total} tot, {pending} pending",
-                foreground="orange"
-            )
-        else:
-            self.lbl_ws_info.config(
-                text=f"✓ {total} tot, {_('all validated')}",
-                foreground="green"
-            )
+        """Handle workstation selection from combobox (placeholder for future use)."""
+        pass
 
     def _on_load_click(self):
         """Handle Load button click - load results for selected workstation."""
@@ -527,7 +468,6 @@ class UI(ParentView):
             for new_idx, ws_data in self.dict_workstations.items():
                 if ws_data["workstation_id"] == saved_ws_id:
                     self.cbx_workstation.current(new_idx)
-                    self._update_ws_info(new_idx)
                     break
 
         # Load results for selected workstation
@@ -664,26 +604,39 @@ class UI(ParentView):
                     pending += 1
                 self._insert_result_row(row)
 
-            # Show filter status in stats
-            if only_problems:
-                # Get total results from workstation info
-                idx = self.cbx_workstation.current()
-                ws_data = self.dict_workstations.get(idx, {})
-                ws_total = ws_data.get("total_results", 0) or 0
+            # Get workstation data for stats
+            idx = self.cbx_workstation.current()
+            ws_data = self.dict_workstations.get(idx, {})
+            ws_total = ws_data.get("total_results", 0) or 0
+            count_3sd = ws_data.get("count_3sd", 0) or 0
+            count_2sd = ws_data.get("count_2sd", 0) or 0
+            approved = ws_data.get("approval_id") is not None
 
+            # Build stats text
+            if only_problems:
                 if total == 0 and ws_total > 0:
-                    # No problems found but there are results
-                    self.lbl_stats.config(
-                        text=f"{_('No problems in')} {ws_total} {_('results')}"
-                    )
+                    stats_text = f"✓ {_('No problems in')} {ws_total} {_('results')}"
                 else:
-                    self.lbl_stats.config(
-                        text=f"{_('Problems:')} {total}/{ws_total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
-                    )
+                    stats_text = f"{_('Problems:')} {total}/{ws_total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
             else:
-                self.lbl_stats.config(
-                    text=f"{_('Results:')} {total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
-                )
+                stats_text = f"{_('Results:')} {total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
+
+            # Add >3SD / >2SD info and set color
+            if approved:
+                stats_text = f"✓ {_('Approved')}  |  " + stats_text
+                self.lbl_stats.config(text=stats_text, foreground="green")
+            elif count_3sd > 0:
+                stats_text += f"  |  ⚠ {count_3sd} >3SD"
+                if count_2sd > 0:
+                    stats_text += f", {count_2sd} >2SD"
+                self.lbl_stats.config(text=stats_text, foreground="red")
+            elif count_2sd > 0:
+                stats_text += f"  |  ⚠ {count_2sd} >2SD"
+                self.lbl_stats.config(text=stats_text, foreground="orange")
+            elif pending > 0:
+                self.lbl_stats.config(text=stats_text, foreground="orange")
+            else:
+                self.lbl_stats.config(text=stats_text, foreground="green")
 
         except Exception as e:
             self.engine.on_log(
@@ -746,7 +699,11 @@ class UI(ParentView):
             color = None
 
         test_name = f"{test_desc}-{sample}"
-        batch_info = f"{lot_number} {level}".strip()
+        # Avoid duplicating level if already in lot_number (e.g., "73549FP00-L1 L1")
+        if level and lot_number.endswith(f"-{level}"):
+            batch_info = lot_number
+        else:
+            batch_info = f"{lot_number} {level}".strip()
         result_str = f"{result_val:.2f}"
 
         values = (batch_info, time_str, result_str, zscore_str, operator_str, status_text)
