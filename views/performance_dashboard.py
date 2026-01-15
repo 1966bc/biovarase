@@ -293,7 +293,11 @@ class UI(ParentView):
         self.current_from = from_date
         self.current_to = to_date
 
-        self._load_data(from_date, to_date)
+        self.engine.busy(self)
+        try:
+            self._load_data(from_date, to_date)
+        finally:
+            self.engine.not_busy(self)
 
     def _load_data(self, from_date, to_date):
         """Query results and aggregate by test_method + workstation."""
@@ -715,6 +719,7 @@ class UI(ParentView):
         if not filepath:
             return
 
+        self.engine.busy(self)
         try:
             wb = Workbook()
             ws = wb.active
@@ -818,6 +823,8 @@ class UI(ParentView):
                 f"{_('Export failed')}: {e}",
                 parent=self,
             )
+        finally:
+            self.engine.not_busy(self)
 
     def on_cancel(self, evt=None):
         """Close window."""

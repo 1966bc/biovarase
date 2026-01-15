@@ -216,57 +216,61 @@ class UI(ParentView):
             )
             return
 
-        # Query validated results for this date
-        sql = """
-            SELECT
-                r.result_id,
-                t.description AS test_name,
-                tm.test_method_id,
-                w.description AS workstation,
-                w.workstation_id,
-                b.batch_id,
-                b.lot_number,
-                b.expiration,
-                b.target,
-                b.sd,
-                b.description AS batch_desc,
-                r.result,
-                r.received,
-                r.validated_by,
-                r.validated_at,
-                u.last_name,
-                u.first_name,
-                un.description AS unit
-            FROM results r
-            INNER JOIN batches b ON r.batch_id = b.batch_id
-            INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
-            INNER JOIN tests t ON tm.test_id = t.test_id
-            INNER JOIN workstations w ON r.workstation_id = w.workstation_id
-            LEFT JOIN users u ON r.validated_by = u.user_id
-            LEFT JOIN units un ON tm.unit_id = un.unit_id
-            WHERE DATE(r.received) = ?
-              AND r.validated = 1
-              AND r.status = 1
-              AND r.is_delete = 0
-              AND b.org_id = ?
-              AND t.status = 1
-              AND tm.status = 1
-            ORDER BY t.description, w.description
-        """
-        rows = self.engine.read(True, sql, (selected_date.isoformat(), lab_id))
+        self.engine.busy(self)
+        try:
+            # Query validated results for this date
+            sql = """
+                SELECT
+                    r.result_id,
+                    t.description AS test_name,
+                    tm.test_method_id,
+                    w.description AS workstation,
+                    w.workstation_id,
+                    b.batch_id,
+                    b.lot_number,
+                    b.expiration,
+                    b.target,
+                    b.sd,
+                    b.description AS batch_desc,
+                    r.result,
+                    r.received,
+                    r.validated_by,
+                    r.validated_at,
+                    u.last_name,
+                    u.first_name,
+                    un.description AS unit
+                FROM results r
+                INNER JOIN batches b ON r.batch_id = b.batch_id
+                INNER JOIN test_methods tm ON b.test_method_id = tm.test_method_id
+                INNER JOIN tests t ON tm.test_id = t.test_id
+                INNER JOIN workstations w ON r.workstation_id = w.workstation_id
+                LEFT JOIN users u ON r.validated_by = u.user_id
+                LEFT JOIN units un ON tm.unit_id = un.unit_id
+                WHERE DATE(r.received) = ?
+                  AND r.validated = 1
+                  AND r.status = 1
+                  AND r.is_delete = 0
+                  AND b.org_id = ?
+                  AND t.status = 1
+                  AND tm.status = 1
+                ORDER BY t.description, w.description
+            """
+            rows = self.engine.read(True, sql, (selected_date.isoformat(), lab_id))
 
-        if not rows:
-            self.all_rows = []
-            messagebox.showinfo(
-                self.engine.app_title,
-                _("No validated results found for this date."),
-                parent=self,
-            )
-            return
+            if not rows:
+                self.all_rows = []
+                messagebox.showinfo(
+                    self.engine.app_title,
+                    _("No validated results found for this date."),
+                    parent=self,
+                )
+                return
 
-        # Store all rows and apply filter
-        self.all_rows = list(rows)
-        self._apply_filter()
+            # Store all rows and apply filter
+            self.all_rows = list(rows)
+            self._apply_filter()
+        finally:
+            self.engine.not_busy(self)
 
     def _on_filter_change(self, evt=None):
         """Handle filter combobox change."""
