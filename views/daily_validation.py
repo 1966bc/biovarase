@@ -617,12 +617,13 @@ class UI(ParentView):
             # Get workstation data for stats
             idx = self.cbx_workstation.current()
             ws_data = self.dict_workstations.get(idx, {})
+            ws_name = ws_data.get("workstation_name", "")
             ws_total = ws_data.get("total_results", 0) or 0
             count_3sd = ws_data.get("count_3sd", 0) or 0
             count_2sd = ws_data.get("count_2sd", 0) or 0
             approved = ws_data.get("approval_id") is not None
 
-            # Build stats text
+            # Build stats text with workstation name
             if only_problems:
                 if total == 0 and ws_total > 0:
                     stats_text = f"✓ {_('No problems in')} {ws_total} {_('results')}"
@@ -631,9 +632,11 @@ class UI(ParentView):
             else:
                 stats_text = f"{_('Results:')} {total}  |  {_('Validated:')} {validated}  |  {_('Pending:')} {pending}"
 
-            # Add approval status and >3SD / >2SD info, set color based on actual state
+            # Add workstation name and approval status
             if approved:
-                stats_text = f"✓ {_('Approved')}  |  " + stats_text
+                stats_text = f"{ws_name}  |  ✓ {_('Approved')}  |  " + stats_text
+            else:
+                stats_text = f"{ws_name}  |  " + stats_text
 
             # Color based on actual problems (not just approval status)
             if count_3sd > 0:
