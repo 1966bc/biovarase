@@ -603,7 +603,8 @@ class Controller:
         batch_id: int,
         workstation_id: int,
         limit: Optional[int] = None,
-        result_id: Optional[int] = None
+        result_id: Optional[int] = None,
+        db=None
     ) -> List[float]:
         """
         Retrieve QC results series for a given batch and workstation.
@@ -613,6 +614,7 @@ class Controller:
             workstation_id: Workstation identifier
             limit: Maximum number of results to retrieve
             result_id: Optional upper limit for result_id (inclusive)
+            db: Optional database connection (BackgroundConnection for threaded operations)
 
         Returns:
             List of results (floats) in chronological order (oldest to newest)
@@ -643,7 +645,7 @@ class Controller:
             """
             args = (batch_id, workstation_id, limit)
 
-        rs = self.read(True, sql, args)
+        rs = (db or self).read(True, sql, args)
 
         if not rs:
             return series

@@ -1169,10 +1169,12 @@ class UI(ParentView):
         print("[DEBUG] Export started - interactions disabled")
 
         def worker():
-            """Background worker for export."""
+            """Background worker for export using dedicated DB connection."""
             try:
-                print("[DEBUG] Worker thread started")
-                self.engine.quick_data_analysis(self.selected_date, None)
+                print("[DEBUG] Worker thread started - creating background connection")
+                with self.engine.get_background_connection() as bg:
+                    print("[DEBUG] Background connection created, starting export")
+                    self.engine.quick_data_analysis(self.selected_date, None, db=bg)
                 print("[DEBUG] Worker thread completed")
                 self.async_queue.put(("done", None))
             except Exception as e:
