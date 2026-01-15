@@ -207,6 +207,13 @@ class UI(ParentView):
         self.lbl_stats = ttk.Label(frm_stats, text=_("Select a workstation and click Load"))
         self.lbl_stats.pack(side=tk.LEFT)
 
+        # Progress bar (hidden by default)
+        self.progress = ttk.Progressbar(
+            frm_stats,
+            mode="indeterminate",
+            length=120
+        )
+
         # Buttons frame
         frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
         frm_buttons.pack(side=tk.TOP, fill=tk.X, **paddings)
@@ -460,6 +467,18 @@ class UI(ParentView):
         self.selected_ws_id = row["workstation_id"]
         self._load_results()
 
+    def _start_progress(self):
+        """Show and start the progress bar animation."""
+        self.progress.pack(side=tk.RIGHT, padx=(10, 0))
+        self.progress.start(10)
+        self.update()
+
+    def _stop_progress(self):
+        """Stop and hide the progress bar."""
+        self.progress.stop()
+        self.progress.pack_forget()
+        self.update()
+
     def _on_load_click(self):
         """Handle Load button click - load results for selected workstation."""
         # Save currently selected workstation_id BEFORE refresh
@@ -470,7 +489,7 @@ class UI(ParentView):
             if row:
                 saved_ws_id = row["workstation_id"]
 
-        self.engine.busy(self)
+        self._start_progress()
         try:
             # Refresh workstations list
             self._load_workstations()
@@ -495,7 +514,7 @@ class UI(ParentView):
             self.selected_ws_id = row["workstation_id"]
             self._load_results()
         finally:
-            self.engine.not_busy(self)
+            self._stop_progress()
 
     # =========================================================================
     # RESULTS LOADING
@@ -891,7 +910,7 @@ class UI(ParentView):
         if not messagebox.askyesno(_("Confirm Approval"), msg, parent=self):
             return
 
-        self.engine.busy(self)
+        self._start_progress()
         try:
             user_id = self.engine.log_user.get("user_id")
             ws_id = row["workstation_id"]
@@ -941,7 +960,7 @@ class UI(ParentView):
             )
             messagebox.showerror(_("Error"), f"{_('Failed to approve:')}\n{e}")
         finally:
-            self.engine.not_busy(self)
+            self._stop_progress()
 
     def _on_validate_result(self):
         """Validate selected result(s)."""
@@ -1013,7 +1032,7 @@ class UI(ParentView):
 
     def _validate_batch(self, result_ids):
         """Validate multiple results with single UPDATE."""
-        self.engine.busy(self)
+        self._start_progress()
         try:
             user_id = self.engine.log_user.get("user_id")
             count = len(result_ids)
@@ -1055,7 +1074,7 @@ class UI(ParentView):
             )
             messagebox.showerror(_("Error"), f"{_('Failed to validate:')}\n{e}")
         finally:
-            self.engine.not_busy(self)
+            self._stop_progress()
 
     def _on_invalidate(self):
         """Invalidate a validated result."""
@@ -1129,7 +1148,7 @@ class UI(ParentView):
             messagebox.showinfo(_("Export"), _("Please load data first."))
             return
 
-        self.engine.busy(self)
+        self._start_progress()
         try:
             self.engine.quick_data_analysis(self.selected_date, None)
         except Exception as e:
@@ -1139,7 +1158,7 @@ class UI(ParentView):
             )
             messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
         finally:
-            self.engine.not_busy(self)
+            self._stop_progress()
 
     # =========================================================================
     # NOTES
