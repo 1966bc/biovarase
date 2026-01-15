@@ -434,10 +434,11 @@ class UI(ParentView):
 
             if display_values:
                 self.cbx_workstation.current(selected_idx)
-
-            self.lbl_stats.config(
-                text=_("Select a workstation and click Load")
-            )
+                # Auto-load results for selected workstation
+                ws_row = self.dict_workstations.get(selected_idx)
+                if ws_row:
+                    self.selected_ws_id = ws_row["workstation_id"]
+                    self._load_results()
 
         except Exception as e:
             self.engine.on_log(
