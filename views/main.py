@@ -2711,6 +2711,18 @@ class Main(tk.Toplevel):
             self._close_all_windows()
             self.set_categories()
 
+            # Update title and status bar
+            company = self.engine.get_company_data()
+            if company:
+                site_name = company.get('site', company.get('lab', ''))
+                self.title(f"Biovarase {site_name}")
+                self.status_bar_site_description.set(
+                    self.get_status_bar_site_description(company)
+                )
+            else:
+                self.title("Biovarase")
+                self.status_bar_site_description.set("")
+
             # Get lab name for confirmation message
             lab_row = self.engine.read(
                 False,
