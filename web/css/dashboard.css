@@ -79,6 +79,15 @@ body {
     gap: 6px;
 }
 
+.date-display {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    background: #e9ecef;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
 .date-range label {
     color: var(--color-text-muted);
     font-size: 0.85rem;

@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listeners
     document.getElementById('refreshBtn').addEventListener('click', loadWorkstations);
-    daysSelect.addEventListener('change', loadWorkstations);
+    daysSelect.addEventListener('change', () => { loadWorkstations(); updateDateDisplay(); });
     dateFrom.addEventListener('change', onDateRangeChange);
     dateTo.addEventListener('change', onDateRangeChange);
     document.getElementById('clearDates').addEventListener('click', clearDateRange);
@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (CONFIG.labId) {
         loadWorkstations();
         startAutoRefresh();
+        updateDateDisplay();
     } else {
         showError('lab_id parameter required. Example: ?lab_id=2002');
     }
@@ -97,6 +98,29 @@ function onDateRangeChange() {
     if (dateFrom && dateTo) {
         loadWorkstations();
     }
+    updateDateDisplay();
+}
+
+/**
+ * Update the date display in Italian format
+ */
+function updateDateDisplay() {
+    const display = document.getElementById('dateDisplay');
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const days = document.getElementById('daysSelect').value;
+
+    if (dateFrom && dateTo) {
+        const fromDate = new Date(dateFrom).toLocaleDateString('it-IT');
+        const toDate = new Date(dateTo).toLocaleDateString('it-IT');
+        display.textContent = `📅 ${fromDate} - ${toDate}`;
+    } else if (days === '1') {
+        display.textContent = `📅 Oggi: ${new Date().toLocaleDateString('it-IT')}`;
+    } else {
+        const fromDate = new Date();
+        fromDate.setDate(fromDate.getDate() - (days - 1));
+        display.textContent = `📅 ${fromDate.toLocaleDateString('it-IT')} - ${new Date().toLocaleDateString('it-IT')}`;
+    }
 }
 
 /**
@@ -107,6 +131,7 @@ function clearDateRange() {
     document.getElementById('dateTo').value = '';
     document.getElementById('daysSelect').disabled = false;
     loadWorkstations();
+    updateDateDisplay();
 }
 
 /**
@@ -516,6 +541,24 @@ function formatTime(datetime) {
     if (!datetime) return '-';
     const date = new Date(datetime);
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Format date in Italian format (dd/mm/yyyy)
+ */
+function formatDate(datetime) {
+    if (!datetime) return '-';
+    const date = new Date(datetime);
+    return date.toLocaleDateString('it-IT');
+}
+
+/**
+ * Format datetime in Italian format (dd/mm/yyyy HH:mm)
+ */
+function formatDateTime(datetime) {
+    if (!datetime) return '-';
+    const date = new Date(datetime);
+    return date.toLocaleDateString('it-IT') + ' ' + date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
 /**
