@@ -470,28 +470,32 @@ class UI(ParentView):
             if row:
                 saved_ws_id = row["workstation_id"]
 
-        # Refresh workstations list
-        self._load_workstations()
+        self.engine.busy(self)
+        try:
+            # Refresh workstations list
+            self._load_workstations()
 
-        # Restore selection if possible
-        if saved_ws_id is not None:
-            for new_idx, ws_data in self.dict_workstations.items():
-                if ws_data["workstation_id"] == saved_ws_id:
-                    self.cbx_workstation.current(new_idx)
-                    break
+            # Restore selection if possible
+            if saved_ws_id is not None:
+                for new_idx, ws_data in self.dict_workstations.items():
+                    if ws_data["workstation_id"] == saved_ws_id:
+                        self.cbx_workstation.current(new_idx)
+                        break
 
-        # Load results for selected workstation
-        idx = self.cbx_workstation.current()
-        if idx < 0:
-            messagebox.showwarning(_("Validation"), _("Please select a workstation."), parent=self)
-            return
+            # Load results for selected workstation
+            idx = self.cbx_workstation.current()
+            if idx < 0:
+                messagebox.showwarning(_("Validation"), _("Please select a workstation."), parent=self)
+                return
 
-        row = self.dict_workstations.get(idx)
-        if not row:
-            return
+            row = self.dict_workstations.get(idx)
+            if not row:
+                return
 
-        self.selected_ws_id = row["workstation_id"]
-        self._load_results()
+            self.selected_ws_id = row["workstation_id"]
+            self._load_results()
+        finally:
+            self.engine.not_busy(self)
 
     # =========================================================================
     # RESULTS LOADING
@@ -887,6 +891,7 @@ class UI(ParentView):
         if not messagebox.askyesno(_("Confirm Approval"), msg, parent=self):
             return
 
+        self.engine.busy(self)
         try:
             user_id = self.engine.log_user.get("user_id")
             ws_id = row["workstation_id"]
@@ -935,6 +940,8 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror(_("Error"), f"{_('Failed to approve:')}\n{e}")
+        finally:
+            self.engine.not_busy(self)
 
     def _on_validate_result(self):
         """Validate selected result(s)."""
@@ -1006,6 +1013,7 @@ class UI(ParentView):
 
     def _validate_batch(self, result_ids):
         """Validate multiple results with single UPDATE."""
+        self.engine.busy(self)
         try:
             user_id = self.engine.log_user.get("user_id")
             count = len(result_ids)
@@ -1046,6 +1054,8 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror(_("Error"), f"{_('Failed to validate:')}\n{e}")
+        finally:
+            self.engine.not_busy(self)
 
     def _on_invalidate(self):
         """Invalidate a validated result."""
