@@ -404,6 +404,7 @@ TRANSLATIONS = {
     # Workstation Test Methods Mapping
     # ==========================================================================
     "Workstations — Test Methods Mapping": {"it": "Postazioni — Mappatura Test Laboratorio", "en": "Workstations — Laboratory Tests Mapping"},
+    "Double-click action:": {"it": "Azione doppio click:", "en": "Double-click action:"},
     "Edit External Code": {"it": "Modifica Codice Esterno", "en": "Edit External Code"},
     "Remove Mapping": {"it": "Rimuovi Mappatura", "en": "Remove Mapping"},
     "External Code": {"it": "Codice Esterno", "en": "External Code"},
