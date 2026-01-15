@@ -20,6 +20,8 @@ Features:
 """
 
 import sys
+import threading
+import queue
 import tkinter as tk
 
 from i18n import _
@@ -77,6 +79,9 @@ class UI(ParentView):
         self.dict_workstations = {}  # combobox index -> workstation data
         self.dict_results = {}       # item_id -> result data
         self.dict_actions = {}       # combobox index -> action data
+
+        # Queue for async operations
+        self.async_queue = queue.Queue()
 
         # Build UI
         self._build_ui()
@@ -1152,17 +1157,31 @@ class UI(ParentView):
             messagebox.showinfo(_("Export"), _("Please load data first."))
             return
 
+        def worker():
+            """Background worker for export."""
+            try:
+                self.engine.quick_data_analysis(self.selected_date, None)
+                self.async_queue.put(("done", None))
+            except Exception as e:
+                self.async_queue.put(("error", e))
+
+        def check_queue():
+            """Check queue for worker results."""
+            try:
+                status, data = self.async_queue.get_nowait()
+                self._stop_progress()
+                if status == "error":
+                    self.engine.on_log(
+                        "_on_export",
+                        data, type(data), sys.modules[__name__]
+                    )
+                    messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{data}")
+            except queue.Empty:
+                self.after(50, check_queue)
+
         self._start_progress()
-        try:
-            self.engine.quick_data_analysis(self.selected_date, None)
-        except Exception as e:
-            self.engine.on_log(
-                "_on_export",
-                e, type(e), sys.modules[__name__]
-            )
-            messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
-        finally:
-            self._stop_progress()
+        threading.Thread(target=worker, daemon=True).start()
+        self.after(50, check_queue)
 
     # =========================================================================
     # NOTES
