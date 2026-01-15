@@ -1119,6 +1119,7 @@ class UI(ParentView):
             messagebox.showinfo(_("Export"), _("Please load data first."))
             return
 
+        self.engine.busy(self)
         try:
             self.engine.quick_data_analysis(self.selected_date, None)
         except Exception as e:
@@ -1127,6 +1128,8 @@ class UI(ParentView):
                 e, type(e), sys.modules[__name__]
             )
             messagebox.showerror(_("Error"), f"{_('Failed to export:')}\n{e}")
+        finally:
+            self.engine.not_busy(self)
 
     # =========================================================================
     # NOTES
