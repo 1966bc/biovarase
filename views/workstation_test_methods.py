@@ -70,7 +70,7 @@ class UI(ParentView):
             return
 
         self.resizable(True, True)
-        self.geometry("900x600")
+        self.geometry("1020x600")
         self.bind("<Alt-c>", self.on_cancel)
 
         self.child = None
@@ -137,7 +137,7 @@ class UI(ParentView):
         ).pack(side=tk.LEFT)
 
         # Treeview with scrollbar
-        cols_methods = ("test", "code", "external_code", "sample", "method", "unit")
+        cols_methods = ("test", "code", "external_code", "sample", "method", "unit", "category")
         self.lstTestsMethods = ttk.Treeview(frm_right, columns=cols_methods, show="headings")
 
         self.lstTestsMethods.column("test", width=200, minwidth=180, anchor=tk.W, stretch=True)
@@ -157,6 +157,9 @@ class UI(ParentView):
 
         self.lstTestsMethods.column("unit", width=80, minwidth=80, anchor=tk.W, stretch=False)
         self.lstTestsMethods.heading("unit", text=_("Unit"), anchor=tk.W)
+
+        self.lstTestsMethods.column("category", width=120, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstTestsMethods.heading("category", text=_("Category"), anchor=tk.W)
 
         sb_methods = ttk.Scrollbar(frm_right, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
         self.lstTestsMethods.configure(yscrollcommand=sb_methods.set)
@@ -506,6 +509,7 @@ class UI(ParentView):
                 IFNULL(samples.description, 'NA')  AS sample_descr,
                 IFNULL(methods.description, 'NA')  AS method_descr,
                 IFNULL(units.description,   'NA')  AS unit_descr,
+                IFNULL(categories.description, '') AS category_descr,
                 test_methods.status
             FROM workstation_test_methods
             JOIN test_methods
@@ -518,6 +522,8 @@ class UI(ParentView):
                 ON test_methods.method_id = methods.method_id
             LEFT JOIN units
                 ON test_methods.unit_id = units.unit_id
+            LEFT JOIN categories
+                ON test_methods.category_id = categories.category_id
             WHERE workstation_test_methods.workstation_id = ?
               AND tests.status = 1
               AND test_methods.status = 1
@@ -536,6 +542,7 @@ class UI(ParentView):
             sample_descr   = row["sample_descr"]
             method_descr   = row["method_descr"]
             unit_descr     = row["unit_descr"]
+            category_descr = row["category_descr"]
             status         = int(row["status"])
 
             self.test_methods_assigned.append(test_method_id)
@@ -547,7 +554,7 @@ class UI(ParentView):
                 tk.END,
                 iid=str(test_method_id),
                 text=str(test_method_id),
-                values=(test_descr, code, external_code, sample_descr, method_descr, unit_descr),
+                values=(test_descr, code, external_code, sample_descr, method_descr, unit_descr, category_descr),
                 tags=tags
             )
 
