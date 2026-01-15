@@ -62,6 +62,8 @@ try {
         WHERE b.workstation_id = :ws_id
           AND b.org_id = :lab_id
           AND b.status = 1
+          AND t.status = 1
+          AND tm.status = 1
         GROUP BY t.test_id, t.description, tm.test_method_id, m.description, u.description
         ORDER BY t.description
     ";
