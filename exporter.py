@@ -289,7 +289,7 @@ class Exporter:
 
         return ws, row + 1
 
-    def _fetch_test_methods(self, lab_id, category_id=None):
+    def _fetch_test_methods(self, lab_id, category_id=None, db=None):
         """
         Return test methods for a given lab as list of dicts with keys:
           - test_method_id
@@ -300,6 +300,7 @@ class Exporter:
         Args:
             lab_id: Laboratory ID
             category_id: Optional category filter (None or 0 = all, >0 = specific category)
+            db: Optional database connection (BackgroundConnection or self)
         """
         sql = """
             SELECT
@@ -327,9 +328,9 @@ class Exporter:
 
         sql += " ORDER BY t.description;"
 
-        return self.read(True, sql, tuple(args)) or []  # type: ignore
+        return (db or self).read(True, sql, tuple(args)) or []  # type: ignore
 
-    def _fetch_batches(self, test_method_id, lab_id):
+    def _fetch_batches(self, test_method_id, lab_id, db=None):
         sql = """
             SELECT
                 b.batch_id,
@@ -361,9 +362,9 @@ class Exporter:
               AND section.parent_id = ?
               AND section.org_type = 'section'
         """
-        return self.read(True, sql, (test_method_id, lab_id)) or []
+        return (db or self).read(True, sql, (test_method_id, lab_id)) or []
 
-    def _fetch_results(self, batch_id, day_sql, workstation_id):
+    def _fetch_results(self, batch_id, day_sql, workstation_id, db=None):
         """
         Return result rows for a given batch, day and workstation as list of dicts.
 
@@ -375,6 +376,9 @@ class Exporter:
           - workstation_serial
           - workstation_id
           - received_date     (date)
+
+        Args:
+            db: Optional database connection (BackgroundConnection or self)
         """
         sql = """
             SELECT
@@ -397,9 +401,9 @@ class Exporter:
               AND r.is_delete = 0
             ORDER BY r.received DESC;
         """
-        return self.read(True, sql, (batch_id, day_sql, workstation_id)) or []  # type: ignore
+        return (db or self).read(True, sql, (batch_id, day_sql, workstation_id)) or []  # type: ignore
 
-    def _fetch_control(self, control_id):
+    def _fetch_control(self, control_id, db=None):
         """Return (control_desc, supplier_desc) or (None, None)."""
         sql = """
             SELECT
@@ -410,7 +414,7 @@ class Exporter:
                     ON c.supplier_id = s.supplier_id
             WHERE c.control_id = ?;
         """
-        row = self.read(False, sql, (control_id,))  # type: ignore
+        row = (db or self).read(False, sql, (control_id,))  # type: ignore
         if not row:
             return None, None
         return row["control_description"], row["supplier_description"]
@@ -470,13 +474,14 @@ class Exporter:
                 fill_type="solid",
             )
 
-    def quick_data_analysis(self, selected_date, category_id=None):
+    def quick_data_analysis(self, selected_date, category_id=None, db=None):
         """
         Generate 'Biovarase' Excel report for a given day.
 
         Args:
             selected_date: Date to generate report for
             category_id: Optional category filter (None = all categories, 0 = all, >0 = specific category)
+            db: Optional database connection (BackgroundConnection for threaded export)
         """
 
         # 1) Normalize date
@@ -497,14 +502,14 @@ class Exporter:
             return
 
         # 5) Fetch test methods (with optional category filter)
-        for row in self._fetch_test_methods(lab_id, category_id):
+        for row in self._fetch_test_methods(lab_id, category_id, db=db):
             tm_id = row["test_method_id"]
             tm_sample = row["sample"]
             tm_test_desc = row["test_description"]
             tm_category_desc = row["category_description"]
 
             # 6) Batches per test method
-            for batch in self._fetch_batches(tm_id, lab_id):
+            for batch in self._fetch_batches(tm_id, lab_id, db=db):
 
                 b_batch_id = batch["batch_id"]
                 b_org_id = batch["org_id"]
@@ -531,12 +536,12 @@ class Exporter:
                 b_equipment_desc = batch["equipment_description"]
 
                 # 7) Results of the day
-                results = self._fetch_results(b_batch_id, day_sql, b_workstation_id)
+                results = self._fetch_results(b_batch_id, day_sql, b_workstation_id, db=db)
                 if not results:
                     continue
 
                 # 8) Control info
-                control_desc, control_supplier = self._fetch_control(b_control_id)
+                control_desc, control_supplier = self._fetch_control(b_control_id, db=db)
 
                 for row in results:
                     r_result_id = row["result_id"]
@@ -554,6 +559,7 @@ class Exporter:
                             r_workstation_id,
                             int(self.get_observations()),
                             r_result_id,
+                            db=db,
                         )
                         if not series:
                             continue
