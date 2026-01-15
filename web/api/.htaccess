@@ -1,0 +1,19 @@
+# API Protection
+
+# Only allow specific HTTP methods
+<LimitExcept GET POST>
+    Deny from all
+</LimitExcept>
+
+# CORS headers for local development
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Lab-Id"
+    Header set Content-Type "application/json; charset=UTF-8"
+</IfModule>
+
+# Handle preflight requests
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]

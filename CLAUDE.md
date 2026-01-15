@@ -113,6 +113,69 @@ self.engine.start_progress(self.progress, self)
 self.engine.stop_progress(self.progress, self)
 ```
 
+## Web Dashboard (TSLB)
+
+Dashboard web per i Tecnici Sanitari di Laboratorio Biomedico, accessibile via browser.
+
+**Stack:** PHP 8+ / JavaScript / Chart.js / MariaDB
+
+**Location:** `web/` folder, deploy to `/var/www/html/biovarase/`
+
+**Files:**
+| File | Purpose |
+|------|---------|
+| `api/config.php` | DB connection, utilities (jsonResponse, requireLabId) |
+| `api/workstations.php` | Lista workstation con stato QC (semaforo) |
+| `api/workstation_detail.php` | Dettaglio risultati per workstation |
+| `api/workstation_tests.php` | Lista test per workstation con stato QC |
+| `api/test_controls.php` | Dati serie + statistiche + drift analysis |
+| `api/test_availability.php` | Dove un test può essere refertato |
+| `api/series.php` | Serie risultati per grafico singolo |
+| `dashboard.html` | Dashboard principale con card semaforo |
+| `charts.html` | Grafici Levey-Jennings multipli |
+| `css/dashboard.css` | Stili dashboard |
+| `css/charts.css` | Stili pagina grafici |
+| `js/dashboard.js` | Logica dashboard |
+| `js/charts.js` | Logica grafici LJ |
+| `js/chart.min.js` | Chart.js library |
+| `js/chartjs-plugin-annotation.min.js` | Plugin per linee target/SD |
+
+**URLs:**
+- Dashboard: `dashboard.html?lab_id=2002`
+- Grafici: `charts.html?lab_id=2002&workstation_id=45`
+
+**Features:**
+- Semaforo per workstation (verde/giallo/rosso/grigio)
+- Filtro periodo: oggi, 7/30/60 giorni o intervallo date personalizzato
+- Lista test colorata per stato (rosso=violazioni, giallo=warning)
+- Grafici Levey-Jennings multipli (tutti i controlli di un test)
+- Drift detection: 7+ punti consecutivi (warning), 10+ (violazione Westgard)
+- Trend detection: 6+ punti consecutivi crescenti/decrescenti
+- Badge SCADUTO per lotti oltre expiration date
+- Date primo/ultimo risultato per ogni batch
+
+**Production deployment:**
+1. Copy `web/` folder to `/var/www/html/biovarase/`
+2. Edit `api/config.php`: set DB_HOST, DB_PASS for production server
+3. Restrict access via `.htaccess` if needed (IP whitelist)
+
+**API Pattern:**
+```php
+require_once __DIR__ . '/config.php';
+requireMethod(['GET']);
+$labId = requireLabId();
+
+// Date range: custom dates or days
+if (isset($_GET['date_from']) && isset($_GET['date_to'])) {
+    $dateFrom = $_GET['date_from'];
+    $dateTo = $_GET['date_to'];
+} else {
+    $days = isset($_GET['days']) ? min((int)$_GET['days'], 180) : 60;
+    $dateFrom = date('Y-m-d', strtotime("-" . ($days - 1) . " days"));
+    $dateTo = date('Y-m-d');
+}
+```
+
 ## Language Policy
 
 - **Communication:** Italian
