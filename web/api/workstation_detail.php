@@ -83,6 +83,8 @@ try {
           AND DATE(r.received) = :date
           AND r.status = 1
           AND r.is_delete = 0
+          AND t.status = 1
+          AND tm.status = 1
         ORDER BY
             CASE
                 WHEN ABS((r.result - b.target) / b.sd) >= 3 THEN 0

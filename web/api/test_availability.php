@@ -36,6 +36,8 @@ try {
         JOIN methods m ON tm.method_id = m.method_id
         JOIN units u ON tm.unit_id = u.unit_id
         WHERE tm.test_method_id = :tm_id
+          AND t.status = 1
+          AND tm.status = 1
     ";
 
     $stmtTest = $pdo->prepare($sqlTest);
