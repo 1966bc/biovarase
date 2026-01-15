@@ -218,7 +218,7 @@ self.engine.notify("batch_changed", batch_id)                    # after changes
 self.engine.unsubscribe("batch_changed", self.on_batch_changed)  # in on_cancel()
 ```
 
-Events: `batch_changed`, `result_changed`, `section_changed`, `supplier_changed`, `equipment_changed`, `test_method_changed`
+Events: `batch_changed`, `result_changed`, `section_changed`, `supplier_changed`, `equipment_changed`, `test_method_changed`, `note_changed`, `tests_changed`
 
 **IMPORTANT:** `notify()` is **synchronous** - callbacks execute immediately. If a callback clears dictionaries or reloads data, extract any needed values BEFORE calling notify:
 ```python
@@ -630,6 +630,9 @@ mysql -u root -p biovarase < migrations/023_cleanup_abbott_pre_2026.sql
 
 # Translate methods to English (international naming)
 mysql -u root -p biovarase < migrations/024_methods_to_english.sql
+
+# Notes permission control (created_by field)
+mysql -u root -p biovarase < migrations/025_add_created_by_to_notes.sql
 ```
 
 ## Key Files

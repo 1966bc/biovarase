@@ -76,6 +76,11 @@ class UI(ParentView):
         self.child = None
         self.selected_workstation = None
         self.test_methods_assigned = []
+        self.action_var = tk.StringVar(value="edit")  # "edit" or "remove"
+
+        # Subscribe to events (Observer pattern)
+        self.engine.subscribe("test_method_changed", self._on_test_method_changed)
+        self.engine.subscribe("tests_changed", self._on_test_method_changed)
 
         # --- Build interface ------------------------------------------------
         self._build_ui()
@@ -111,25 +116,25 @@ class UI(ParentView):
         frm_right = ttk.Frame(pane_right, style="Panel.TFrame")
         frm_right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
-        # Buttons frame FIRST (pack order matters - bottom first)
-        frm_buttons = ttk.Frame(frm_right, style="App.TFrame")
-        frm_buttons.pack(side=tk.BOTTOM, fill=tk.X, pady=(5, 0))
+        # Action selector frame (bottom)
+        frm_action = ttk.Frame(frm_right, style="App.TFrame")
+        frm_action.pack(side=tk.BOTTOM, fill=tk.X, pady=(5, 0))
 
-        self.btn_edit_external = ttk.Button(
-            frm_buttons,
+        ttk.Label(frm_action, text=_("Double-click action:")).pack(side=tk.LEFT, padx=(0, 10))
+
+        ttk.Radiobutton(
+            frm_action,
             text=_("Edit External Code"),
-            command=self.on_edit_external_code,
-            state=tk.DISABLED
-        )
-        self.btn_edit_external.pack(side=tk.LEFT, padx=(0, 5))
+            variable=self.action_var,
+            value="edit"
+        ).pack(side=tk.LEFT, padx=(0, 10))
 
-        self.btn_remove = ttk.Button(
-            frm_buttons,
+        ttk.Radiobutton(
+            frm_action,
             text=_("Remove Mapping"),
-            command=self.on_remove_mapping,
-            state=tk.DISABLED
-        )
-        self.btn_remove.pack(side=tk.LEFT)
+            variable=self.action_var,
+            value="remove"
+        ).pack(side=tk.LEFT)
 
         # Treeview with scrollbar
         cols_methods = ("test", "code", "external_code", "sample", "method", "unit")
@@ -159,7 +164,7 @@ class UI(ParentView):
         sb_methods.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.lstTestsMethods.tag_configure("inactive", background="light gray")
-        self.lstTestsMethods.bind("<<TreeviewSelect>>", self.on_test_method_selected)
+        self.lstTestsMethods.bind("<Double-1>", self.on_test_method_activated)
 
     def on_open(self):
         self.title(_("Workstations — Test Methods Mapping"))
@@ -654,17 +659,29 @@ class UI(ParentView):
         self._set_tests_methods((ws_id,))
 
 
-    def on_test_method_selected(self, evt=None):
+    def on_test_method_activated(self, evt=None):
         """
-        Enable/disable action buttons based on selection and permissions.
-        """
-        sel = self.lstTestsMethods.selection()
-        has_selection = bool(sel)
-        can_edit = self.engine.can_validate_qc()
+        Double-click on test method: dispatch to edit or remove based on radiobox.
 
-        state = tk.NORMAL if (has_selection and can_edit) else tk.DISABLED
-        self.btn_edit_external.config(state=state)
-        self.btn_remove.config(state=state)
+        Permission required: Admin/Superuser only.
+        """
+        if not self.engine.can_validate_qc():
+            messagebox.showwarning(
+                self.engine.app_title,
+                self.engine.user_not_enable,
+                parent=self
+            )
+            return
+
+        sel = self.lstTestsMethods.selection()
+        if not sel:
+            return
+
+        action = self.action_var.get()
+        if action == "edit":
+            self.on_edit_external_code()
+        elif action == "remove":
+            self.on_remove_mapping()
 
     def on_edit_external_code(self, evt=None):
         """
@@ -731,6 +748,12 @@ class UI(ParentView):
         # 5) Refresh list
         self._set_tests_methods((self.selected_workstation["workstation_id"],))
 
+    def _on_test_method_changed(self, data=None):
+        """Observer callback: refresh when test_method data changes."""
+        self.refresh_from_tests()
+
     def on_cancel(self, evt=None):
         """Close window."""
+        self.engine.unsubscribe("test_method_changed", self._on_test_method_changed)
+        self.engine.unsubscribe("tests_changed", self._on_test_method_changed)
         super().on_cancel(evt)
