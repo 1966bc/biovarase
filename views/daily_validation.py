@@ -207,11 +207,19 @@ class UI(ParentView):
         self.lbl_stats = ttk.Label(frm_stats, text=_("Select a workstation and click Load"))
         self.lbl_stats.pack(side=tk.LEFT)
 
-        # Progress bar (hidden by default)
+        # Progress bar (hidden by default) with custom style
+        style = ttk.Style()
+        style.configure(
+            "Custom.Horizontal.TProgressbar",
+            troughcolor="#e0e0e0",
+            background="#4a90d9",  # Blue color
+            thickness=20
+        )
         self.progress = ttk.Progressbar(
             frm_stats,
             mode="indeterminate",
-            length=120
+            length=120,
+            style="Custom.Horizontal.TProgressbar"
         )
 
         # Buttons frame
