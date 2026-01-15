@@ -507,7 +507,7 @@ class Exporter:
             for batch in self._fetch_batches(tm_id, lab_id):
 
                 b_batch_id = batch["batch_id"]
-                b_lab_id = batch["lab_id"]
+                b_org_id = batch["org_id"]
                 b_control_id = batch["control_id"]
                 b_test_method_id = batch["test_method_id"]
                 b_workstation_id = batch["workstation_id"]
