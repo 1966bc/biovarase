@@ -45,7 +45,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Test Methods view (`views/test_methods.py`):**
 - Search box to filter tests by name
-- Window size 900x750
+- Treeview shows: code, sample, method, unit, section, category
+- Window size 1000x600
 
 **Daily Validation (`views/daily_validation.py`):**
 - Hotkey: Alt-L to load (underline on "L" in Load button)

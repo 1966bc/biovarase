@@ -26,6 +26,7 @@ SQL_TEST_METHODS = """
                       methods.description  AS method_description,
                       units.description    AS unit_description,
                       org.description      AS section_description,
+                      IFNULL(categories.description, '') AS category_description,
                       test_methods.status  AS status
                     FROM tests
                     INNER JOIN test_methods ON tests.test_id = test_methods.test_id
@@ -34,6 +35,7 @@ SQL_TEST_METHODS = """
                     INNER JOIN units   ON test_methods.unit_id   = units.unit_id
                     INNER JOIN organizations org ON test_methods.org_id = org.org_id
                     INNER JOIN organizations lab ON org.parent_id = lab.org_id
+                    LEFT JOIN categories ON test_methods.category_id = categories.category_id
                     WHERE tests.test_id = ?
                       AND lab.org_id = ?
                       AND tests.status = 1
@@ -52,7 +54,7 @@ class UI(ParentView):
             return
 
         self.resizable(True, True)
-        self.geometry("900x600")
+        self.geometry("1000x600")
 
         # Hotkeys
         self.bind("<Alt-c>", self.on_cancel)
@@ -119,7 +121,7 @@ class UI(ParentView):
         lf_methods = ttk.Labelframe(frm_methods, text=_("Methods"))
         lf_methods.pack(fill=tk.BOTH, expand=1)
 
-        cols_methods = ("code", "sample", "method", "unit", "section")
+        cols_methods = ("code", "sample", "method", "unit", "section", "category")
         self.lstMethods = ttk.Treeview(lf_methods, columns=cols_methods, show="headings")
 
         self.lstMethods.column("code", width=80, minwidth=80, anchor=tk.W, stretch=True)
@@ -136,6 +138,9 @@ class UI(ParentView):
 
         self.lstMethods.column("section", width=100, minwidth=100, anchor=tk.W, stretch=True)
         self.lstMethods.heading("section", text=_("Section:").rstrip(":"), anchor=tk.W)
+
+        self.lstMethods.column("category", width=120, minwidth=100, anchor=tk.W, stretch=True)
+        self.lstMethods.heading("category", text=_("Category"), anchor=tk.W)
 
         sb_methods = ttk.Scrollbar(lf_methods, orient=tk.VERTICAL, command=self.lstMethods.yview)
         self.lstMethods.configure(yscrollcommand=sb_methods.set)
@@ -273,7 +278,8 @@ class UI(ParentView):
                     row["sample_description"],
                     row["method_description"],
                     row["unit_description"],
-                    row["section_description"],      
+                    row["section_description"],
+                    row["category_description"],
                 ),
                 tags=tags,)
    
