@@ -82,6 +82,7 @@ class UI(ParentView):
 
         # Queue for async operations
         self.async_queue = queue.Queue()
+        self._export_running = False
 
         # Build UI
         self._build_ui()
@@ -807,6 +808,11 @@ class UI(ParentView):
 
     def _on_double_click(self, evt):
         """Handle double-click on result."""
+        # Block during export
+        if getattr(self, "_export_running", False):
+            print("[DEBUG] Double-click blocked - export running")
+            return
+
         item_id = self.tree.identify_row(evt.y)
         if not item_id:
             return
@@ -1157,19 +1163,32 @@ class UI(ParentView):
             messagebox.showinfo(_("Export"), _("Please load data first."))
             return
 
+        # Prevent interactions during export
+        self._export_running = True
+        self.tree.config(selectmode="none")
+        print("[DEBUG] Export started - interactions disabled")
+
         def worker():
             """Background worker for export."""
             try:
+                print("[DEBUG] Worker thread started")
                 self.engine.quick_data_analysis(self.selected_date, None)
+                print("[DEBUG] Worker thread completed")
                 self.async_queue.put(("done", None))
             except Exception as e:
+                print(f"[DEBUG] Worker thread error: {e}")
                 self.async_queue.put(("error", e))
 
         def check_queue():
             """Check queue for worker results."""
             try:
                 status, data = self.async_queue.get_nowait()
+                print(f"[DEBUG] Queue received: {status}")
                 self._stop_progress()
+                # Re-enable interactions
+                self._export_running = False
+                self.tree.config(selectmode="extended")
+                print("[DEBUG] Export finished - interactions enabled")
                 if status == "error":
                     self.engine.on_log(
                         "_on_export",
