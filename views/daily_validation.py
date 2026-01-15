@@ -511,10 +511,26 @@ class UI(ParentView):
 
     def _on_load_click(self):
         """Handle Load button click - load results for selected workstation."""
-        # First refresh workstations list
+        # Save currently selected workstation_id BEFORE refresh
+        idx = self.cbx_workstation.current()
+        saved_ws_id = None
+        if idx >= 0:
+            row = self.dict_workstations.get(idx)
+            if row:
+                saved_ws_id = row["workstation_id"]
+
+        # Refresh workstations list
         self._load_workstations()
 
-        # Then load results
+        # Restore selection if possible
+        if saved_ws_id is not None:
+            for new_idx, ws_data in self.dict_workstations.items():
+                if ws_data["workstation_id"] == saved_ws_id:
+                    self.cbx_workstation.current(new_idx)
+                    self._update_ws_info(new_idx)
+                    break
+
+        # Load results for selected workstation
         idx = self.cbx_workstation.current()
         if idx < 0:
             messagebox.showwarning(_("Validation"), _("Please select a workstation."), parent=self)
