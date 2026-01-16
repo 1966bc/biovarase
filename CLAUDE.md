@@ -737,6 +737,12 @@ mysql -u root -p biovarase < migrations/024_methods_to_english.sql
 
 # Notes permission control (created_by field)
 mysql -u root -p biovarase < migrations/025_add_created_by_to_notes.sql
+
+# Results permission control (created_by field for granular permissions)
+mysql -u root -p biovarase < migrations/026_add_created_by_to_results.sql
+
+# Add VOID operation to audit_results enum
+mysql -u root -p biovarase < migrations/027_add_void_to_audit_operation.sql
 ```
 
 ## Key Files
