@@ -90,6 +90,14 @@ function getCurrentOrgId()
 }
 
 /**
+ * Get current user's user_id
+ */
+function getCurrentUserId()
+{
+    return isLoggedIn() ? $_SESSION['user']['user_id'] : null;
+}
+
+/**
  * Check if current user has at least the given role level
  * Lower role number = more permissions
  */
@@ -302,4 +310,169 @@ function canModifyResult($result, $userSectionId = null)
 function canVoidResult($result, $userSectionId = null)
 {
     return canModifyResult($result, $userSectionId);
+}
+
+/**
+ * Check if user is App Admin (role 0)
+ */
+function isAppAdmin()
+{
+    return getCurrentRole() === ROLE_APP_ADMIN;
+}
+
+/**
+ * Get working lab ID
+ * - For App Admin: returns selected working_lab_id from session
+ * - For other users: returns their org_id (their assigned lab)
+ */
+function getWorkingLabId()
+{
+    if (!isLoggedIn()) {
+        return null;
+    }
+
+    // App Admin uses working_lab_id from session
+    if (isAppAdmin()) {
+        return isset($_SESSION['working_lab_id']) ? $_SESSION['working_lab_id'] : null;
+    }
+
+    // Other users use their org_id
+    return getCurrentOrgId();
+}
+
+/**
+ * Set working lab ID (for App Admin)
+ */
+function setWorkingLabId($labId)
+{
+    if (!isLoggedIn() || !isAppAdmin()) {
+        return false;
+    }
+
+    $_SESSION['working_lab_id'] = $labId ? (int)$labId : null;
+    return true;
+}
+
+/**
+ * Get working lab name
+ */
+function getWorkingLabName()
+{
+    if (!isLoggedIn()) {
+        return null;
+    }
+
+    // App Admin with working lab
+    if (isAppAdmin() && isset($_SESSION['working_lab_name'])) {
+        return $_SESSION['working_lab_name'];
+    }
+
+    // Other users - org_name from session
+    $user = getCurrentUser();
+    return $user['org_name'] ?? null;
+}
+
+/**
+ * Set working lab (ID and name)
+ */
+function setWorkingLab($labId, $labName)
+{
+    if (!isLoggedIn() || !isAppAdmin()) {
+        return false;
+    }
+
+    $_SESSION['working_lab_id'] = $labId ? (int)$labId : null;
+    $_SESSION['working_lab_name'] = $labName;
+    return true;
+}
+
+/**
+ * Check if user needs to select a lab before proceeding
+ * Returns true for App Admin who hasn't selected a working lab
+ */
+function needsLabSelection()
+{
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Only App Admin needs to select a lab
+    if (!isAppAdmin()) {
+        return false;
+    }
+
+    // Check if working lab is set
+    return empty($_SESSION['working_lab_id']);
+}
+
+/**
+ * Require working lab - redirect to lab selector if needed
+ */
+function requireWorkingLab()
+{
+    requireAuth();
+
+    if (needsLabSelection()) {
+        header('Location: /biovarase/select-lab');
+        exit;
+    }
+}
+
+/**
+ * Get site name (hospital) for the working lab
+ * Site is the parent of the lab in the organization hierarchy
+ */
+function getWorkingSiteName()
+{
+    if (!isLoggedIn()) {
+        return null;
+    }
+
+    // Check if already cached in session
+    if (isset($_SESSION['working_site_name'])) {
+        return $_SESSION['working_site_name'];
+    }
+
+    $workingLabId = getWorkingLabId();
+    if (!$workingLabId) {
+        return null;
+    }
+
+    // Query to get site (parent of lab)
+    try {
+        require_once __DIR__ . '/../api/config.php';
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare("
+            SELECT site.description as site_name
+            FROM organizations lab
+            JOIN organizations site ON lab.parent_id = site.org_id
+            WHERE lab.org_id = ? AND site.org_type = 'site'
+        ");
+        $stmt->execute([$workingLabId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result) {
+            $_SESSION['working_site_name'] = $result['site_name'];
+            return $result['site_name'];
+        }
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+
+    return null;
+}
+
+/**
+ * Set working lab with site info
+ */
+function setWorkingLabWithSite($labId, $labName, $siteName = null)
+{
+    if (!isLoggedIn() || !isAppAdmin()) {
+        return false;
+    }
+
+    $_SESSION['working_lab_id'] = $labId ? (int)$labId : null;
+    $_SESSION['working_lab_name'] = $labName;
+    $_SESSION['working_site_name'] = $siteName;
+    return true;
 }

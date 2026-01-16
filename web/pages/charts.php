@@ -8,7 +8,7 @@
 
 $pageTitle = 'Grafici QC - Biovarase';
 $pageCSS = 'charts.css';
-$pageJS = ['chart.min.js', 'chartjs-plugin-annotation.min.js', 'charts.js'];
+$pageJS = ['chart.min.js', 'chartjs-plugin-annotation.min.js', 'chartjs-plugin-datalabels.min.js', 'charts.js'];
 
 require_once __DIR__ . '/../includes/header.php';
 ?>

@@ -19,7 +19,7 @@ ini_set('log_errors', 1);
 define('DB_HOST', 'localhost');           // Production: use actual DB server IP
 define('DB_NAME', 'biovarase');
 define('DB_USER', 'biovarase');           // Change for production
-define('DB_PASS', 'CHANGE_THIS_PASSWORD'); // IMPORTANT: Set actual password
+define('DB_PASS', 'pS2dY^hX1nB5mL'); // IMPORTANT: Set actual password
 define('DB_CHARSET', 'utf8mb4');
 
 /**

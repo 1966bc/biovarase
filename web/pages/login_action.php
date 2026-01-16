@@ -22,14 +22,14 @@ $pdo = getDBConnection();
 $result = attemptLogin($username, $password, $pdo);
 
 if ($result['success']) {
-    // Redirect to dashboard with lab_id
-    $labId = $result['lab_id'];
-    if ($labId) {
-        header('Location: /biovarase/dashboard?lab_id=' . $labId);
-    } else {
-        // Admin without org_id - redirect without lab_id (will need to select)
-        header('Location: /biovarase/dashboard');
+    // Check if App Admin needs to select a lab
+    if (isAppAdmin()) {
+        header('Location: /biovarase/select-lab');
+        exit;
     }
+
+    // Other users go directly to dashboard
+    header('Location: /biovarase/dashboard');
     exit;
 } else {
     // Redirect back to login with error

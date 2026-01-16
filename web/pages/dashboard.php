@@ -1,48 +1,49 @@
 <?php
 /**
- * Dashboard - TSLB QC Overview
+ * Dashboard - Workstations QC Overview
  *
  * Public page showing workstation QC status.
  * No authentication required for viewing.
  */
 
-$pageTitle = 'TSLB Dashboard - Biovarase';
 $pageJS = ['chart.min.js', 'chartjs-plugin-annotation.min.js', 'dashboard.js'];
 
 require_once __DIR__ . '/../includes/header.php';
+
+$pageTitle = t('Workstations') . ' - Biovarase';
 ?>
 
     <header class="header">
-        <h1>TSLB Dashboard</h1>
+        <h1><?= t('Workstations') ?></h1>
         <div class="header-controls">
             <div>
-                <label for="daysSelect">Periodo:</label>
+                <label for="daysSelect"><?= t('Period') ?>:</label>
                 <select id="daysSelect">
-                    <option value="1" selected>Oggi</option>
-                    <option value="7">7 giorni</option>
-                    <option value="30">30 giorni</option>
-                    <option value="60">60 giorni</option>
+                    <option value="1" selected><?= t('Today') ?></option>
+                    <option value="7"><?= t('7 days') ?></option>
+                    <option value="30"><?= t('30 days') ?></option>
+                    <option value="60"><?= t('60 days') ?></option>
                 </select>
             </div>
             <div class="date-range">
-                <label>oppure</label>
-                <input type="date" id="dateFrom" title="Data inizio">
+                <label><?= t('or') ?></label>
+                <input type="date" id="dateFrom" title="<?= t('Start date') ?>">
                 <span>-</span>
-                <input type="date" id="dateTo" title="Data fine">
-                <button class="btn-clear" id="clearDates" title="Cancella date">&times;</button>
+                <input type="date" id="dateTo" title="<?= t('End date') ?>">
+                <button class="btn-clear" id="clearDates" title="<?= t('Clear dates') ?>">&times;</button>
             </div>
             <div class="date-display" id="dateDisplay"></div>
             <div>
-                <label for="autoRefresh">Auto-refresh:</label>
+                <label for="autoRefresh"><?= t('Auto-refresh') ?>:</label>
                 <select id="autoRefresh">
-                    <option value="0">Disattivato</option>
-                    <option value="30">30 secondi</option>
-                    <option value="60" selected>1 minuto</option>
-                    <option value="120">2 minuti</option>
-                    <option value="300">5 minuti</option>
+                    <option value="0"><?= t('Disabled') ?></option>
+                    <option value="30"><?= t('30 seconds') ?></option>
+                    <option value="60" selected><?= t('1 minute') ?></option>
+                    <option value="120"><?= t('2 minutes') ?></option>
+                    <option value="300"><?= t('5 minutes') ?></option>
                 </select>
             </div>
-            <button class="btn btn-primary" id="refreshBtn">Aggiorna</button>
+            <button class="btn btn-primary" id="refreshBtn"><?= t('Refresh') ?></button>
             <span class="status-time" id="lastRefresh"></span>
         </div>
     </header>
