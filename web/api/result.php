@@ -281,5 +281,5 @@ try {
 
 } catch (PDOException $e) {
     error_log("Biovarase API Error: " . $e->getMessage());
-    jsonError('Database error', 500);
+    jsonError('Database error: ' . $e->getMessage(), 500);
 }

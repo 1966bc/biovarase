@@ -4,6 +4,9 @@
  * Handles test selection and multiple Levey-Jennings chart rendering.
  */
 
+// Register the datalabels plugin
+Chart.register(ChartDataLabels);
+
 // Configuration from URL
 const CONFIG = {
     apiBase: '/biovarase/api',
@@ -373,7 +376,21 @@ function createChart(canvasId, control, unit) {
         return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
     });
 
-    const values = series.map(s => s.value);
+    // Y axis range
+    const yMin = target - 4 * sd;
+    const yMax = target + 4 * sd;
+
+    // Clipping: values beyond ±4SD are shown at the edge with triangles
+    const clippingMargin = 0.2 * sd; // Small margin so triangles are visible
+    const clippedValues = series.map(s => {
+        if (s.value > yMax) return yMax - clippingMargin; // Clip high values
+        if (s.value < yMin) return yMin + clippingMargin; // Clip low values
+        return s.value;
+    });
+
+    // Track which points are clipped
+    const isClippedHigh = series.map(s => s.value > yMax);
+    const isClippedLow = series.map(s => s.value < yMin);
 
     // Point colors based on z-score (gray for voided results)
     const pointColors = series.map(s => {
@@ -386,37 +403,53 @@ function createChart(canvasId, control, unit) {
         return '#28a745';
     });
 
-    // Point radius - larger for points with notes
-    const pointRadii = series.map(s => s.has_notes ? 8 : 5);
+    // Point radius - larger for points with notes or clipped
+    const pointRadii = series.map((s, idx) => {
+        if (isClippedHigh[idx] || isClippedLow[idx]) return 10;
+        if (s.has_notes) return 8;
+        return 5;
+    });
+
+    // Point style - triangles for clipped points
+    const pointStyles = series.map((s, idx) => {
+        if (isClippedHigh[idx] || isClippedLow[idx]) return 'triangle';
+        return 'circle';
+    });
+
+    // Point rotation - flip triangle for low clipped values
+    const pointRotations = series.map((s, idx) => {
+        if (isClippedLow[idx]) return 180; // Point down
+        return 0; // Point up (default for triangle) or no rotation for circle
+    });
 
     // Point border - thicker black border for points with notes, dashed effect for voided
     const pointBorderColors = series.map((s, idx) => {
         if (s.is_voided) return '#666';
+        if (isClippedHigh[idx] || isClippedLow[idx]) return '#000';
         if (s.has_notes) return '#000';
         return pointColors[idx];
     });
-    const pointBorderWidths = series.map(s => {
+    const pointBorderWidths = series.map((s, idx) => {
         if (s.is_voided) return 2;
+        if (isClippedHigh[idx] || isClippedLow[idx]) return 2;
         if (s.has_notes) return 3;
         return 1;
     });
-
-    // Y axis range
-    const yMin = target - 4 * sd;
-    const yMax = target + 4 * sd;
 
     const chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                data: values,
+                data: clippedValues,
                 borderColor: '#007bff',
                 backgroundColor: 'transparent',
                 pointBackgroundColor: pointColors,
                 pointBorderColor: pointBorderColors,
                 pointBorderWidth: pointBorderWidths,
                 pointRadius: pointRadii,
+                pointStyle: pointStyles,
+                pointRotation: pointRotations,
                 pointHoverRadius: 9,
                 fill: false,
                 tension: 0
@@ -453,6 +486,65 @@ function createChart(canvasId, control, unit) {
                 legend: {
                     display: false
                 },
+                datalabels: {
+                    labels: {
+                        // Value label - above the point
+                        value: {
+                            display: function(context) {
+                                const idx = context.dataIndex;
+                                const s = series[idx];
+                                if (s.is_voided) return false;
+                                const zscore = Math.abs(s.zscore || 0);
+                                return zscore >= 2;
+                            },
+                            formatter: function(value, context) {
+                                const idx = context.dataIndex;
+                                const s = series[idx];
+                                return s.value.toFixed(1);
+                            },
+                            color: function(context) {
+                                const idx = context.dataIndex;
+                                const s = series[idx];
+                                const zscore = Math.abs(s.zscore || 0);
+                                if (zscore >= 3) return '#dc3545';
+                                return '#856404';
+                            },
+                            backgroundColor: function(context) {
+                                const idx = context.dataIndex;
+                                const s = series[idx];
+                                const zscore = Math.abs(s.zscore || 0);
+                                if (zscore >= 3) return 'rgba(220, 53, 69, 0.15)';
+                                return 'rgba(255, 193, 7, 0.25)';
+                            },
+                            borderRadius: 3,
+                            padding: 3,
+                            font: { size: 12, weight: 'bold' },
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 6
+                        },
+                        // Time label - below the point
+                        time: {
+                            display: function(context) {
+                                const idx = context.dataIndex;
+                                const s = series[idx];
+                                if (s.is_voided) return false;
+                                const zscore = Math.abs(s.zscore || 0);
+                                return zscore >= 2;
+                            },
+                            formatter: function(value, context) {
+                                const idx = context.dataIndex;
+                                const s = series[idx];
+                                return new Date(s.received).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+                            },
+                            color: '#666',
+                            font: { size: 10 },
+                            anchor: 'start',
+                            align: 'bottom',
+                            offset: 6
+                        }
+                    }
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -461,11 +553,17 @@ function createChart(canvasId, control, unit) {
                             const zscore = s.zscore !== null ? s.zscore.toFixed(2) : 'N/A';
                             const noteIndicator = s.has_notes ? ' [N]' : '';
                             const voidedIndicator = s.is_voided ? ' [ANNULLATO]' : '';
+                            const clippedIndicator = (isClippedHigh[idx] || isClippedLow[idx]) ? ' ⚠️ OUTLIER' : '';
                             const lines = [
-                                `Valore: ${s.value.toFixed(2)}${noteIndicator}${voidedIndicator}`,
+                                `Valore: ${s.value.toFixed(2)}${noteIndicator}${voidedIndicator}${clippedIndicator}`,
                                 `Z-Score: ${zscore}`,
                                 `${new Date(s.received).toLocaleString('it-IT')}`
                             ];
+                            if (isClippedHigh[idx]) {
+                                lines.push(`📈 Valore oltre +4SD (clipped)`);
+                            } else if (isClippedLow[idx]) {
+                                lines.push(`📉 Valore sotto -4SD (clipped)`);
+                            }
                             if (s.is_voided) {
                                 const voidedBy = s.voided_by ? s.voided_by : 'N/A';
                                 lines.push(`⚠️ Annullato da: ${voidedBy}`);
@@ -823,9 +921,10 @@ async function saveNote() {
 
         if (data.success) {
             messageDiv.innerHTML = '<p style="color: #28a745;">Nota salvata!</p>';
-            // Close modal and refresh charts after short delay
+            // Close modal, refresh tests list and charts after short delay
             setTimeout(() => {
                 closeResultModal();
+                loadTests(); // Refresh test list to update status indicators
                 refreshCharts();
             }, 800);
         } else {
@@ -867,9 +966,10 @@ async function updateResultValue() {
 
         if (data.success) {
             messageDiv.innerHTML = `<p style="color: #28a745;">Valore aggiornato: ${data.old_value.toFixed(2)} → ${data.new_value.toFixed(2)}</p>`;
-            // Close modal and refresh charts after short delay
+            // Close modal, refresh tests list and charts after short delay
             setTimeout(() => {
                 closeResultModal();
+                loadTests(); // Refresh test list to update status indicators
                 refreshCharts();
             }, 800);
         } else {
@@ -922,9 +1022,10 @@ async function voidResult() {
 
         if (data.success) {
             messageDiv.innerHTML = '<p style="color: #28a745;">Risultato annullato!</p>';
-            // Close modal and refresh charts after short delay
+            // Close modal, refresh tests list and charts after short delay
             setTimeout(() => {
                 closeResultModal();
+                loadTests(); // Refresh test list to update status indicators
                 refreshCharts();
             }, 800);
         } else {
