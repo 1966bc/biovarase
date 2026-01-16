@@ -114,7 +114,24 @@ mysql -u root -p biovarase < migrations/026_add_created_by_to_results.sql
 
 # Operazione VOID nell'audit
 mysql -u root -p biovarase < migrations/027_add_void_to_audit_operation.sql
+
+# Nuova tabella assays (sostituisce test_methods + goals per web)
+mysql -u root -p biovarase < migrations/028_create_assays_table.sql
 ```
+
+## Schema Database Web vs Desktop
+
+| Web (nuovo) | Desktop (legacy) | Note |
+|-------------|------------------|------|
+| `assays` | `test_methods` + `goals` | Tabella unificata |
+| `batches.assay_id` | `batches.test_method_id` | Entrambi presenti |
+| `audit_assays` | - | Nuovo audit trail |
+
+La tabella `assays` include:
+- Tutti i campi di `test_methods`
+- Tutti i campi di `goals` (cvw, cvb, imp, bias, teap005, teap001)
+- Campo `description` per nome locale del lab
+- Trigger automatici per audit
 
 ## Configurazione Apache
 

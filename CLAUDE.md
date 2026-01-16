@@ -743,7 +743,12 @@ mysql -u root -p biovarase < migrations/026_add_created_by_to_results.sql
 
 # Add VOID operation to audit_results enum
 mysql -u root -p biovarase < migrations/027_add_void_to_audit_operation.sql
+
+# Create assays table (web only - replaces test_methods + goals)
+mysql -u root -p biovarase < migrations/028_create_assays_table.sql
 ```
+
+**Note:** Migration 028 creates `assays` table for the web app only. The desktop Python app continues using `test_methods` + `goals` tables unchanged.
 
 ## Key Files
 
