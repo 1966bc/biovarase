@@ -6,7 +6,7 @@
 
 // Configuration
 const CONFIG = {
-    apiBase: 'api',
+    apiBase: '/biovarase/api',
     autoRefreshInterval: 60000, // 60 seconds, 0 to disable
     labId: null, // Set from URL or selection
 };
@@ -248,7 +248,7 @@ function getSemaforoIcon(status) {
 function openChartsPage(workstationId, event) {
     event.stopPropagation(); // Prevent card click
     const dateParams = getDateParams();
-    let url = `charts.html?lab_id=${CONFIG.labId}&workstation_id=${workstationId}`;
+    let url = `/biovarase/charts?lab_id=${CONFIG.labId}&workstation_id=${workstationId}`;
     if (dateParams.date_from) {
         url += `&date_from=${dateParams.date_from}&date_to=${dateParams.date_to}`;
     } else {

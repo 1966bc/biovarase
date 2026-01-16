@@ -113,11 +113,15 @@ try {
                 r.result_id,
                 r.result,
                 r.received,
-                r.validated
+                r.validated,
+                r.status,
+                r.log_id,
+                CONCAT(u.last_name, ' ', u.first_name) as voided_by_name,
+                (SELECT COUNT(*) FROM notes n WHERE n.result_id = r.result_id AND n.status = 1) as note_count
             FROM results r
+            LEFT JOIN users u ON u.user_id = r.log_id AND r.status = 0
             WHERE r.batch_id = :batch_id
               AND r.org_id = :lab_id
-              AND r.status = 1
               AND r.is_delete = 0
               AND DATE(r.received) >= :date_from
               AND DATE(r.received) <= :date_to
@@ -151,12 +155,16 @@ try {
                 'value' => (float)$r['result'],
                 'zscore' => $zscore,
                 'received' => $r['received'],
-                'validated' => (bool)$r['validated']
+                'validated' => (bool)$r['validated'],
+                'has_notes' => (int)$r['note_count'] > 0,
+                'is_voided' => $r['status'] == 0,
+                'voided_by' => $r['status'] == 0 ? $r['voided_by_name'] : null
             ];
         }
 
-        // Calculate statistics
-        $values = array_column($series, 'value');
+        // Calculate statistics (excluding voided results)
+        $activeResults = array_filter($series, function($s) { return !$s['is_voided']; });
+        $values = array_column($activeResults, 'value');
         $count = count($values);
         $mean = $count > 0 ? array_sum($values) / $count : 0;
         $variance = 0;
@@ -169,8 +177,8 @@ try {
         $calculatedSd = sqrt($variance);
         $cv = $mean > 0 ? ($calculatedSd / $mean) * 100 : 0;
 
-        // Drift analysis
-        $drift = analyzeDrift($series, $target);
+        // Drift analysis (excluding voided results)
+        $drift = analyzeDrift($activeResults, $target);
 
         // Get first and last result dates from series
         $firstResult = !empty($series) ? $series[0]['received'] : null;
