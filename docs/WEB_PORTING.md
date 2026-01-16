@@ -202,3 +202,9 @@ Modificare `api/config.php` con credenziali corrette.
 - [ ] Inserimento risultati manuali
 - [ ] Gestione batch
 - [ ] Report/export
+
+### Cleanup finale (dopo dismissione Python desktop)
+- [ ] Rimuovere trigger sincronizzazione `tr_batches_sync_assay_insert` e `tr_batches_sync_assay_update` (migration 029)
+- [ ] Rimuovere colonna `batches.test_method_id` (usare solo `assay_id`)
+- [ ] Rimuovere tabelle legacy: `test_methods`, `goals`
+- [ ] Rimuovere script Abbott import Python (sostituito da import web)
