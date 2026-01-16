@@ -746,9 +746,19 @@ mysql -u root -p biovarase < migrations/027_add_void_to_audit_operation.sql
 
 # Create assays table (web only - replaces test_methods + goals)
 mysql -u root -p biovarase < migrations/028_create_assays_table.sql
+
+# Sync trigger: keeps batches.assay_id in sync with test_method_id
+mysql -u root -p biovarase < migrations/029_sync_batch_assay_id_trigger.sql
 ```
 
 **Note:** Migration 028 creates `assays` table for the web app only. The desktop Python app continues using `test_methods` + `goals` tables unchanged.
+
+**IMPORTANTE - Cleanup post-migrazione (dopo dismissione Python desktop):**
+Quando l'app Python desktop sarà dismessa, rimuovere:
+1. Trigger sincronizzazione: `DROP TRIGGER tr_batches_sync_assay_insert; DROP TRIGGER tr_batches_sync_assay_update;`
+2. Colonna legacy: `ALTER TABLE batches DROP COLUMN test_method_id;`
+3. Tabelle legacy: `DROP TABLE goals; DROP TABLE test_methods;`
+4. Script Abbott import Python (sostituito da import web)
 
 ## Key Files
 
