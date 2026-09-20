@@ -4,276 +4,126 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-"""
-Notes master window.
+"""Everything that has been written about the results, over the period.
 
-This Toplevel shows all notes linked to the currently selected result
-and opens the editor mask imported as `ui.UI`.
+The notes are the log of non conformities: with no validation step, this is
+where somebody said what was seen and what was done about it, and this
+window is that log read end to end instead of one result at a time.
+
+It is the page to open when the question is about the year rather than about
+this morning: how often a calibration was repeated, on which instrument, on
+which analyte. The answers are the reason the actions are a table and not a
+free text field.
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
+from tkinter import ttk
 
-import ui.note as ui
-from ui.parent_view import ParentView
+import ui.note
 
-STATUS_ACTIVE = 1
+from ui.window import Window
+
+COLUMNS = (("#0", "id", tk.W, False, 0, 0),
+           ("#1", "Date", tk.W, False, 90, 105),
+           ("#2", "Analyte", tk.W, True, 120, 150),
+           ("#3", "Bench", tk.W, False, 55, 70),
+           ("#4", "Level", tk.W, False, 50, 65),
+           ("#5", "Result", tk.E, False, 55, 70),
+           ("#6", "Action", tk.W, False, 130, 150),
+           ("#7", "Note", tk.W, True, 200, 260),
+           ("#8", "By", tk.W, False, 70, 85))
 
 
-class UI(ParentView):
-    """Master window for managing notes of a selected result."""
+class UI(Window, tk.Toplevel):
+    """The notes of the period, newest first."""
 
-    def __init__(self, parent):
-        super().__init__(parent, name="notes")
-        if self._reusing:
-            return
+    def __init__(self, parent, since=None):
+        super().__init__(name="notes")
 
-        self.transient(parent.winfo_toplevel())
-        self.resizable(False, False)
+        self.parent = parent
+        self.since = since
+        self.dict_notes = {}
+        self.summary = tk.StringVar()
 
-        self.table = "notes"
-        self.primary_key = "note_id"
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.engine.tools.hide_me(self)
+        self.init_ui()
+        self.engine.tools.center_me(self, parent.winfo_toplevel())
 
-        self.selected_item = None
-        self.selected_test = None
-        self.selected_batch = None
-        self.selected_result = None
-        self.child = None
+        self.engine.events.subscribe("notes", self.on_notes_changed)
 
-        self.items = tk.StringVar(value="Items: 0")
-        self.batch = tk.StringVar()
-        self.description = tk.StringVar()
-        self.result = tk.StringVar()
-        self.received = tk.StringVar()
+    def init_ui(self):
 
-        self.bind("<Return>", self._on_item_activated)
+        frm_main = ttk.Frame(self, style="App.TFrame", padding=6)
 
-        self._build_ui()
-        self.show(on_screen=True)
+        ttk.Label(frm_main, style="App.TLabel",
+                  textvariable=self.summary).pack(side=tk.TOP, anchor=tk.W,
+                                                  pady=(0, 4))
 
-    # --------------------------------------------------------------------- UI
-    def _build_ui(self):
-        """Build the complete master layout."""
+        frm_list = ttk.Frame(frm_main, style="App.TFrame")
+        self.lst_notes = self.engine.tools.get_tree(frm_list, COLUMNS)
+        self.lst_notes.configure(height=20)
+        self.lst_notes.bind("<Double-Button-1>", self.on_edit)
+        frm_list.pack(fill=tk.BOTH, expand=1)
 
-        frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
-        frm_main.pack(fill=tk.BOTH, padx=5, pady=5, expand=True)
+        frm_main.pack(fill=tk.BOTH, expand=1)
 
-        # Left: context info (test, batch, result, etc.)
-        frm_left = ttk.Frame(
-            frm_main,
-            style="App.TFrame",
-            relief=tk.GROOVE,
-            padding=8,
-        )
-        frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
-
-        ttk.Label(frm_left, text="Batch:").pack(side=tk.TOP, anchor=tk.W)
-        ttk.Label(frm_left, textvariable=self.batch).pack(side=tk.TOP, anchor=tk.W)
-
-        ttk.Label(frm_left, text="Description:").pack(side=tk.TOP, anchor=tk.W)
-        ttk.Label(frm_left, textvariable=self.description).pack(side=tk.TOP, anchor=tk.W)
-
-        ttk.Label(frm_left, text="Result:").pack(side=tk.TOP, anchor=tk.W)
-        ttk.Label(frm_left, textvariable=self.result).pack(side=tk.TOP, anchor=tk.W)
-
-        ttk.Label(frm_left, text="Received:").pack(side=tk.TOP, anchor=tk.W)
-        ttk.Label(frm_left, textvariable=self.received).pack(side=tk.TOP, anchor=tk.W)
-
-        # Middle: Treeview with notes
-        frm_middle = ttk.Frame(
-            frm_main,
-            style="App.TFrame",
-            relief=tk.GROOVE,
-            padding=8,
-        )
-        frm_middle.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
-
-        ttk.Label(
-            frm_middle,
-            style="App.TLabel",
-            textvariable=self.items,
-        ).pack(fill=tk.X, padx=2, pady=2)
-
-        cols_notes = ("description", "modified")
-        self.lstItems = ttk.Treeview(frm_middle, columns=cols_notes, show="headings")
-
-        self.lstItems.column("description", width=180, minwidth=180, anchor=tk.W, stretch=True)
-        self.lstItems.heading("description", text="Description", anchor=tk.W)
-
-        self.lstItems.column("modified", width=140, minwidth=140, anchor=tk.W, stretch=True)
-        self.lstItems.heading("modified", text="Modified", anchor=tk.W)
-
-        sb_notes = ttk.Scrollbar(frm_middle, orient=tk.VERTICAL, command=self.lstItems.yview)
-        self.lstItems.configure(yscrollcommand=sb_notes.set)
-        self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        sb_notes.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.lstItems.tag_configure("status", background=self.engine.tools.get_rgb(211, 211, 211))
-
-        self.lstItems.bind("<<TreeviewSelect>>", self._on_item_selected)
-        self.lstItems.bind("<Double-1>", self._on_item_activated)
-
-        # Right: Buttons
-        frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
-        frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=6, pady=6)
-
-        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, "Close", self.on_cancel, "<Alt-c>", self)
-
-    # ----------------------------------------------------------------- Public
     def on_open(self):
-        """
-        Configure title, load parent context, reload data and center the window.
-        This method MUST always be called after construction.
-        """
-        # Parent MUST provide dicts (PROJECT_RULES: use read_dict).
-        self.selected_test = getattr(self.parent, "selected_test", None)
-        self.selected_batch = getattr(self.parent, "selected_batch", None)
-        self.selected_result = getattr(self.parent, "selected_result", None)
 
-        # Test description in title
-        test_name = ""
-        if isinstance(self.selected_test, dict):
-            test_name = self.selected_test.get("description", "")
-        self.title(f"Notes - {test_name}" if test_name else "Notes management")
+        self.title("Notes")
+        self.set_notes()
 
-        # Batch: lot_number + description
-        if isinstance(self.selected_batch, dict):
-            self.batch.set(self.selected_batch.get("lot_number", ""))
-            self.description.set(self.selected_batch.get("description", ""))
+    def set_notes(self):
+        """Every note of the period, with the result it is about."""
+        sql = """SELECT n.note_id, n.description, n.modified, n.result_id,
+                        a.description AS action,
+                        r.result,
+                        t.description AS analyte,
+                        b.description AS level,
+                        w.description AS bench,
+                        u.last_name AS by_whom
+                   FROM notes n
+                   JOIN actions a ON a.action_id = n.action_id
+                   JOIN results r ON r.result_id = n.result_id
+                   JOIN batches b ON b.batch_id = r.batch_id
+                   JOIN test_methods tm ON tm.test_method_id = b.test_method_id
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN workstations w ON w.workstation_id = b.workstation_id
+                   LEFT JOIN users u ON u.user_id = n.created_by
+                  WHERE n.status = 1
+                    AND (? IS NULL OR r.received >= ?)
+               ORDER BY r.received DESC"""
+        rows = self.engine.db.read(True, sql, (self.since, self.since))
+
+        self.engine.tools.clear_treeview(self.lst_notes)
+        self.dict_notes.clear()
+        for row in rows:
+            item = self.lst_notes.insert("", tk.END,
+                                         values=(self.engine.format_date(row["modified"]),
+                                                 row["analyte"], row["bench"],
+                                                 row["level"], row["result"],
+                                                 row["action"], row["description"],
+                                                 row["by_whom"]))
+            self.dict_notes[item] = (row["note_id"], row["result_id"])
+
+        self.summary.set("{0} notes in the period.".format(len(rows)))
+
+    def on_edit(self, evt=None):
+        """Open the note the list is on: its author may correct it."""
+        chosen = self.dict_notes.get(self.lst_notes.focus())
+
+        if chosen is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   self.engine.no_selected, parent=self)
         else:
-            self.batch.set("")
-            self.description.set("")
+            note_id, result_id = chosen
+            self.engine.windows.replace(
+                "note", lambda: ui.note.UI(self, result_id, note_id))
 
-        # Result: numeric value + received datetime
-        if isinstance(self.selected_result, dict):
-            value = self.selected_result.get("result")
-            received = self.selected_result.get("received")
+    def on_notes_changed(self, row_id=None):
+        self.set_notes()
 
-            if value is not None:
-                try:
-                    self.result.set(round(float(value), 3))
-                except (TypeError, ValueError):
-                    self.result.set("")
-            else:
-                self.result.set("")
-
-            try:
-                if hasattr(received, "strftime"):
-                    self.received.set(received.strftime("%d-%m-%Y"))
-                else:
-                    self.received.set("")
-            except Exception:
-                self.received.set("")
-        else:
-            self.result.set("")
-            self.received.set("")
-
-        self._set_values()
-
-    def _set_values(self):
-        """
-        Reload Treeview data for the current result.
-
-        PROJECT_RULES:
-        - result_id MUST be obtained from a dict (read_dict).
-        - No positional indexing on database rows.
-        """
-        if not isinstance(self.selected_result, dict):
-            # No valid result bound → clear list
-            self.engine.tools.clear_treeview(self.lstItems)
-            self.items.set("Items: 0")
-            self.selected_item = None
-            return
-
-        result_id = self.selected_result.get("result_id")
-        if result_id is None:
-            self.engine.tools.clear_treeview(self.lstItems)
-            self.items.set("Items: 0")
-            self.selected_item = None
-            return
-
-        sql = """
-            SELECT
-                notes.note_id,
-                actions.description AS description,
-                notes.modified      AS modified,
-                notes.status        AS status
-            FROM notes
-            INNER JOIN actions
-                ON notes.action_id = actions.action_id
-            WHERE notes.result_id = ?;
-        """
-
-        rs = self.engine.db.read(True, sql, (result_id,)) or []
-
-        # Clear current content
-        self.engine.tools.clear_treeview(self.lstItems)
-
-        count = 0
-        for row in rs:
-            status = int(row["status"])
-            tags = ("status",) if status != STATUS_ACTIVE else ()
-            self.lstItems.insert(
-                "",
-                tk.END,
-                iid=str(row["note_id"]),
-                text=str(row["note_id"]),
-                values=(
-                    _(row["description"]),  # Translate action description
-                    row["modified"],
-                ),
-                tags=tags,
-            )
-            count += 1
-
-    
-        self.items.set(f"Items: {count}")
-
-        self.selected_item = None
-
-    # --------------------------------------------------------- Tree callbacks
-    def _on_item_selected(self, _evt=None):
-        """Update self.selected_item with the current note (dict)."""
-        sel = self.lstItems.selection()
-        if not sel:
-            self.selected_item = None
-            return
-
-        # Treeview iid is NOT a DB row; PROJECT_RULES are about SQL rows.
-        note_id = sel[0]
-
-        # get_selected returns a hybrid dict; we only use named keys.
-        self.selected_item = self.engine.db.get_selected(
-            self.table,
-            self.primary_key,
-            note_id,
-        )
-
-    def _on_item_activated(self, _evt=None):
-        """
-        Activate current selection:
-        - if a note is selected, open the editor on that note
-        - otherwise, show warning.
-        """
-        sel = self.lstItems.selection()
-        if not sel:
-            messagebox.showwarning(
-                self.engine.app_title,
-                self.engine.no_selected,
-                parent=self,
-            )
-            return
-
-        self._on_item_selected()
-        self.engine.open_child(self, ui.UI, index=sel[0])
-
-    def _on_add(self, _evt=None):
-        """Open the editor for a new note."""
-        self.engine.open_child(self, ui.UI, index=None)
-
-    # -------------------------------------------------------------- Lifecycle
-    def on_cancel(self, _evt=None):
-        """Close window safely."""
-        super().on_cancel()
+    def on_cancel(self, evt=None):
+        self.engine.events.unsubscribe("notes", self.on_notes_changed)
+        self.destroy()

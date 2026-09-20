@@ -90,15 +90,22 @@ class Dialog(tk.Toplevel):
     def on_open(self):
 
         if self.row_id is not None:
-            self.title("Edit {0}".format(self.NAME.title()))
+            self.title("Edit {0}".format(self.get_caption()))
             row = self.get_row()
             self.set_values(row)
             self.status.set(row["status"])
         else:
-            self.title("Add {0}".format(self.NAME.title()))
+            self.title("Add {0}".format(self.get_caption()))
             self.status.set(1)
 
         self.first_field.focus()
+
+    def get_caption(self):
+        """The name of the thing being edited, as a person would write it.
+
+        test_method is a table; "test method" is what it is called.
+        """
+        return self.NAME.replace("_", " ")
 
     def get_row(self):
         """The row being edited, read now from the database."""

@@ -4,477 +4,149 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
+"""An analyte as this laboratory measures it, and what it is held to.
+
+The analyte says what substance; this says how it is measured here - the
+matrix, the method, the unit, the panel it is reported in - and what the
+result has to be worth: the analytical goals.
+
+The goals come two ways and the window offers both, because they are two
+different things. An endogenous analyte is held to its own biological
+variation, and the imprecision, the bias and the total error follow from it
+by formula. A drug has no biological variation - the concentration is what
+the dose made it - and is held to the state of the art, which is a total
+error to stay inside. Type the variation and the rest is computed; leave it
+at zero and type the total error instead.
+
+documents/ANALYTICAL_GOALS.md has the formulae and where the numbers come
+from.
+"""
+
 import tkinter as tk
-
-from ui.parent_view import ParentView
-from tkinter import ttk
 from tkinter import messagebox
+from tkinter import ttk
+
+from ui.dialog import Dialog
+from ui.lookup import Lookup
 
 
-class UI(ParentView):
-    """
-    Test Method editor (Singleton Toplevel).
+class UI(Dialog):
+    NAME = "test_method"
+    TABLE = "test_methods"
 
-    - INSERT when index is None; UPDATE when index is provided (tree iid).
-    - Grid-only layout.
-    - Readonly comboboxes; minimal validation for required fields.
-    - Hotkeys: Alt+S/Enter (Save), Alt+C/Esc (Cancel).
-    """
+    def init_fields(self):
 
-    _instance = None  # class-level singleton cache
-
-    def __init__(self, parent, index=None):
-        if getattr(self, "_is_init", False):
-            self.parent = parent
-            self.index = index
-            return
-
-        super().__init__(parent, name="test_method")
-        self.index = index
-
-        self.transient(parent.winfo_toplevel())
-        self.resizable(False, False)
-        self.bind("<Alt-s>", self._on_save)
-        self.bind("<Return>", self._on_save)
-
-        # State vars
         self.code = tk.StringVar()
-        # limit code to 10 chars via engine helper
-        self.code.trace("w", lambda *args, c=10, v=self.code: self.engine.tools.limit_chars(c, v, *args))
+        self.cvw = tk.DoubleVar()
+        self.cvb = tk.DoubleVar()
+        self.imp = tk.DoubleVar()
+        self.bias = tk.DoubleVar()
+        self.teap005 = tk.DoubleVar()
+        self.teap001 = tk.DoubleVar()
         self.is_mandatory = tk.BooleanVar()
-        self.status = tk.BooleanVar()
 
-        # Build UI
-        self._build_ui()
-        self.show()
+        cb_test = self.engine.tools.get_combo(self.frm_fields)
+        self.test = Lookup(self.engine, cb_test, "tests")
 
-        self._is_init = True
+        cb_sample = self.engine.tools.get_combo(self.frm_fields)
+        self.sample = Lookup(self.engine, cb_sample, "samples")
 
-    # ---------------------------------------------------------------------
-    # UI (grid-only)
-    # ---------------------------------------------------------------------
-    def _build_ui(self):
-        pad = {"padx": 8, "pady": 6}
+        cb_method = self.engine.tools.get_combo(self.frm_fields)
+        self.method = Lookup(self.engine, cb_method, "methods")
 
-        self.frm_main = ttk.Frame(self, style="App.TFrame", padding=10)
-        self.frm_main.grid(row=0, column=0, sticky="nsew")
+        cb_unit = self.engine.tools.get_combo(self.frm_fields)
+        self.unit = Lookup(self.engine, cb_unit, "units")
 
-        # Left form
-        left = ttk.Frame(self.frm_main, style="App.TFrame")
-        left.grid(row=0, column=0, sticky=tk.NS)
-        left.columnconfigure(1, weight=1)
+        cb_category = self.engine.tools.get_combo(self.frm_fields)
+        self.category = Lookup(self.engine, cb_category, "categories")
 
-        r = 0; c = 1
-        ttk.Label(left, text="Category:").grid(row=r, column=0, sticky=tk.W)
-        self.cbCategories = ttk.Combobox(left, state="readonly")
-        self.cbCategories.grid(row=r, column=c, sticky="ew", **pad)
+        self.add_field("Analyte:", cb_test)
+        self.add_field("Matrix:", cb_sample)
+        self.add_field("Method:", cb_method)
+        self.add_field("Unit:", cb_unit)
+        self.add_field("Panel:", cb_category)
+        self.add_field("Code:", self.get_entry(self.code, 12), tk.W)
 
-        r += 1
-        ttk.Label(left, text="Code:").grid(row=r, column=0, sticky=tk.W)
-        self.txCode = ttk.Entry(left, textvariable=self.code)
-        self.txCode.grid(row=r, column=c, sticky="ew", **pad)
+        chk = ttk.Checkbutton(self.frm_fields, style="App.TCheckbutton",
+                              onvalue=1, offvalue=0, variable=self.is_mandatory)
+        self.add_field("Every day:", chk, tk.W)
 
-        r += 1
-        ttk.Label(left, text="Sample:").grid(row=r, column=0, sticky=tk.W)
-        self.cbSamples = ttk.Combobox(left, state="readonly")
-        self.cbSamples.grid(row=r, column=c, sticky="ew", **pad)
+        self.add_field("CVi%:", self.get_entry(self.cvw, 10, "float"), tk.W)
+        self.add_field("CVg%:", self.get_entry(self.cvb, 10, "float"), tk.W)
+        self.add_field("Imprecision%:", self.get_entry(self.imp, 10, "float"), tk.W)
+        self.add_field("Bias%:", self.get_entry(self.bias, 10, "float"), tk.W)
+        self.add_field("TEa% (95):", self.get_entry(self.teap005, 10, "float"), tk.W)
+        self.add_field("TEa% (99):", self.get_entry(self.teap001, 10, "float"), tk.W)
 
-        r += 1
-        ttk.Label(left, text="Method:").grid(row=r, column=0, sticky=tk.W)
-        self.cbMethods = ttk.Combobox(left, state="readonly")
-        self.cbMethods.grid(row=r, column=c, sticky="ew", **pad)
+    def get_entry(self, variable, width, kind="text"):
+        """A field of the width its column allows, and no wider."""
+        entry = self.engine.tools.get_entry(self.frm_fields, variable, kind)
+        entry.configure(width=width)
 
-        r += 1
-        ttk.Label(left, text="Unit:").grid(row=r, column=0, sticky=tk.W)
-        self.cbUnits = ttk.Combobox(left, state="readonly")
-        self.cbUnits.grid(row=r, column=c, sticky="ew", **pad)
+        return entry
 
-        r += 1
-        ttk.Label(left, text="Section:").grid(row=r, column=0, sticky=tk.W)
-        self.cbSections = ttk.Combobox(left, state="readonly")
-        self.cbSections.grid(row=r, column=c, sticky="ew", **pad)
+    def get_buttons(self):
+        """Save and Cancel, and Compute for the goals that follow a formula."""
+        return (("Save", self.on_save),
+                ("Compute", self.on_compute),
+                ("Cancel", self.on_cancel))
 
-        r += 1
-        ttk.Label(left, text="Mandatory:").grid(row=r, column=0, sticky=tk.W)
-        self.chkMandatory = ttk.Checkbutton(left, variable=self.is_mandatory, onvalue=1, offvalue=0)
-        self.chkMandatory.grid(row=r, column=c, sticky="w", **pad)
+    def on_compute(self, evt=None):
+        """Work the goals out of the biological variation, by the formulae.
 
-        r += 1
-        ttk.Label(left, text="Status:").grid(row=r, column=0, sticky=tk.W)
-        self.chkStatus = ttk.Checkbutton(left, variable=self.status, onvalue=1, offvalue=0)
-        self.chkStatus.grid(row=r, column=c, sticky="w", **pad)
-
-        # Right buttons
-        right = ttk.Frame(self.frm_main, style="App.TFrame")
-        right.grid(row=0, column=1, sticky=tk.NS, padx=6)
-        ttk.Button(right, style="App.TButton", text="Save", underline=0,
-                   command=self._on_save).grid(row=0, column=0, sticky="ew", padx=4, pady=4)
-        ttk.Button(right, style="App.TButton", text="Cancel", underline=0,
-                   command=self.on_cancel).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
-
-    # ---------------------------------------------------------------------
-    # Lifecycle
-    # ---------------------------------------------------------------------
-
-    def on_open(self, selected_test, selected_item=None):
+        CVa = 0.5 x CVi, bias = 0.25 x sqrt(CVi^2 + CVg^2), TEa = z x CVa +
+        bias, with the coverage factor from the settings. Refused when the
+        variation is zero, because that is the case the formulae do not
+        cover: a drug is held to the state of the art, and its total error is
+        typed rather than derived.
         """
-        Called by parent each time the dialog is requested.
-        Decides mode/title, (re)loads values, brings front, sets focus.
+        cvw = self.cvw.get()
+        cvb = self.cvb.get()
 
-        selected_test:
-            Hybrid dict returned by engine.db.get_selected("tests", ...), with:
-                - "test_id"
-                - "description"
-                - numeric keys [0], [1], ... for backward compatibility.
-        """
-        self.selected_test = selected_test
-        self.selected_item = selected_item
-
-        # Resolve test description once 
-        test_descr = self.selected_test["description"]
-
-        # Reload combos every open (schema/config may change)
-        self._set_categories()
-        self._set_samples()
-        self._set_units()
-        self._set_methods()
-        self._set_sections()
-        
-
-        if self.index is not None and self.selected_item is not None:
-            # UPDATE mode
-            title = f"Update method for {test_descr}"
-            self._load_selected()
+        if not cvw:
+            messagebox.showinfo(
+                self.engine.app_title,
+                "No biological variation: nothing to compute from.\n\n"
+                "An analyte with a variation of its own has its goals"
+                " computed; a drug is held to the state of the art, and its"
+                " allowable total error is typed in.",
+                parent=self)
         else:
-            # INSERT mode
-            title = f"Add method for {test_descr}"
-            self._clear_fields()
-            # Prefill code with first 5 chars of test description
-            self.code.set((test_descr or "")[:5].upper())
-            self.is_mandatory.set(0)
-            self.status.set(1)
+            imp = self.engine.qc.get_imp(cvw)
+            bias = self.engine.qc.get_allowable_bias(cvw, cvb)
+            self.imp.set(imp)
+            self.bias.set(bias)
+            self.teap005.set(round(1.65 * imp + bias, 2))
+            self.teap001.set(round(2.58 * imp + bias, 2))
 
-        self.title(title)
-        try:
-            self.transient(self.parent)
-            self.deiconify()
-            self.lift()
-        except Exception as e:
-            pass
-        self.after_idle(lambda: self.cbCategories.focus_set())
-        
-    # ---------------------------------------------------------------------
-    # Data helpers
-    # ---------------------------------------------------------------------
-    def _clear_fields(self):
-        """
-        Reset all form fields to their default/empty state.
-        """
-        self.code.set("")
-        for cb in (self.cbCategories, self.cbSamples, self.cbMethods, self.cbUnits, self.cbSections):
-            try:
-                cb.set("")
-                cb.current(-1)
-            except Exception as e:
-                pass
-        self.is_mandatory.set(0)
-        self.status.set(1)
+    def set_values(self, row):
 
-    def _set_categories(self):
-        """Load categories filtered by current lab (org_id)."""
-        self.dict_categories = {}
-        values = []
-        sql = """
-            SELECT category_id, description
-            FROM categories
-            WHERE org_id = ?
-            AND status = 1
-            ORDER BY description
-        """
-        lab_id = self.engine.get_lab_id()
-        rows = self.engine.db.read(True, sql, (lab_id,)) or []
-        for idx, row in enumerate(rows):
-            self.dict_categories[idx] = row["category_id"]
-            values.append(row["description"])
-        self.cbCategories["values"] = values
+        self.code.set(row["code"])
+        self.cvw.set(row["cvw"])
+        self.cvb.set(row["cvb"])
+        self.imp.set(row["imp"])
+        self.bias.set(row["bias"])
+        self.teap005.set(row["teap005"])
+        self.teap001.set(row["teap001"])
+        self.is_mandatory.set(row["is_mandatory"])
+        self.test.set_id(row["test_id"])
+        self.sample.set_id(row["sample_id"])
+        self.method.set_id(row["method_id"])
+        self.unit.set_id(row["unit_id"])
+        self.category.set_id(row["category_id"])
 
-    def _set_samples(self):
-        self.dict_samples = {}
-        values = []
-        sql = (
-            "SELECT sample_id, description "
-            "FROM samples "
-            "WHERE status = 1 "
-            "ORDER BY description;"
-        )
-        rows = self.engine.db.read(True, sql, ()) or []
-        for idx, row in enumerate(rows):
-            self.dict_samples[idx] = row["sample_id"]
-            values.append(row["description"])
-        self.cbSamples["values"] = values
+    def get_values(self):
 
-    def _set_units(self):
-        self.dict_units = {}
-        values = []
-        sql = (
-            "SELECT unit_id, description "
-            "FROM units "
-            "WHERE status = 1 "
-            "ORDER BY description;"
-        )
-        rows = self.engine.db.read(True, sql, ()) or []
-        for idx, row in enumerate(rows):
-            self.dict_units[idx] = row["unit_id"]
-            values.append(row["description"])
-        self.cbUnits["values"] = values
-
-    def _set_methods(self):
-        self.dict_methods = {}
-        values = []
-        sql = (
-            "SELECT method_id, description "
-            "FROM methods "
-            "WHERE status = 1 "
-            "ORDER BY description;"
-        )
-        rows = self.engine.db.read(True, sql, ()) or []
-        for idx, row in enumerate(rows):
-            self.dict_methods[idx] = row["method_id"]
-            values.append(row["description"])
-        self.cbMethods["values"] = values
-
-    def _set_sections(self):
-        """
-        Load only sections belonging to the lab of the current context.
-
-        Uses organizations table to get sections (org_type='section')
-        that are children of the current lab (org_id).
-
-        Populates:
-            self.dict_sections: index -> org_id (section)
-            self.cbSections["values"]: list of section descriptions
-        """
-        self.dict_sections = {}
-        values = []
-
-        lab_id = self.engine.current_ids.get("lab_id")
-        if lab_id is None:
-            # No lab context → no sections to display
-            self.cbSections["values"] = []
-            return
-
-        sql = """
-            SELECT
-                org_id AS section_id,
-                description
-            FROM organizations
-            WHERE status = 1
-              AND parent_id = ?
-              AND org_type = 'section'
-            ORDER BY description;
-        """
-        rs = self.engine.db.read(True, sql, (lab_id,)) or []
-
-        for idx, row in enumerate(rs):
-            self.dict_sections[idx] = row["section_id"]
-            values.append(row["description"])
-
-        self.cbSections["values"] = values
-
-    def _load_selected(self):
-        """
-        Load the selected test_method into the form.
-
-        self.selected_item is the hybrid dict returned by:
-            engine.db.get_selected("test_methods", "test_method_id", pk)
-
-        Expected keys:
-            - "test_method_id"
-            - "test_id"
-            - "category_id"
-            - "code"
-            - "sample_id"
-            - "method_id"
-            - "unit_id"
-            - "section_id"
-            - "is_mandatory"
-            - "status"
-        """
-        item = self.selected_item or {}
-
-        # Category
-        cid = item.get("category_id")
-        if cid is not None:
-            try:
-                k = next(k for k, v in self.dict_categories.items() if v == cid)
-                self.cbCategories.current(k)
-            except StopIteration:
-                self.cbCategories.set("")
-        else:
-            self.cbCategories.set("")
-
-        # Code
-        self.code.set(item.get("code") or "")
-
-        # Sample
-        sid = item.get("sample_id")
-        if sid is not None:
-            try:
-                k = next(k for k, v in self.dict_samples.items() if v == sid)
-                self.cbSamples.current(k)
-            except StopIteration:
-                self.cbSamples.set("")
-        else:
-            self.cbSamples.set("")
-
-        # Method
-        mid = item.get("method_id")
-        if mid is not None:
-            try:
-                k = next(k for k, v in self.dict_methods.items() if v == mid)
-                self.cbMethods.current(k)
-            except StopIteration:
-                self.cbMethods.set("")
-        else:
-            self.cbMethods.set("")
-
-        # Unit
-        uid = item.get("unit_id")
-        if uid is not None:
-            try:
-                k = next(k for k, v in self.dict_units.items() if v == uid)
-                self.cbUnits.current(k)
-            except StopIteration:
-                self.cbUnits.set("")
-        else:
-            self.cbUnits.set("")
-
-        # Section (now uses org_id)
-        org_id = item.get("org_id") or item.get("section_id")
-        try:
-            k = next(k for k, v in self.dict_sections.items() if v == org_id)
-            self.cbSections.current(k)
-        except StopIteration:
-            self.cbSections.set("")
-
-        # Flags
-        self.is_mandatory.set(int(item.get("is_mandatory", 0)))
-        self.status.set(int(item.get("status", 1)))
-
-    def _collect_values(self):
-        """
-        Collect and validate form values, returning a list suitable for SQL args.
-
-        Uses named keys from:
-            - self.selected_test -> "test_id"
-        The section is always taken from cbSections.
-        """
-
-        # Required: all combos selected
-        for label, cb in (("Category", self.cbCategories),
-                          ("Sample", self.cbSamples),
-                          ("Method", self.cbMethods),
-                          ("Unit", self.cbUnits),
-                          ("Section", self.cbSections),):
-            if cb.current() < 0:
-                messagebox.showwarning(self.engine.app_title, f"Select a {label}.", parent=self)
-                raise RuntimeError("validation")
-
-        # Required: code (non-empty)
-        code = (self.code.get() or "").strip()
-        if not code:
-            messagebox.showwarning(self.engine.app_title, "Code is required.", parent=self)
-            self.txCode.focus_set()
-            raise RuntimeError("validation")
-
-        # Test id from selected_test (hybrid dict from engine.get_selected)
-        test_id = self.selected_test["test_id"]
-
-        # Section org_id for multi-tenant (org_id references the section in organizations table)
-        section_org_id = self.dict_sections[self.cbSections.current()]
-
-        return [
-            test_id,                                            # test_id
-            self.dict_categories[self.cbCategories.current()],  # category_id
-            code,                                               # code
-            self.dict_samples[self.cbSamples.current()],        # sample_id
-            self.dict_methods[self.cbMethods.current()],        # method_id
-            self.dict_units[self.cbUnits.current()],            # unit_id
-            section_org_id,                                     # org_id (section's org_id)
-            int(self.is_mandatory.get()),                       # is_mandatory
-            int(self.status.get()),                             # status
-        ]
-
-    # ---------------------------------------------------------------------
-    # Actions
-    # ---------------------------------------------------------------------
-    def _on_save(self, _evt=None):
-        # Optional global validation hook
-        if hasattr(self.engine, "on_fields_control"):
-            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
-                return
-
-        if not messagebox.askyesno(self.engine.app_title,
-                                   getattr(self.engine, "ask_to_save", "Do you want to save?"),
-                                   parent=self):
-            return
-
-        try:
-            args = self._collect_values()
-        except RuntimeError:
-            return
-
-        if self.index is not None and getattr(self, "selected_item", None):
-            # UPDATE
-            sql = self.engine.build_sql("test_methods", op="update")
-            pk = self.selected_item.get("test_method_id")
-            args.append(pk)  # pk at the end
-        else:
-            # INSERT
-            sql = self.engine.build_sql("test_methods", op="insert")
-
-        last_id = self.engine.db.write(sql, args)
-        if last_id is None:
-            err = self.engine.last_write_error
-            if err:
-                msg = self.engine.tools.get_database_error(err)
-            else:
-                msg = "Save failed."
-            messagebox.showerror(self.engine.app_title, msg, parent=self)
-            return
-
-        # refresh parent view and reselect
-        self.parent._load_methods_for_selected_test()
-        self._reselect_in_parent(last_id)
-
-        # Notify observers for cross-window refresh
-        self.engine.events.notify("test_methods")
-
-        self.on_cancel()
-
-    def _reselect_in_parent(self, last_id=None):
-        """
-        Reselect the row in the parent's Treeview after save.
-
-        - UPDATE: reselect by current test_method_id
-        - INSERT: reselect by last_id
-        """
-        if self.index is not None and getattr(self, "selected_item", None):
-            target_pk = self.selected_item.get("test_method_id")
-        else:
-            target_pk = last_id
-
-        if target_pk is None:
-            return
-
-        tv = self.parent.lstMethods
-        iid = str(target_pk)
-        try:
-            tv.selection_set(iid)
-            tv.see(iid)
-            self.parent.on_test_method_selected()  # refresh parent state
-        except Exception as e:
-            pass
-        
-    def on_cancel(self, _evt=None):
-        self.engine.safe_close(self)
+        return {"test_id": self.test.get_id(),
+                "category_id": self.category.get_id(),
+                "sample_id": self.sample.get_id(),
+                "method_id": self.method.get_id(),
+                "unit_id": self.unit.get_id(),
+                "code": self.engine.tools.get_clean_text(self.code.get()),
+                "is_mandatory": int(self.is_mandatory.get()),
+                "cvw": self.cvw.get(),
+                "cvb": self.cvb.get(),
+                "imp": self.imp.get(),
+                "bias": self.bias.get(),
+                "teap005": self.teap005.get(),
+                "teap001": self.teap001.get()}

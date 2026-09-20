@@ -32,6 +32,7 @@ import ui.equipments
 import ui.export_day
 import ui.methods
 import ui.note
+import ui.notes
 import ui.performance_dashboard
 import ui.plots
 import ui.result
@@ -40,6 +41,7 @@ import ui.since
 import ui.statistics
 import ui.suppliers
 import ui.tea
+import ui.test_methods
 import ui.tests
 import ui.units
 import ui.users
@@ -159,6 +161,7 @@ class Main(Window, ttk.Frame):
         m_qc.add_separator()
         m_qc.add_command(label="Performance", underline=0,
                          command=self.on_performance)
+        m_qc.add_command(label="Notes", underline=1, command=self.on_notes)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
@@ -177,6 +180,7 @@ class Main(Window, ttk.Frame):
                                   ("Methods", ui.methods),
                                   ("Models", ui.equipments),
                                   ("Samples", ui.samples),
+                                  ("Test methods", ui.test_methods),
                                   ("Suppliers", ui.suppliers),
                                   ("Units", ui.units),
                                   ("Users", ui.users)):
@@ -341,6 +345,11 @@ class Main(Window, ttk.Frame):
         self.engine.windows.show(
             "performance",
             lambda: ui.performance_dashboard.UI(self, self.since))
+
+    def on_notes(self, evt=None):
+        """The log of what was written about the results, over the period."""
+        self.engine.windows.show("notes",
+                                 lambda: ui.notes.UI(self, self.since))
 
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
