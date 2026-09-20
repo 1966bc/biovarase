@@ -25,6 +25,7 @@ import ui.actions
 import ui.licence
 import ui.batches
 import ui.categories
+import ui.change_password
 import ui.controls
 import ui.equipments
 import ui.methods
@@ -120,8 +121,14 @@ class Main(Window, ttk.Frame):
         bar = tk.Menu(self.parent)
 
         m_file = tk.Menu(bar, tearoff=0)
+        m_file.add_command(label="Backup database", underline=0, command=self.on_backup)
+        m_file.add_command(label="Export database as SQL", underline=0,
+                           command=self.on_dump)
+        m_file.add_separator()
         m_file.add_command(label="Log", underline=0, command=self.engine.open_log)
         m_file.add_separator()
+        m_file.add_command(label="Change password", underline=7,
+                           command=self.on_change_password)
         m_file.add_command(label="Exit", underline=1, command=self.parent.on_exit)
         bar.add_cascade(label="File", underline=0, menu=m_file)
 
@@ -157,6 +164,35 @@ class Main(Window, ttk.Frame):
         bar.add_cascade(label="?", menu=m_about)
 
         self.parent.config(menu=bar)
+
+    def on_backup(self, evt=None):
+        """A copy of the database file, named after the moment it was taken.
+
+        The cheapest safety there is, and the one that matters most when the
+        file lives on a shared folder: SQLite is one file, so a copy of it is
+        the whole laboratory. Copied with the connection's own backup, which
+        is consistent even if something is writing while it runs.
+        """
+        path = self.engine.backup()
+        messagebox.showinfo(self.engine.app_title,
+                            "Database copied to\n\n{0}".format(path),
+                            parent=self)
+
+    def on_dump(self, evt=None):
+        """The whole database as SQL statements, in a file that can be read.
+
+        A copy of the file is what is restored; a dump is what is read, and
+        what survives a version of SQLite that no longer opens the file.
+        """
+        path = self.engine.db.dump(self.engine.get_file("sql/bks"))
+        messagebox.showinfo(self.engine.app_title,
+                            "Database written to\n\n{0}".format(path),
+                            parent=self)
+
+    def on_change_password(self, evt=None):
+        """Change the password of whoever is logged in."""
+        self.engine.windows.replace("change_password",
+                                    lambda: ui.change_password.UI(self))
 
     def on_about(self, evt=None):
         """What this is, who wrote it, and what it is running on."""
@@ -603,9 +639,16 @@ class Main(Window, ttk.Frame):
         self.values["te"].set(self.engine.qc.get_te(lot["target"], mean, cv))
         self.values["u"].set(self.engine.qc.get_uncertainty(cv, bias))
 
-        rule = self.engine.westgards.get_westgard_violation_rule(lot["target"],
-                                                                 lot["sd"],
-                                                                 series)
+        # A series shorter than the observations asked for is not judged:
+        # the rules that need more points simply do not fire, and what comes
+        # out is an Accept with nothing behind it. A lot opened last week has
+        # not been in control yet - it has not been anything yet.
+        if len(series) < self.engine.get_observations():
+            rule = "NED"
+        else:
+            rule = self.engine.westgards.get_westgard_violation_rule(lot["target"],
+                                                                     lot["sd"],
+                                                                     series)
         self.values["westgard"].set(rule)
         self.set_westgard_alarm(rule)
 
@@ -616,7 +659,11 @@ class Main(Window, ttk.Frame):
         rejection rule both mean the run is looked at before results go out,
         and a colour that said "maybe" would be read as "carry on".
         """
-        if rule in ("Accept", "NED", ""):
+        if rule == "NED":
+            # Not enough data: neither good news nor bad, and it should not
+            # be read as either.
+            colour = "#666666"
+        elif rule in ("Accept", ""):
             colour = "#1e8449"
         else:
             colour = "#c0392b"

@@ -206,14 +206,22 @@ class Engine:
         """
         return self.log_user.get("role") == ROLE_ADMIN
 
-    def get_new_password(self):
-        """A hash of the password every new user starts with.
+    def get_hash(self, password):
+        """The hash of a password, as it is stored.
 
         gensalt() makes a new salt every time, so two users with the same
         password have different hashes, and the cost of the hashing is part
-        of what it returns.
+        of what comes back. What is stored is never the password.
+
+        @param name: password
+        @return: the hash
+        @rtype: string
         """
-        return bcrypt.hashpw(b"pass", bcrypt.gensalt()).decode("utf-8")
+        return bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf-8")
+
+    def get_new_password(self):
+        """A hash of the password every new user starts with."""
+        return self.get_hash(b"pass")
 
     # ------------------------------------------------------- the laboratory
 
@@ -307,6 +315,32 @@ class Engine:
     DATE_FORMATS = {"dd-mm-yyyy": "%d-%m-%Y",
                     "mm-dd-yyyy": "%m-%d-%Y",
                     "yyyy-mm-dd": "%Y-%m-%d"}
+
+    def backup(self):
+        """Copy the database into sql/bks, named after the moment.
+
+        sqlite3's own backup and not a file copy: it goes through the
+        connection, so a copy taken while something is writing is a database
+        and not half of one. The name sorts by date and never overwrites.
+
+        @return: path of the copy
+        @rtype: string
+        """
+        import sqlite3
+
+        folder = self.get_file(os.path.join("sql", "bks"))
+        os.makedirs(folder, exist_ok=True)
+
+        name = "biovarase_{0}.sl3".format(
+            datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+        path = os.path.join(folder, name)
+
+        copy = sqlite3.connect(path)
+        with copy:
+            self.db.con.backup(copy)
+        copy.close()
+
+        return path
 
     def get_today(self):
         """Today, as a date: what an expiration is compared against.

@@ -4,190 +4,105 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
+"""Change the password of whoever is logged in.
+
+Only their own: a window that sets somebody else's password shows it to the
+person filling the form. An administrator who has to let someone back in
+gives them a new user or resets theirs to the one everybody starts with, and
+the audit trail says who did it.
+
+The old password is asked for as well. Without it, a terminal left unlocked
+for two minutes is a password changed by whoever walked past.
+"""
+
 import tkinter as tk
-
-from ui.parent_view import ParentView
-from tkinter import ttk
 from tkinter import messagebox
-import bcrypt
+from tkinter import ttk
+
+from ui.window import Window
+
+#: Shorter than this is not a password.
+MINIMUM = 8
 
 
-class UI(ParentView):
+class UI(Window, tk.Toplevel):
+    """Three fields: the one in use, the new one, and the new one again."""
 
-    def __init__(self, parent):        
-        if getattr(self, "_is_init", False):
-            self.parent = parent
-            return
+    def __init__(self, parent):
+        super().__init__(name="change_password")
 
-        super().__init__(parent, name="change_password")
+        self.parent = parent
+        self.current = tk.StringVar()
+        self.fresh = tk.StringVar()
+        self.again = tk.StringVar()
 
-         # Anti-flash (build off-screen)
-        self.withdraw()
-        self.attributes("-alpha", 0.0)
-       
-        self._is_init = True
-        self.parent = parent 
-        self.engine = self.nametowidget(".").engine
-               
-        self.resizable(False, False)
-        
-        self.old_password = tk.StringVar()
-        self.new_password = tk.StringVar()
-        self.repeat_password = tk.StringVar()
+        self.transient(parent)
+        self.resizable(0, 0)
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.init_ui()
+        self.engine.tools.center_me(self)
 
-        self.bind("<Escape>", self.__on_cancel)
-        self.protocol("WM_DELETE_WINDOW", self.__on_cancel)
+    def init_ui(self):
 
-        # --- Build interface ------------------------------------------------
-        self._build_ui()
-        self.show()
-        self.update_idletasks()
-        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-        
-    def _build_ui(self):
-        """Constructs the user interface (Labels, Entry fields, and Buttons)."""
-        paddings = {"padx": 10, "pady": 5} 
+        frm_main = ttk.Frame(self, style="App.TFrame", padding=12)
+        frm_fields = ttk.Frame(frm_main, style="App.TFrame")
 
-        self.frm_main = ttk.Frame(self, style="App.TFrame", padding=15)
-        self.frm_main.grid(row=0, column=0, sticky=tk.NSEW)
+        for row, (label, variable) in enumerate((("Current password:", self.current),
+                                                 ("New password:", self.fresh),
+                                                 ("New password again:", self.again))):
+            ttk.Label(frm_fields, style="App.TLabel",
+                      text=label).grid(row=row, column=0, sticky=tk.W)
+            entry = self.engine.tools.get_entry(frm_fields, variable)
+            entry.configure(show="*", width=self.engine.tools.FIELD_CODE)
+            entry.grid(row=row, column=1, padx=6, pady=4)
+            if row == 0:
+                self.first = entry
 
-        frm_input = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_input.columnconfigure(1, weight=1) 
-        frm_input.grid(row=0, column=0, sticky=tk.NSEW, **paddings)
+        buttons = self.engine.tools.get_button_column(frm_main,
+                                                      (("Save", self.on_save),
+                                                       ("Cancel", self.on_cancel)),
+                                                      window=self)
 
-        r = 0
-        c = 1
-        
-        # Old Password
-        ttk.Label(frm_input, text="Old Password:").grid(row=r, column=0, sticky=tk.W, **paddings)
-        self.txtOldPassword = ttk.Entry(frm_input, show="*", textvariable=self.old_password, width=30)
-        self.txtOldPassword.grid(row=r, column=c, sticky=tk.EW, **paddings)
-        self.txtOldPassword.focus_set()
-
-        r += 1
-        # New Password
-        ttk.Label(frm_input, text="New Password:").grid(row=r, column=0, sticky=tk.W, **paddings)
-        self.txtNewPassword = ttk.Entry(frm_input, show="*", textvariable=self.new_password, width=30)
-        self.txtNewPassword.grid(row=r, column=c, sticky=tk.EW, **paddings)
-
-        r += 1
-        # Repeat Password
-        ttk.Label(frm_input, text="Confirm Password:").grid(row=r, column=0, sticky=tk.W, **paddings)
-        self.txtRepeatPassword = ttk.Entry(frm_input, show="*", textvariable=self.repeat_password, width=30)
-        self.txtRepeatPassword.grid(row=r, column=c, sticky=tk.EW, **paddings)
-
-        # Frame for Buttons
-        frm_buttons = ttk.Frame(self.frm_main, style="App.TFrame")
-        frm_buttons.grid(row=1, column=0, sticky=tk.E, pady=10) # Positioned below the Entry fields
-
-        r = 0
-        c = 0
-        
-        # Save Button
-        btn_save = ttk.Button(frm_buttons, style="App.TButton", text="Save", underline=0, command=self.on_save)
-        btn_save.grid(row=r, column=c, sticky=tk.EW, padx=5, pady=5)
-        self.bind("<Alt-s>", self.on_save)
-
-        c += 1
-        # Cancel Button
-        btn_cancel = ttk.Button(frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.__on_cancel)
-        btn_cancel.grid(row=r, column=c, sticky=tk.EW, padx=5, pady=5)
-        self.bind("<Alt-c>", self.__on_cancel, add="+") # Use add="+" to avoid overwriting existing bindings
+        frm_fields.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=(12, 0))
+        frm_main.pack(fill=tk.BOTH, expand=1)
 
     def on_open(self):
-        self.title("Change Password")
-        self.after_idle(self.txtOldPassword.focus_set)
 
-    def _fetch_current_hash(self):
-        """Retrieves the bcrypt hash (string) of the logged-in user or None."""
-        if not (hasattr(self.engine, 'log_user') and self.engine.log_user):
-            messagebox.showerror(self.title(), "User not found.", parent=self)
-            return None
-
-        user_id = self.engine.log_user["user_id"]
-        sql = "SELECT pswrd FROM users WHERE user_id = ?;"
-        row = self.engine.db.read(False, sql, (user_id,))
-        return row["pswrd"] if row else None
-
-    def _match_old_password(self):
-        """Compares the old entered password with the stored hash (using bcrypt)."""
-        stored_hash = self._fetch_current_hash()
-        if not stored_hash:
-            return False
-            
-        # Tkinter strings must be encoded to bytes for bcrypt.checkpw
-        old_pw_bytes = self.old_password.get().strip().encode("utf-8")
-        # The stored hash string must also be encoded to bytes
-        stored_hash_bytes = stored_hash.encode("utf-8")
-        
-        try:
-            return bcrypt.checkpw(old_pw_bytes, stored_hash_bytes)
-        except Exception as e:
-            return False
-
-    def _hash_new_password(self, plain_password: str) -> str:
-        """Generates a bcrypt hash and returns it as a utf-8 string (ready for DB storage)."""
-        pw_bytes = plain_password.strip().encode("utf-8")
-        # Using a default work factor (rounds=12)
-        hashed = bcrypt.hashpw(pw_bytes, bcrypt.gensalt(rounds=12)) 
-        return hashed.decode("utf-8")
+        self.title("Change password")
+        self.first.focus()
 
     def on_save(self, evt=None):
-        """Handles the save logic, including password validation and DB update."""
-        
-        if hasattr(self.engine, "on_fields_control"):
-            if self.engine.tools.on_fields_control(self.frm_main, self.parent.title()) is False:
-                return
-            
-        if not messagebox.askyesno(self.parent.title(),
-                                   getattr(self.engine, "ask_to_save", "Save changes?"),
-                                   parent=self):
-            messagebox.showinfo(self.parent.title(),
-                                getattr(self.engine, "abort", "Abort."),
+        """Check the three fields against each other, then write the hash."""
+        nickname = self.engine.log_user["nickname"]
+        message = self.get_error(nickname)
+
+        if message is not None:
+            messagebox.showwarning(self.engine.app_title, message, parent=self)
+        else:
+            self.engine.db.write(
+                "UPDATE users SET pswrd = ? WHERE user_id = ?",
+                (self.engine.get_hash(self.fresh.get().encode("utf-8")),
+                 self.engine.log_user["user_id"]))
+            messagebox.showinfo(self.engine.app_title,
+                                "Password changed.",
                                 parent=self)
-            return
+            self.on_cancel()
 
-        # 1) Verify old password
-        if not self._match_old_password():
-            messagebox.showinfo(self.parent.title(),
-                                "Current password is incorrect.", parent=self)
-            self.txtOldPassword.focus_set()
-            return
+    def get_error(self, nickname):
+        """What is wrong with what was typed, or None when nothing is."""
+        found = None
 
-        # 2) Verify new password meets criteria (length and match)
-        new_pw = self.new_password.get().strip()
-        rep_pw = self.repeat_password.get().strip()
+        if self.engine.on_login(nickname, self.current.get().encode("utf-8")) is None:
+            found = "The current password is not that one."
+        elif len(self.fresh.get()) < MINIMUM:
+            found = "A password is at least {0} characters.".format(MINIMUM)
+        elif self.fresh.get() != self.again.get():
+            found = "The two new passwords are not the same."
+        elif self.fresh.get() == self.current.get():
+            found = "The new password is the one already in use."
 
-        if len(new_pw) < 8:
-            messagebox.showinfo(self.parent.title(),
-                                "Password must be at least 8 characters.", parent=self)
-            self.txtNewPassword.focus_set()
-            return
+        return found
 
-        if new_pw != rep_pw:
-            messagebox.showinfo(self.parent.title(),
-                                "Passwords do not match.", parent=self)
-            self.txtRepeatPassword.focus_set()
-            return
-
-        # 3) Update DB with new bcrypt hash
-        hashed = self._hash_new_password(new_pw)
-        user_id = self.engine.log_user["user_id"]
-        sql = "UPDATE users SET pswrd = ? WHERE user_id = ?;"
-        result = self.engine.db.write(sql, (hashed, user_id))
-        if result is None:
-            err = self.engine.last_write_error
-            if err:
-                msg = self.engine.tools.get_database_error(err)
-            else:
-                msg = "Save failed."
-            messagebox.showerror(self.parent.title(), msg, parent=self)
-            return
-
-        messagebox.showinfo(self.parent.title(), "Password changed successfully.", parent=self)
-        self.on_cancel()
-
-    def __on_cancel(self, evt=None):
-        """Destroys the window and resets the Singleton reference."""
-        UI._instance = None
+    def on_cancel(self, evt=None):
         self.destroy()
