@@ -19,6 +19,7 @@ import datetime
 import os
 import subprocess
 import sys
+import webbrowser
 
 import bcrypt
 
@@ -31,6 +32,10 @@ from report import Report
 from tools import Tools
 from westgards import Westgards
 from windows import Windows
+
+#: The user manual, beside the program, and where it is read if it is not.
+MANUAL = os.path.join("documents", "USER_MANUAL.pdf")
+MANUAL_URL = "https://github.com/1966bc/Biovarase/blob/main/documents/USER_MANUAL.md"
 
 #: The roles. The laboratory has two: whoever runs it, and whoever works in it.
 ROLE_ADMIN = 0
@@ -165,6 +170,31 @@ class Engine:
             subprocess.Popen(["xdg-open", path])
         else:
             os.startfile(path)
+
+    def open_url(self, url):
+        """Open an address in the browser the system uses.
+
+        webbrowser and not xdg-open: it is the one thing in the standard
+        library that knows what a browser is on every system this runs on,
+        and it does not block.
+
+        @param name: url
+        """
+        webbrowser.open(url)
+
+    def open_manual(self):
+        """Open the user manual, where the program keeps it.
+
+        The PDF ships with the program, so the manual is at hand on a bench
+        with no network. If it was left out of the build, the copy in the
+        repository answers instead.
+        """
+        path = self.get_file(MANUAL)
+
+        if os.path.exists(path):
+            self.open_file(path)
+        else:
+            self.open_url(MANUAL_URL)
 
     def open_log(self):
         """Open the log file with the program the system uses for text."""

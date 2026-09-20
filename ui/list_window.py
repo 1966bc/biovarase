@@ -71,7 +71,8 @@ class ListWindow(tk.Toplevel):
 
     def on_open(self):
 
-        self.title(self.TABLE.title())
+        # test_methods is a table name, "Test methods" is a window title.
+        self.title(self.TABLE.replace("_", " ").capitalize())
         self.set_values()
 
     def set_values(self):

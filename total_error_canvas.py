@@ -50,7 +50,6 @@ class TotalErrorCanvas(tk.Canvas):
         self._bias = 0.0
         self._cv = 0.0
         self._z = 0.0
-        self._n_series = 0
         self._n_results = 0
         self._date_from = None
         self._date_to = None
@@ -69,7 +68,6 @@ class TotalErrorCanvas(tk.Canvas):
         bias,
         cv,
         z_score,
-        n_series,
         n_results,
         unit = "",
         date_from=None,
@@ -83,7 +81,6 @@ class TotalErrorCanvas(tk.Canvas):
         self._bias = float(bias)
         self._cv = float(cv)
         self._z = float(z_score)
-        self._n_series = int(n_series)
         self._n_results = int(n_results)
         self._date_from = date_from
         self._date_to = date_to
@@ -239,11 +236,8 @@ class TotalErrorCanvas(tk.Canvas):
             f"TE {self._te:.1f}%",
             f"TEa {self._tea:.1f}%",
             f"z = {self._z:.2f}",
-            f"n = {self._n_series}",
+            "n = {0} results".format(self._n_results),
         ]
-
-        if self._n_results and self._n_results != self._n_series:
-            summary_parts[-1] = f"n = {self._n_series} on {self._n_results} results"
 
         if self._unit:
             summary_parts.append(self._unit)

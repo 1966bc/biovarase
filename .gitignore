@@ -35,4 +35,7 @@ dist/
 documents/*
 !documents/ANALYTICAL_GOALS.md
 !documents/BUILD.md
+!documents/USER_MANUAL.md
+!documents/USER_MANUAL.pdf
+!documents/images/
 log.txt

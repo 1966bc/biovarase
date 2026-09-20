@@ -71,7 +71,6 @@ class UI(Window, tk.Toplevel):
                             bias=bias,
                             cv=cv,
                             z_score=self.engine.qc.get_zscore(),
-                            n_series=1,
                             n_results=len(series),
                             unit=unit["description"])
 

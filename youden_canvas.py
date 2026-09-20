@@ -22,7 +22,7 @@ class YoudenPlotCanvas(tk.Canvas):
     a general plotting library.
     """
 
-    LEFT_MARGIN   = 60
+    LEFT_MARGIN   = 80
     RIGHT_MARGIN  = 20
     TOP_MARGIN    = 40
     BOTTOM_MARGIN = 50
@@ -383,7 +383,7 @@ class YoudenPlotCanvas(tk.Canvas):
         if self._y_label:
             vertical = "\n".join(list(self._y_label))
             self.create_text(
-                x0 - 40,
+                x0 - 62,
                 (y0 + y1) / 2.0,
                 text=vertical,
                 anchor="center",

@@ -55,6 +55,11 @@ from bias_canvas import BiasCanvas
 from ljcanvas import LeveyJenningsCanvas
 from ui.window import Window
 
+#: The biological variation the analytical goals are computed from: the
+#: EFLM keeps it, updates it, and says how each estimate was graded. The
+#: formulae that use it are in documents/ANALYTICAL_GOALS.md.
+BIOLOGICAL_VARIATION = "https://biologicalvariation.eu/"
+
 #: The columns of each list, as Tools.get_tree wants them:
 #: (identifier, heading, anchor, stretch, minwidth, width).
 BATCHES = (("#0", "id", tk.W, False, 0, 0),
@@ -212,10 +217,15 @@ class Main(Window, ttk.Frame):
                               command=self.on_export_goals)
         bar.add_cascade(label="Exports", underline=1, menu=m_exports)
 
-        m_about = tk.Menu(bar, tearoff=0)
-        m_about.add_command(label="About", underline=0, command=self.on_about)
-        m_about.add_command(label="Licence", underline=0, command=self.on_licence)
-        bar.add_cascade(label="?", menu=m_about)
+        m_help = tk.Menu(bar, tearoff=0)
+        m_help.add_command(label="User manual", underline=0, command=self.on_manual)
+        m_help.add_separator()
+        m_help.add_command(label="Biological variation database", underline=0,
+                           command=self.on_biological_variation)
+        m_help.add_separator()
+        m_help.add_command(label="About", underline=0, command=self.on_about)
+        m_help.add_command(label="Licence", underline=0, command=self.on_licence)
+        bar.add_cascade(label="?", menu=m_help)
 
         self.parent.config(menu=bar)
 
@@ -316,6 +326,20 @@ class Main(Window, ttk.Frame):
         """Change the password of whoever is logged in."""
         self.engine.windows.replace("change_password",
                                     lambda: ui.change_password.UI(self))
+
+    def on_manual(self, evt=None):
+        """The manual, with the program that reads a PDF on this system."""
+        self.engine.open_manual()
+
+    def on_biological_variation(self, evt=None):
+        """The EFLM database the analytical goals of every method come from.
+
+        Where a method has an allowable total error and nobody remembers on
+        what grounds, this is the ground: the within-subject and
+        between-subject variation of the analyte, with the studies behind
+        each estimate and how they were graded.
+        """
+        self.engine.open_url(BIOLOGICAL_VARIATION)
 
     def on_about(self, evt=None):
         """What this is, who wrote it, and what it is running on."""

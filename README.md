@@ -7,7 +7,7 @@ measures, the lots of control material open on its instruments, the results
 run on them, and the Levey-Jennings chart that says whether the method can
 report today.
 
-![Biovarase: a Levey-Jennings chart with the statistics of the series](docs/biovarase.png)
+![Biovarase: a Levey-Jennings chart with the statistics of the series](documents/images/biovarase.png)
 
 Python 3 with Tkinter and SQLite. Three dependencies, no server, no browser,
 and a database that is one file.
@@ -115,6 +115,11 @@ work.
 
 95 tests, `unittest` from the standard library, a database in memory.
 
+[documents/USER_MANUAL.md](documents/USER_MANUAL.md) is the program as it is
+used, with a picture of every window: the day's work, the rules and what
+each chart answers, the records that get signed, and what the settings
+change. It ships as a PDF too, and the **?** menu opens it.
+
 Three documents go with the code:
 [ARCHITECTURE.md](ARCHITECTURE.md), how it is built and why;
 [HOW_IT_WORKS.md](HOW_IT_WORKS.md), the program followed while it runs — the
@@ -133,7 +138,7 @@ start, a login, a chart, a result entered, an error;
 | `*_canvas.py`, `ljcanvas.py` | the charts |
 | `sql/` | the schema, the queries, the sample database |
 | `tests/` | 95 of them |
-| `documents/` | the analytical goals, and how to build it |
+| `documents/` | the manual, the analytical goals, how to build it |
 
 ## Licence
 
