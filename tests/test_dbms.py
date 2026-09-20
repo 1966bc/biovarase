@@ -213,10 +213,9 @@ class TestStatementsFromTheSchema(DBMSTestCase):
 class TestDates(DBMSTestCase):
     """Dates come back as dates, and go in as the text the schema holds.
 
-    sqlite3 did both conversions itself until Python 3.12 deprecated them.
-    DBMS registers its own, and what these tests watch is the type: a date
-    that comes back a string does not fail where it is read, it fails in a
-    comparison somewhere else, quietly and wrongly.
+    The conversions themselves are dates.py and are tested there; what is
+    watched here is that a DBMS has them, through the whole way round - a
+    column of the real schema, written and read back.
     """
 
     def test_a_day_comes_back_a_date(self):
@@ -254,22 +253,6 @@ class TestDates(DBMSTestCase):
         self.db.write("INSERT INTO results (batch_id, result) VALUES (?, ?)", (1, 95.0))
         row = self.db.read(False, "SELECT created_at FROM results")
         self.assertIsInstance(row["created_at"], datetime.datetime)
-
-    def test_the_conversions_are_the_ones_written_here(self):
-        """And not the ones sqlite3 is giving up.
-
-        Those still work on the Python of today, which is exactly why no
-        other test in this class would notice if the registrations were
-        taken out - until the version that removes them, on somebody's
-        machine, in a laboratory.
-        """
-        self.assertEqual(sqlite3.converters["DATE"], self.db.convert_date)
-        self.assertEqual(sqlite3.converters["TIMESTAMP"], self.db.convert_timestamp)
-        adapters = sqlite3.adapters
-        self.assertEqual(adapters[(datetime.date, sqlite3.PrepareProtocol)],
-                         self.db.adapt_date)
-        self.assertEqual(adapters[(datetime.datetime, sqlite3.PrepareProtocol)],
-                         self.db.adapt_datetime)
 
     def test_nothing_stays_nothing(self):
         """A column that is empty comes back None, not a date of some kind."""
