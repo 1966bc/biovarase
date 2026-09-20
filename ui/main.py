@@ -88,9 +88,6 @@ class Main(Window, ttk.Frame):
         self.engine.events.subscribe("notes", self.on_results_changed)
         self.engine.events.subscribe("batches", self.on_lots_changed)
 
-    def __str__(self):
-        return "class: {0}".format(self.__class__.__name__)
-
     # ------------------------------------------------------------- the menu
 
     def init_menu(self):
@@ -135,20 +132,31 @@ class Main(Window, ttk.Frame):
     # --------------------------------------------------------------- the ui
 
     def init_ui(self):
-        """Three lists, a chart and a table, in two columns."""
+        """Three lists, a chart and a table, in panes that can be dragged.
+
+        A PanedWindow and not fixed frames: on the bench the chart wants the
+        room, on a laptop the lists do, and the person in front of it knows
+        which. The weights say what grows when the window does - the chart
+        and the results, not the lists of names.
+        """
         frm_main = ttk.Frame(self, style="App.TFrame", padding=6)
 
-        left = ttk.Frame(frm_main, style="App.TFrame")
-        right = ttk.Frame(frm_main, style="App.TFrame")
+        across = ttk.PanedWindow(frm_main, orient=tk.HORIZONTAL)
 
+        left = ttk.PanedWindow(across, orient=tk.VERTICAL)
         self.init_methods(left)
         self.init_lots(left)
-        self.init_chart(right)
-        self.init_statistics(right)
+
+        right = ttk.PanedWindow(across, orient=tk.VERTICAL)
+        chart = ttk.Frame(right, style="App.TFrame")
+        self.init_chart(chart)
+        self.init_statistics(chart)
+        right.add(chart, weight=3)
         self.init_results(right)
 
-        left.pack(side=tk.LEFT, fill=tk.Y)
-        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=(8, 0))
+        across.add(left, weight=1)
+        across.add(right, weight=3)
+        across.pack(fill=tk.BOTH, expand=1)
         frm_main.pack(fill=tk.BOTH, expand=1)
 
     def init_methods(self, container):
@@ -160,7 +168,7 @@ class Main(Window, ttk.Frame):
         self.lst_methods = self.engine.tools.get_tree(frm, METHODS)
         self.lst_methods.bind("<<TreeviewSelect>>", self.on_selected_method)
 
-        frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        container.add(frm, weight=3)
 
     def init_lots(self, container):
         """The lots of control material open on the analyte chosen."""
@@ -170,7 +178,7 @@ class Main(Window, ttk.Frame):
         self.lst_lots.tag_configure("expired", foreground="#c0392b")
         self.lst_lots.bind("<<TreeviewSelect>>", self.on_selected_lot)
 
-        frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1, pady=(6, 0))
+        container.add(frm, weight=1)
 
     def init_chart(self, container):
         """The Levey-Jennings chart, drawn on a canvas and nothing else."""
@@ -217,7 +225,7 @@ class Main(Window, ttk.Frame):
                                                        ("Note", self.on_note)))
         buttons.pack(side=tk.RIGHT, fill=tk.Y)
 
-        frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1, pady=(6, 0))
+        container.add(frm, weight=2)
 
     # ------------------------------------------------------------- the data
 

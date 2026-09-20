@@ -34,9 +34,6 @@ class Login(Window, ttk.Frame):
 
         self.init_ui()
 
-    def __str__(self):
-        return "class: {0}".format(self.__class__.__name__)
-
     def init_ui(self):
 
         frm_main = ttk.Frame(self, style="App.TFrame", padding=12)

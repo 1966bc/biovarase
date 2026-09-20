@@ -31,7 +31,14 @@ they are Toplevels and Frames exactly as they were.
 
 
 class Window:
-    """The engine, reached from any widget in the tree."""
+    """The engine, reached from any widget in the tree.
+
+    A note for whoever adds a __str__ to a window: Tk uses str(widget) as the
+    widget's path name, so a __str__ that returns anything else breaks every
+    call that takes parent=self - a messagebox among them, which then fails
+    with `bad window path name`. Widgets are the one place where that
+    convention does not apply.
+    """
 
     @property
     def engine(self):
