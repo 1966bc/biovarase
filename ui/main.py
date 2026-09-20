@@ -111,6 +111,7 @@ class Main(Window, ttk.Frame):
 
         m_qc = tk.Menu(bar, tearoff=0)
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
+        m_qc.add_command(label="Edit result", underline=0, command=self.on_edit_result)
         m_qc.add_command(label="Note", underline=0, command=self.on_note)
         bar.add_cascade(label="QC", underline=0, menu=m_qc)
 
@@ -247,6 +248,14 @@ class Main(Window, ttk.Frame):
         # a result already entered is to say what was done about it. The
         # result itself is opened from the chart, by double clicking its point.
         self.lst_results.bind("<Double-Button-1>", self.on_note)
+        # The right button reaches what the chart cannot: a result older than
+        # the points drawn, and above all an excluded one, which has to be
+        # opened again to be put back.
+        self.lst_results.bind("<Button-3>", self.on_result_menu)
+
+        self.menu_results = tk.Menu(self, tearoff=0)
+        self.menu_results.add_command(label="Edit result", command=self.on_edit_result)
+        self.menu_results.add_command(label="Note", command=self.on_note)
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -585,6 +594,20 @@ class Main(Window, ttk.Frame):
             result_id = self.chart_results[index]
             self.engine.windows.replace(
                 "result", lambda: ui.result.UI(self, self.batch, result_id))
+
+    def on_result_menu(self, evt):
+        """The menu of a result, on the row the pointer is over.
+
+        The row is selected first: a menu that acted on the row selected
+        before, while the pointer is over another one, would act on the
+        wrong result and say nothing about it.
+        """
+        item = self.lst_results.identify_row(evt.y)
+
+        if item:
+            self.lst_results.selection_set(item)
+            self.lst_results.focus(item)
+            self.menu_results.tk_popup(evt.x_root, evt.y_root)
 
     def on_add_result(self, evt=None):
         """Enter a result on the lot chosen."""
