@@ -25,6 +25,7 @@ import ui.about
 import ui.actions
 import ui.licence
 import ui.batches
+import ui.bland_altman
 import ui.categories
 import ui.change_password
 import ui.controls
@@ -36,6 +37,7 @@ import ui.result
 import ui.samples
 import ui.statistics
 import ui.suppliers
+import ui.tea
 import ui.tests
 import ui.units
 import ui.users
@@ -147,6 +149,8 @@ class Main(Window, ttk.Frame):
 
         m_qc = tk.Menu(bar, tearoff=0)
         m_qc.add_command(label="Statistics", underline=0, command=self.on_statistics)
+        m_qc.add_command(label="Total error", underline=0, command=self.on_tea)
+        m_qc.add_command(label="Bland-Altman", underline=0, command=self.on_bland_altman)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
@@ -283,6 +287,27 @@ class Main(Window, ttk.Frame):
                 "statistics",
                 lambda: ui.statistics.UI(self, self.batch, self.since))
 
+    def on_tea(self, evt=None):
+        """What this series does against what the analyte allows."""
+        if self.batch is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a batch first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "tea", lambda: ui.tea.UI(self, self.batch, self.since))
+
+    def on_bland_altman(self, evt=None):
+        """This control on two instruments: how far apart they are."""
+        if self.batch is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a batch first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "bland_altman",
+                lambda: ui.bland_altman.UI(self, self.batch, self.since))
+
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
         self.engine.windows.show("batches", lambda: ui.batches.UI(self))
@@ -408,6 +433,9 @@ class Main(Window, ttk.Frame):
         self.menu_results = tk.Menu(self, tearoff=0)
         self.menu_results.add_command(label="Edit result", command=self.on_edit_result)
         self.menu_results.add_command(label="Note", command=self.on_note)
+        self.menu_results.add_separator()
+        self.menu_results.add_command(label="Delete result",
+                                      command=self.on_delete_result)
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -974,6 +1002,32 @@ class Main(Window, ttk.Frame):
         else:
             self.engine.windows.replace(
                 "result", lambda: ui.result.UI(self, self.batch, result_id))
+
+    def on_delete_result(self, evt=None):
+        """Remove a result that never belonged to this lot.
+
+        Deleting is for what did not happen: a result entered twice, or on
+        the wrong lot. A measurement that was made and came out badly is
+        excluded instead - In use, in its own window - which keeps it on the
+        chart in grey and keeps the series honest. Either way the audit trail
+        holds what it was, which is why the question says so.
+        """
+        result_id = self.dict_results.get(self.lst_results.focus())
+
+        if result_id is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   self.engine.no_selected,
+                                   parent=self)
+        elif messagebox.askyesno(self.engine.app_title,
+                                 "{0}\n\nThe result is removed from the lot."
+                                 " What it was stays in the audit trail.\n\n"
+                                 "A result that was measured and came out badly"
+                                 " is excluded, not deleted.".format(
+                                     self.engine.ask_to_delete),
+                                 parent=self):
+            self.engine.db.write("DELETE FROM results WHERE result_id = ?",
+                                 (result_id,))
+            self.engine.events.notify("results", None)
 
     def on_note(self, evt=None):
         """Write down what was seen on a result and what was done about it."""

@@ -4,18 +4,17 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-"""The lots of control material, and the results entered on them.
+"""The lots of control material: opening one, and correcting one.
 
-Three lists across: the analytes as this laboratory measures them, the lots
-open on the one chosen, and the results on the lot. This is where the
-material is administered - a new lot when the box arrives, a target
-recomputed, a result typed in the wrong place taken out again - while the
-main window is where the control is read.
+Two lists: the analytes as this laboratory measures them, and the lots open
+on the one chosen. This is where the material is administered - a new lot
+when the box arrives, a target recomputed once the instrument has had its
+say - while the main window is where the control is read and where the
+results are.
 
-Deleting a result is here and nowhere else, and it is meant to be rare: a
-result entered on the wrong lot, or entered twice. What is wrong with a
-measurement that was made is said by excluding it, which leaves it on the
-chart in grey; deleting is for what never happened.
+No buttons. Double click an analyte and you are opening a lot on it; double
+click a lot and you are correcting that lot. The gesture is on the thing it
+is about, as it is everywhere else in this program.
 """
 
 import tkinter as tk
@@ -23,7 +22,6 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import ui.batch
-import ui.result
 
 from ui.lookup import Lookup
 from ui.window import Window
@@ -42,11 +40,6 @@ BATCHES = (("#0", "id", tk.W, False, 0, 0),
            ("#6", "Expiration", tk.W, False, 80, 90),
            ("#7", "Results", tk.E, False, 55, 65))
 
-RESULTS = (("#0", "id", tk.W, False, 0, 0),
-           ("#1", "Date", tk.W, True, 120, 145),
-           ("#2", "Value", tk.CENTER, False, 55, 70),
-           ("#3", "In use", tk.CENTER, False, 45, 55))
-
 
 class UI(Window, tk.Toplevel):
     """The lots of every analyte, and what has been measured on them."""
@@ -60,7 +53,6 @@ class UI(Window, tk.Toplevel):
         self.parent = parent
         self.dict_methods = {}
         self.dict_batches = {}
-        self.dict_results = {}
         self.method = None
         self.batch = None
         self.panels = None
@@ -80,7 +72,6 @@ class UI(Window, tk.Toplevel):
 
         self.init_methods(across)
         self.init_batches(across)
-        self.init_results(across)
 
         across.pack(fill=tk.BOTH, expand=1)
         frm_main.pack(fill=tk.BOTH, expand=1)
@@ -95,6 +86,9 @@ class UI(Window, tk.Toplevel):
 
         self.lst_methods = self.engine.tools.get_tree(frm, METHODS)
         self.lst_methods.bind("<<TreeviewSelect>>", self.on_selected_method)
+        # Double clicking an analyte opens a lot on it: the box has arrived
+        # and this is the analyte it is for.
+        self.lst_methods.bind("<Double-Button-1>", self.on_add_batch)
 
         container.add(frm, weight=2)
 
@@ -108,31 +102,7 @@ class UI(Window, tk.Toplevel):
         self.lst_batches.bind("<<TreeviewSelect>>", self.on_selected_batch)
         self.lst_batches.bind("<Double-Button-1>", self.on_edit_batch)
 
-        buttons = self.engine.tools.get_button_column(frm,
-                                                      (("Add", self.on_add_batch),
-                                                       ("Edit", self.on_edit_batch)),
-                                                      window=self)
-        buttons.pack(side=tk.RIGHT, fill=tk.Y)
-
         container.add(frm, weight=3)
-
-    def init_results(self, container):
-        """The results on the lot chosen, with the three things done to them."""
-        frm = ttk.LabelFrame(container, text="Results")
-
-        self.lst_results = self.engine.tools.get_tree(frm, RESULTS)
-        self.lst_results.tag_configure("excluded", foreground="gray")
-        self.lst_results.bind("<Double-Button-1>", self.on_edit_result)
-
-        buttons = self.engine.tools.get_button_column(frm,
-                                                      (("Add", self.on_add_result),
-                                                       ("Edit", self.on_edit_result),
-                                                       ("Delete", self.on_delete_result),
-                                                       ("Close", self.on_cancel)),
-                                                      window=self)
-        buttons.pack(side=tk.RIGHT, fill=tk.Y)
-
-        container.add(frm, weight=2)
 
     # ------------------------------------------------------------- the data
 
@@ -213,33 +183,6 @@ class UI(Window, tk.Toplevel):
                 tags=tuple(tags))
             self.dict_batches[item] = row["batch_id"]
 
-    def set_results(self):
-        """The results on the lot, newest first, excluded ones in grey."""
-        sql = """SELECT r.result_id, r.result, r.received, r.status
-                   FROM results r
-                  WHERE r.batch_id = ?
-               ORDER BY r.received DESC
-                  LIMIT ?"""
-        rows = self.engine.db.read(True, sql, (self.batch, self.engine.get_records()))
-
-        self.engine.tools.clear_treeview(self.lst_results)
-        self.dict_results.clear()
-        for row in rows:
-            if row["status"]:
-                tags = ()
-                in_use = "yes"
-            else:
-                tags = ("excluded",)
-                in_use = "no"
-
-            item = self.lst_results.insert(
-                "", tk.END,
-                values=(self.engine.format_datetime(row["received"]),
-                        row["result"],
-                        in_use),
-                tags=tags)
-            self.dict_results[item] = row["result_id"]
-
     # ------------------------------------------------------------ the doing
 
     def on_panel(self, evt=None):
@@ -253,32 +196,25 @@ class UI(Window, tk.Toplevel):
         if self.method is not None:
             self.set_batches()
             self.batch = None
-            self.engine.tools.clear_treeview(self.lst_results)
-            self.dict_results.clear()
 
     def on_selected_batch(self, evt=None):
         """A lot chosen: the results on it."""
         self.batch = self.dict_batches.get(self.lst_batches.focus())
-
-        if self.batch is not None:
-            self.set_results()
 
     def on_reset(self):
         """Empty the two lists that hang off the analyte."""
         self.method = None
         self.batch = None
         self.engine.tools.clear_treeview(self.lst_batches)
-        self.engine.tools.clear_treeview(self.lst_results)
         self.dict_batches.clear()
-        self.dict_results.clear()
 
     def on_batches_changed(self, row_id=None):
         if self.method is not None:
             self.set_batches()
 
     def on_results_changed(self, row_id=None):
-        if self.batch is not None:
-            self.set_results()
+        # A result entered elsewhere changes the count this window shows.
+        if self.method is not None:
             self.set_batches()
 
     def on_add_batch(self, evt=None):
@@ -300,49 +236,6 @@ class UI(Window, tk.Toplevel):
         else:
             self.engine.windows.replace(
                 "batch", lambda: ui.batch.UI(self, self.method, self.batch))
-
-    def on_add_result(self, evt=None):
-        if self.batch is None:
-            messagebox.showwarning(self.engine.app_title,
-                                   "Choose a batch first.",
-                                   parent=self)
-        else:
-            self.engine.windows.replace("result",
-                                        lambda: ui.result.UI(self, self.batch))
-
-    def on_edit_result(self, evt=None):
-        result_id = self.dict_results.get(self.lst_results.focus())
-
-        if result_id is None:
-            messagebox.showwarning(self.engine.app_title,
-                                   self.engine.no_selected,
-                                   parent=self)
-        else:
-            self.engine.windows.replace(
-                "result", lambda: ui.result.UI(self, self.batch, result_id))
-
-    def on_delete_result(self, evt=None):
-        """Remove a result from the lot it never belonged to.
-
-        Deleting is for what did not happen - a result entered twice, or on
-        the wrong lot. A measurement that was made and came out wrong is
-        excluded instead, which keeps it on the chart in grey and keeps the
-        series honest. Either way the audit trail holds what it was.
-        """
-        result_id = self.dict_results.get(self.lst_results.focus())
-
-        if result_id is None:
-            messagebox.showwarning(self.engine.app_title,
-                                   self.engine.no_selected,
-                                   parent=self)
-        elif messagebox.askyesno(self.engine.app_title,
-                                 "{0}\n\nThe result is removed from the lot."
-                                 " What it was stays in the audit trail.".format(
-                                     self.engine.ask_to_delete),
-                                 parent=self):
-            self.engine.db.write("DELETE FROM results WHERE result_id = ?",
-                                 (result_id,))
-            self.engine.events.notify("results", None)
 
     def on_cancel(self, evt=None):
         """Stop being told about changes, and go."""
