@@ -30,13 +30,13 @@ class UI(ChildView):
         # Enforce max lengths as you type (delegated to engine)
         self.lot_number.trace(
             "w",
-            lambda x, y, z, c=LOT_NUMBER_MAX_LENGTH, v=self.lot_number: self.engine.limit_chars(
+            lambda x, y, z, c=LOT_NUMBER_MAX_LENGTH, v=self.lot_number: self.engine.tools.limit_chars(
                 c, v, x, y, z
             ),
         )
         self.description.trace(
             "w",
-            lambda x, y, z, c=BATCH_DESCRIPTION_MAX_LENGTH, v=self.description: self.engine.limit_chars(
+            lambda x, y, z, c=BATCH_DESCRIPTION_MAX_LENGTH, v=self.description: self.engine.tools.limit_chars(
                 c, v, x, y, z
             ),
         )
@@ -51,8 +51,8 @@ class UI(ChildView):
         self.remember_batch = tk.BooleanVar()
 
         # Numeric validators provided by engine
-        self.vcmd = self.engine.get_validate_float(self)
-        self.vcmd_int = self.engine.get_validate_integer(self)
+        self.vcmd = self.engine.tools.get_validate_float(self)
+        self.vcmd_int = self.engine.tools.get_validate_integer(self)
 
         # Auto-compute SD when lower/upper change (only if 'Computed' selected)
         self.lower.trace("w", lambda *args: self._compute_sd())
@@ -100,7 +100,7 @@ class UI(ChildView):
         r += 1
         ttk.Label(frm_left, text="Expiration:").grid(row=r, sticky=tk.N + tk.W)
         # Safe fallback: use BASE_BG_RGB if available, otherwise fallback to a known RGB
-        bg = getattr(self.engine, "BASE_BG_RGB", self.engine.get_rgb(240, 240, 237))
+        bg = getattr(self.engine, "BASE_BG_RGB", self.engine.tools.get_rgb(240, 240, 237))
         self.expiration_date = Calendarium(frm_left, "")
         self.expiration_date.grid(row=r, column=c, sticky=tk.W)
 
@@ -253,7 +253,7 @@ class UI(ChildView):
             WHERE test_id = ?;
         """
         args = (selected_test_method["test_id"],)  
-        self.selected_test = self.engine.read(False, sql, args)
+        self.selected_test = self.engine.db.read(False, sql, args)
         
         if not self.selected_test:
             messagebox.showerror(self.engine.app_title, "Test not found.", parent=self)
@@ -332,7 +332,7 @@ class UI(ChildView):
             WHERE status = 1
             ORDER BY description ASC;
         """
-        rs = self.engine.read(True, sql, ())
+        rs = self.engine.db.read(True, sql, ())
 
         for row in (rs or []):
             self.dict_controls[index] = row["control_id"]
@@ -480,7 +480,7 @@ class UI(ChildView):
 
     def on_save(self, _evt=None):
         # Required fields check (engine)
-        if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+        if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
             return
         if self._check_lower_upper() is False:
             return
@@ -510,11 +510,11 @@ class UI(ChildView):
             sql = self.engine.build_sql("batches", op="insert")
 
         # Execute
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
@@ -527,7 +527,7 @@ class UI(ChildView):
 
         # Notify all subscribers (Observer pattern)
         # This will refresh: batches.py, main.py, and any other listener
-        self.engine.notify("batch_changed", {"batch_id": target_id})
+        self.engine.events.notify("batch_changed", {"batch_id": target_id})
 
         # Close
         self.on_cancel()

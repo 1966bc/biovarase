@@ -30,7 +30,7 @@ class UI(ChildView):
         self.status = tk.BooleanVar()
 
         # Integer validation callback from Engine
-        self.vcmd_int = self.engine.get_validate_integer(self)
+        self.vcmd_int = self.engine.tools.get_validate_integer(self)
 
         # Internal dictionaries used to map combobox index → primary key
         self.dict_instruments = {}
@@ -179,7 +179,7 @@ class UI(ChildView):
             ORDER BY description ASC;
         """
 
-        rows = self.engine.read(True, sql, ())
+        rows = self.engine.db.read(True, sql, ())
 
         for idx, row in enumerate(rows or []):
             equipment_id = row["equipment_id"]
@@ -205,7 +205,7 @@ class UI(ChildView):
             SELECT parent_id FROM organizations
             WHERE org_id = ? AND org_type = 'section'
         """
-        row = self.engine.read(False, sql_parent, (self.selected_section_org_id,))
+        row = self.engine.db.read(False, sql_parent, (self.selected_section_org_id,))
         lab_org_id = row["parent_id"] if row else None
 
         if lab_org_id is None:
@@ -220,7 +220,7 @@ class UI(ChildView):
             ORDER BY description;
         """
 
-        rows = self.engine.read(True, sql, (lab_org_id,))
+        rows = self.engine.db.read(True, sql, (lab_org_id,))
 
         for idx, row in enumerate(rows or []):
             org_id = row["org_id"]
@@ -298,7 +298,7 @@ class UI(ChildView):
     def _on_save(self, _evt=None):
 
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
         if self._check_device_id() == 0:
@@ -319,11 +319,11 @@ class UI(ChildView):
         else:
             sql = self.engine.build_sql(self.parent.table, op="insert")
 
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
@@ -360,7 +360,7 @@ class UI(ChildView):
             WHERE device_id = ?;
         """
 
-        row = self.engine.read(False, sql, (device,))
+        row = self.engine.db.read(False, sql, (device,))
 
         if row:
             existing_id = row.get("workstation_id")

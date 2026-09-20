@@ -95,7 +95,7 @@ class UI(ParentView):
         sb_ws.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Tag used to highlight inactive workstations
-        self.lstWorkstations.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
+        self.lstWorkstations.tag_configure("status", background=self.engine.tools.get_rgb(211, 211, 211))
 
         self.lstWorkstations.bind("<<TreeviewSelect>>", self.on_workstation_selected)
         self.lstWorkstations.bind("<Double-1>", self.on_workstation_activated)
@@ -144,7 +144,7 @@ class UI(ParentView):
         - Lab Admin+ (role>=3): See ONLY their assigned lab and sections
         """
         # Clear current content
-        self.engine.clear_treeview(self.Sites)
+        self.engine.tools.clear_treeview(self.Sites)
 
         root_iid = "org_root"
         self.Sites.insert("", tk.END, iid=root_iid, text="Organizations")
@@ -216,7 +216,7 @@ class UI(ParentView):
 
         # Get user's org info
         sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
-        org = self.engine.read(False, sql, (user_org_id,))
+        org = self.engine.db.read(False, sql, (user_org_id,))
         if not org:
             return
 
@@ -228,7 +228,7 @@ class UI(ParentView):
         elif org_type == "section":
             # Get parent lab
             sql = "SELECT parent_id FROM organizations WHERE org_id = ?"
-            parent = self.engine.read(False, sql, (user_org_id,))
+            parent = self.engine.db.read(False, sql, (user_org_id,))
             lab_id = parent["parent_id"] if parent else None
         else:
             lab_id = None
@@ -238,7 +238,7 @@ class UI(ParentView):
 
         # Get lab info
         sql = "SELECT org_id, description FROM organizations WHERE org_id = ?"
-        lab = self.engine.read(False, sql, (lab_id,))
+        lab = self.engine.db.read(False, sql, (lab_id,))
         if not lab:
             return
 
@@ -256,7 +256,7 @@ class UI(ParentView):
 
         # Get user's org info
         sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
-        org = self.engine.read(False, sql, (user_org_id,))
+        org = self.engine.db.read(False, sql, (user_org_id,))
         if not org:
             return
 
@@ -304,7 +304,7 @@ class UI(ParentView):
             """
             args = (parent_id, org_type)
 
-        rows = self.engine.read(True, sql, args) or []
+        rows = self.engine.db.read(True, sql, args) or []
         return [(r["org_id"], r["description"]) for r in rows]
 
 
@@ -393,7 +393,7 @@ class UI(ParentView):
             ORDER BY workstations.description;
         """
 
-        rows = self.engine.read(True, sql, args)
+        rows = self.engine.db.read(True, sql, args)
 
         for row in (rows or []):
             workstation_id = row["workstation_id"]
@@ -437,7 +437,7 @@ class UI(ParentView):
 
         pk = int(sel[0])
 
-        self.selected_workstation = self.engine.get_selected(
+        self.selected_workstation = self.engine.db.get_selected(
             self.table, self.primary_key, pk
         )
 
@@ -454,7 +454,7 @@ class UI(ParentView):
 
         pk = int(sel[0])
 
-        self.selected_workstation = self.engine.get_selected(
+        self.selected_workstation = self.engine.db.get_selected(
             self.table, self.primary_key, pk
         )
 

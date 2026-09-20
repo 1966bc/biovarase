@@ -143,7 +143,7 @@ class UI(ParentView):
 
         if messagebox.askyesno(self.engine.app_title, "Export data?", parent=self):
             args = (selected_date,)  # tuple(date,)
-            self.engine.get_counts(args)
+            self.engine.exporter.get_counts(args)
             self.on_cancel()
 
     def on_cancel(self, evt=None):

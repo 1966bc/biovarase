@@ -105,14 +105,14 @@ class Main(tk.Toplevel):
         super().__init__(name="main")
         self._initialized = True
         self.engine = self.nametowidget(".").engine
-        self.engine.dict_instances[self.winfo_name()] = self
+        self.engine.windows.dict_instances[self.winfo_name()] = self
         self.parent = parent
 
         # Subscribe to changes (Observer pattern)
-        self.engine.subscribe("batch_changed", self._on_batch_changed)
-        self.engine.subscribe("tests_changed", self._on_tests_changed)
-        self.engine.subscribe("categories_changed", self._on_categories_changed)
-        self.engine.subscribe("test_method_changed", self._on_test_method_changed)
+        self.engine.events.subscribe("batch_changed", self._on_batch_changed)
+        self.engine.events.subscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.subscribe("categories_changed", self._on_categories_changed)
+        self.engine.events.subscribe("test_method_changed", self._on_test_method_changed)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -334,7 +334,7 @@ class Main(tk.Toplevel):
             all_menus.append(m_adm)
 
         for m in all_menus:
-            m.config(bg=self.engine.get_rgb(240, 240, 237),)
+            m.config(bg=self.engine.tools.get_rgb(240, 240, 237),)
             m.config(fg="black")
 
         self.config(menu=m_main)
@@ -588,7 +588,7 @@ class Main(tk.Toplevel):
             ROLE_VIEWER: "#999999",          # Light Gray - Viewer
         }
         role_color = role_colors.get(role, "#000000")
-        bg_color = self.engine.get_rgb(240, 240, 237)
+        bg_color = self.engine.tools.get_rgb(240, 240, 237)
 
         # Colored dot indicator
         tk.Label(
@@ -663,7 +663,7 @@ class Main(tk.Toplevel):
             self.title("Biovarase")
 
         self.status_bar_site_description.set(self.get_status_bar_site_description(company))
-        self.ddof.set(self.engine.get_ddof())
+        self.ddof.set(self.engine.qc.get_ddof())
         self.show_expired.set(self.engine.get_show_expired_batches())
         self.show_recent_only.set(self.engine.get_show_recent_only())
         self.observations.set(self.engine.get_observations())
@@ -736,7 +736,7 @@ class Main(tk.Toplevel):
         self.observations.set(self.engine.get_observations())
 
     def set_zscore(self):
-        self.zscore.set(self.engine.get_zscore())
+        self.zscore.set(self.engine.qc.get_zscore())
 
     def on_reset(self):
 
@@ -772,14 +772,14 @@ class Main(tk.Toplevel):
 
         # Lista risultati
         if getattr(self, "lstResults", None) is not None:
-            self.engine.clear_treeview(self.lstResults)
+            self.engine.tools.clear_treeview(self.lstResults)
 
     def reset_batch_data(self):
 
         self.expiration.set('')
         self.target.set(0)
         self.sd.set(0)
-        self.engine.clear_treeview(self.lstBatches)
+        self.engine.tools.clear_treeview(self.lstBatches)
 
     def reset_cal_data(self):
 
@@ -813,7 +813,7 @@ class Main(tk.Toplevel):
 
         # --- Compute expanded uncertainty at control level -------------------
         try:
-            u = self.engine.get_uncertainty(cv, bias)
+            u = self.engine.qc.get_uncertainty(cv, bias)
         except Exception as e:
             u = 0.0
 
@@ -825,7 +825,7 @@ class Main(tk.Toplevel):
 
         # --- Total error (percent) as before --------------------------------
         if self.target.get() != 0:
-            et = self.engine.get_te(
+            et = self.engine.qc.get_te(
                 self.target.get(),
                 self.average.get(),
                 self.cva.get(),
@@ -848,14 +848,13 @@ class Main(tk.Toplevel):
         # Calcolo regola
         try:
             engine = getattr(self, "engine", None) or self.engine
-            rule = engine.get_westgard_violation_rule(
+            rule = engine.westgards.get_westgard_violation_rule(
                 self.selected_batch["target"], self.selected_batch["sd"],
                 [float(x) for x in series],
                 self.selected_batch, self.selected_test
             ) or ""
         except Exception as e:
-            try: engine.on_log(f"westgard error: {e}")
-            except Exception: pass
+            self.engine.log.exception("westgard rule failed: {0}".format(e))
             rule = ""
 
         self.westgard.set(rule.strip())
@@ -911,7 +910,7 @@ class Main(tk.Toplevel):
         """
         args = (lab_id,)
             
-        rs = self.engine.read(True, sql, args)
+        rs = self.engine.db.read(True, sql, args)
 
         if rs:
             for row in rs:
@@ -959,7 +958,7 @@ class Main(tk.Toplevel):
         """
         args = (category_id, lab_id)
 
-        rs = self.engine.read(True, sql, args)
+        rs = self.engine.db.read(True, sql, args)
         if rs:
             for row in rs:
                 self.test_methods[index] = row["test_method_id"]
@@ -971,7 +970,7 @@ class Main(tk.Toplevel):
 
     def set_workstations(self):
         """Fill workstations treeview for selected test method."""
-        self.engine.clear_treeview(self.lstWorkstations)
+        self.engine.tools.clear_treeview(self.lstWorkstations)
         self.selected_workstation = None
         self.workstation_test_methods = {}
 
@@ -1009,7 +1008,7 @@ class Main(tk.Toplevel):
         """
         args = (test_method_id, lab_id)
 
-        rs = self.engine.read(True, sql, args)
+        rs = self.engine.db.read(True, sql, args)
 
         if rs:
             first_item = None
@@ -1136,7 +1135,7 @@ class Main(tk.Toplevel):
 
     def _populate_batches(self):
         """Core logic to populate batch treeview (no early-return checks)."""
-        self.engine.clear_treeview(self.lstBatches)
+        self.engine.tools.clear_treeview(self.lstBatches)
         self.dict_batches = {}
 
         # Base query with optional recent results filter
@@ -1190,7 +1189,7 @@ class Main(tk.Toplevel):
             self.selected_workstation["workstation_id"],
         )
 
-        rs = self.engine.read(True, sql, args)
+        rs = self.engine.db.read(True, sql, args)
 
         if rs:
             for row in rs:
@@ -1215,7 +1214,7 @@ class Main(tk.Toplevel):
     def set_batches(self):
         """Fill batches treeview for selected test method and workstation."""
         if self.cbTests.current() == -1 or not self.lstWorkstations.selection():
-            self.engine.clear_treeview(self.lstBatches)
+            self.engine.tools.clear_treeview(self.lstBatches)
             self.dict_batches = {}
             self.frmBatches.config(text=f"Batches (0)")
             self.reset_cal_data()
@@ -1223,7 +1222,7 @@ class Main(tk.Toplevel):
             return
 
         if not (self.selected_test_method and self.selected_workstation):
-            self.engine.clear_treeview(self.lstBatches)
+            self.engine.tools.clear_treeview(self.lstBatches)
             self.dict_batches = {}
             self.frmBatches.config(text=f"Batches (0)")
             self.reset_cal_data()
@@ -1242,7 +1241,7 @@ class Main(tk.Toplevel):
 
     def set_results(self):
         """Fill results treeview for selected batch and workstation."""
-        self.engine.clear_treeview(self.lstResults)
+        self.engine.tools.clear_treeview(self.lstResults)
         self.dict_results = {}
 
         if not (self.selected_batch and self.selected_workstation):
@@ -1279,7 +1278,7 @@ class Main(tk.Toplevel):
             int(self.observations.get())
         )
 
-        rs = self.engine.read(True, sql, args)
+        rs = self.engine.db.read(True, sql, args)
 
         if not rs:
             self.reset_cal_data()
@@ -1299,7 +1298,7 @@ class Main(tk.Toplevel):
                   AND status = 1
                 GROUP BY result_id;
             """
-            notes_rows = self.engine.read(True, sql_notes, tuple(result_ids)) or []
+            notes_rows = self.engine.db.read(True, sql_notes, tuple(result_ids)) or []
             notes_map = {
                 row["result_id"]: row["notes_count"]
                 for row in notes_rows
@@ -1390,10 +1389,10 @@ class Main(tk.Toplevel):
         count_enabled = len(enabled_values)
 
         if enabled_values:
-            mean = self.engine.get_mean(enabled_values)
-            cv = self.engine.get_cv(enabled_values)
-            bias = self.engine.get_bias(mean, target)
-            computed_sd = self.engine.get_sd(enabled_values)
+            mean = self.engine.qc.get_mean(enabled_values)
+            cv = self.engine.qc.get_cv(enabled_values)
+            bias = self.engine.qc.get_bias(mean, target)
+            computed_sd = self.engine.qc.get_sd(enabled_values)
 
             self.set_calculated_data(mean, computed_sd, cv, bias)
 
@@ -1437,14 +1436,14 @@ class Main(tk.Toplevel):
             return
 
         self.cbTests.set("")
-        self.engine.clear_treeview(self.lstWorkstations)
+        self.engine.tools.clear_treeview(self.lstWorkstations)
 
         index = self.cbCategories.current()
         pk = self.dict_categories.get(index)
         if pk is None:
             return
 
-        self.selected_category = self.engine.get_selected("categories", "category_id", pk)
+        self.selected_category = self.engine.db.get_selected("categories", "category_id", pk)
         self.reset_batch_data()
         self.reset_cal_data()
         self.reset_graph()
@@ -1456,7 +1455,7 @@ class Main(tk.Toplevel):
             return
 
         if self.cbTests.current() == -1:
-            self.engine.clear_treeview(self.lstWorkstations)
+            self.engine.tools.clear_treeview(self.lstWorkstations)
             self.reset_batch_data()
             self.reset_cal_data()
             self.reset_graph()
@@ -1468,13 +1467,13 @@ class Main(tk.Toplevel):
             return
 
         # test_method and test as dictionaries
-        self.selected_test_method = self.engine.get_selected(
+        self.selected_test_method = self.engine.db.get_selected(
             "test_methods", "test_method_id", pk
         )
         if self.selected_test_method:
             test_id = self.selected_test_method.get("test_id")
             if test_id is not None:
-                self.selected_test = self.engine.get_selected("tests", "test_id", test_id)
+                self.selected_test = self.engine.db.get_selected("tests", "test_id", test_id)
             else:
                 self.selected_test = None
         else:
@@ -1499,7 +1498,7 @@ class Main(tk.Toplevel):
             self.reset_batch_data()
             return
 
-        self.selected_workstation = self.engine.get_selected(
+        self.selected_workstation = self.engine.db.get_selected(
             "workstations", "workstation_id", pk
         )
         self.reset_batch_data()
@@ -1521,7 +1520,7 @@ class Main(tk.Toplevel):
             self.reset_graph()
             return
 
-        self.selected_batch = self.engine.get_selected("batches", "batch_id", pk)
+        self.selected_batch = self.engine.db.get_selected("batches", "batch_id", pk)
         self.set_batch_data()
         self.set_results()
 
@@ -1538,7 +1537,7 @@ class Main(tk.Toplevel):
             self.selected_result = None
             return
 
-        self.selected_result = self.engine.get_selected("results", "result_id", pk)
+        self.selected_result = self.engine.db.get_selected("results", "result_id", pk)
 
     def _open_result_editor_for_item(self, item_id):
         """Open result editor in update mode for the given treeview item_id."""
@@ -1553,7 +1552,7 @@ class Main(tk.Toplevel):
                 )
                 return
 
-            self.selected_result = self.engine.get_selected("results", "result_id", result_id)
+            self.selected_result = self.engine.db.get_selected("results", "result_id", result_id)
 
             if not self.selected_result:
                 messagebox.showerror(
@@ -1565,7 +1564,7 @@ class Main(tk.Toplevel):
 
             # Get selected batch.
             batch_id = self.selected_result["batch_id"]
-            self.selected_batch = self.engine.get_selected("batches", "batch_id", batch_id)
+            self.selected_batch = self.engine.db.get_selected("batches", "batch_id", batch_id)
 
             if not self.selected_batch:
                 messagebox.showerror(
@@ -1577,7 +1576,7 @@ class Main(tk.Toplevel):
 
             # Get selected test_method and then test.
             test_method_id = self.selected_batch["test_method_id"]
-            self.selected_test_method = self.engine.get_selected(
+            self.selected_test_method = self.engine.db.get_selected(
                 "test_methods", "test_method_id", test_method_id
             )
 
@@ -1590,23 +1589,18 @@ class Main(tk.Toplevel):
                 return
 
             test_id = self.selected_test_method["test_id"]
-            self.selected_test = self.engine.get_selected("tests", "test_id", test_id)
+            self.selected_test = self.engine.db.get_selected("tests", "test_id", test_id)
 
             # Get selected workstation.
             workstation_id = self.selected_result["workstation_id"]
-            self.selected_workstation = self.engine.get_selected(
+            self.selected_workstation = self.engine.db.get_selected(
                 "workstations", "workstation_id", workstation_id
             )
 
             ui.result.UI(self, item_id).on_open()
 
         except Exception as e:
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                sys.exc_info()[1],
-                sys.exc_info()[0],
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def on_lj_point_double_click(self, info):
         """
@@ -1652,12 +1646,7 @@ class Main(tk.Toplevel):
             self._open_result_editor_for_item(item_id)
 
         except Exception as e:
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                sys.exc_info()[1],
-                sys.exc_info()[0],
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
 
 
@@ -1740,12 +1729,7 @@ class Main(tk.Toplevel):
             )
 
         except Exception as e:
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                sys.exc_info()[1],
-                sys.exc_info()[0],
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def set_bias_chart(self, series, target, avg):
         """Update bias chart (target vs mean)."""
@@ -1941,7 +1925,7 @@ class Main(tk.Toplevel):
 
                 index = self.cbTests.current()
                 pk = self.test_methods[index]
-                selected_test_method = self.engine.get_selected("test_methods", "test_method_id", pk)
+                selected_test_method = self.engine.db.get_selected("test_methods", "test_method_id", pk)
                 ui.plots.UI(self,).on_open(selected_test_method,
                                                self.selected_workstation,
                                                int(self.observations.get()))
@@ -2058,7 +2042,7 @@ class Main(tk.Toplevel):
         else:
             self.engine.set_ddof(0)
 
-        self.ddof.set(self.engine.get_ddof())
+        self.ddof.set(self.engine.qc.get_ddof())
 
         try:
             self.set_results()
@@ -2117,7 +2101,7 @@ class Main(tk.Toplevel):
 
 
                 try:
-                    cur = self.engine.con.cursor()
+                    cur = self.engine.db.con.cursor()
                     # Begin transaction
                     cur.execute("START TRANSACTION")  # Use START TRANSACTION for better MariaDB compatibility
 
@@ -2155,14 +2139,11 @@ class Main(tk.Toplevel):
                         cur.execute(sql_insert, args)
                         current_log_time += datetime.timedelta(days=1)
 
-                    self.engine.con.commit()  # Commit the transaction
+                    self.engine.db.con.commit()  # Commit the transaction
                     self.set_results()
                 except Exception as e:  # Catch generic exception for rollback
-                    self.engine.con.rollback()  # Rollback on any error
-                    self.engine.on_log(inspect.stack()[0][3],
-                                                           str(e),
-                                                           sys.exc_info()[0],
-                                                           sys.modules[__name__])
+                    self.engine.db.con.rollback()  # Rollback on any error
+                    self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
                 finally:
                     if 'cur' in locals() and cur:  # Check if cursor was created before closing
                         cur.close()
@@ -2196,7 +2177,7 @@ class Main(tk.Toplevel):
 
         batch_item = self.lstBatches.selection()[0]
         batch_id = self.dict_batches[batch_item]
-        self.selected_batch = self.engine.get_selected("batches", "batch_id", batch_id)
+        self.selected_batch = self.engine.db.get_selected("batches", "batch_id", batch_id)
 
         if not self.selected_batch:
             messagebox.showerror(
@@ -2208,7 +2189,7 @@ class Main(tk.Toplevel):
 
         # Get selected test_method and then test.
         test_method_id = self.selected_batch["test_method_id"]
-        self.selected_test_method = self.engine.get_selected(
+        self.selected_test_method = self.engine.db.get_selected(
             "test_methods", "test_method_id", test_method_id
         )
 
@@ -2221,10 +2202,10 @@ class Main(tk.Toplevel):
             return
 
         test_id = self.selected_test_method["test_id"]
-        self.selected_test = self.engine.get_selected("tests", "test_id", test_id)
+        self.selected_test = self.engine.db.get_selected("tests", "test_id", test_id)
 
         workstation_id = self.selected_batch["workstation_id"]
-        self.selected_workstation = self.engine.get_selected("workstations", "workstation_id", workstation_id)
+        self.selected_workstation = self.engine.db.get_selected("workstations", "workstation_id", workstation_id)
 
         ui.result.UI(self).on_open()
 
@@ -2248,27 +2229,22 @@ class Main(tk.Toplevel):
             item_id = selection[0]
             pk = self.dict_results.get(item_id)
             if pk:
-                self.selected_result = self.engine.get_selected("results", "result_id", pk)
+                self.selected_result = self.engine.db.get_selected("results", "result_id", pk)
 
             ui.notes.UI(self).on_open()
 
         except Exception as e:
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                sys.exc_info()[1],
-                sys.exc_info()[0],
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _open_document(self, key, error_msg):
         """Helper to open documents from documents.json."""
         engine = self.engine
-        engine.busy(self)
+        engine.tools.busy(self)
 
         try:
             ret = engine.launch_document(key)
         finally:
-            engine.not_busy(self)
+            engine.tools.not_busy(self)
 
         if not ret:
             messagebox.showinfo(
@@ -2377,13 +2353,7 @@ class Main(tk.Toplevel):
                 
         except Exception as exc:
             # Log error
-            self.engine.on_log(
-                "on_change_user",
-                str(exc),
-                type(exc).__name__,
-                sys.modules[__name__],
-                inspect.currentframe()
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             messagebox.showerror("Error", f"Failed to change user: {exc}", parent=self)
 
     def _fetch_available_sections(self, role):
@@ -2428,7 +2398,7 @@ class Main(tk.Toplevel):
             """
             args = (lab_id,)
 
-        return self.engine.read(True, sql, args)
+        return self.engine.db.read(True, sql, args)
 
     def _show_section_picker_dialog(self, sections, current_section_id):
         """Show modal dialog to pick a section.
@@ -2549,13 +2519,13 @@ class Main(tk.Toplevel):
         """Close all child windows when changing lab context."""
         # Get list of window names (excluding main)
         windows_to_close = [
-            name for name in list(self.engine.dict_instances.keys())
+            name for name in list(self.engine.windows.dict_instances.keys())
             if name != self.winfo_name()
         ]
 
         for name in windows_to_close:
             try:
-                window = self.engine.dict_instances.get(name)
+                window = self.engine.windows.dict_instances.get(name)
                 if window and window.winfo_exists():
                     # Call on_cancel if available, otherwise destroy
                     if hasattr(window, "on_cancel"):
@@ -2593,20 +2563,14 @@ class Main(tk.Toplevel):
             self._apply_section_change(new_section_id, sections)
 
         except Exception as exc:
-            self.engine.on_log(
-                "on_change_section",
-                str(exc),
-                type(exc).__name__,
-                sys.modules[__name__],
-                inspect.currentframe()
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             messagebox.showerror("Error", f"Failed to change section: {exc}", parent=self)
 
     def on_close(self):
         # Unsubscribe from events (Observer pattern)
-        self.engine.unsubscribe("batch_changed", self._on_batch_changed)
-        self.engine.unsubscribe("tests_changed", self._on_tests_changed)
-        self.engine.unsubscribe("categories_changed", self._on_categories_changed)
-        self.engine.unsubscribe("test_method_changed", self._on_test_method_changed)
-        self.engine.dict_instances.pop(self.winfo_name(), None)
+        self.engine.events.unsubscribe("batch_changed", self._on_batch_changed)
+        self.engine.events.unsubscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.unsubscribe("categories_changed", self._on_categories_changed)
+        self.engine.events.unsubscribe("test_method_changed", self._on_test_method_changed)
+        self.engine.windows.dict_instances.pop(self.winfo_name(), None)
         self.nametowidget(".").on_exit()

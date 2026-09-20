@@ -49,7 +49,7 @@ class UI(ChildView):
         self.selected_goal = None
 
         # Float validation provided by engine
-        self.float_vcmd = self.engine.get_validate_float(self)
+        self.float_vcmd = self.engine.tools.get_validate_float(self)
 
         # Global key bindings
         self.bind("<Alt-c>", self.on_cancel)
@@ -138,7 +138,7 @@ class UI(ChildView):
 
         # Retrieve test_method via engine
         try:
-            self.selected_test_method = self.engine.get_selected(
+            self.selected_test_method = self.engine.db.get_selected(
                 "test_methods", "test_method_id", int(self.index)
             )
         except Exception as e:
@@ -155,7 +155,7 @@ class UI(ChildView):
         # Load goal row
         try:
             sql = "SELECT * FROM goals WHERE test_method_id = ? LIMIT 1;"
-            self.selected_goal = self.engine.read(False, sql, (self.index,))
+            self.selected_goal = self.engine.db.read(False, sql, (self.index,))
         except Exception as e:
             self.selected_goal = None
 
@@ -233,7 +233,7 @@ class UI(ChildView):
 
         # Optional global validation
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
         # Confirmation
@@ -250,18 +250,18 @@ class UI(ChildView):
             # UPDATE
             sql = self.engine.build_sql("goals", op="update")
             args.append(self.selected_goal["goal_id"])
-            result = self.engine.write(sql, args)
+            result = self.engine.db.write(sql, args)
         else:
             # INSERT → fallback to UPDATE on UNIQUE
             sql = self.engine.build_sql("goals", op="insert")
-            result = self.engine.write(sql, args)
+            result = self.engine.db.write(sql, args)
 
             # Check for duplicate error and fallback to UPDATE
             if result is None:
                 err = self.engine.last_write_error
                 err_str = str(err) if err else ""
                 if "Duplicate entry" in err_str or "1062" in err_str:
-                    row = self.engine.read(
+                    row = self.engine.db.read(
                         False,
                         "SELECT * FROM goals WHERE test_method_id = ? LIMIT 1;",
                         (args[0],),
@@ -269,12 +269,12 @@ class UI(ChildView):
                     if row:
                         sql = self.engine.build_sql("goals", op="update")
                         args.append(row["goal_id"])
-                        result = self.engine.write(sql, args)
+                        result = self.engine.db.write(sql, args)
 
         if result is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)

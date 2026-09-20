@@ -191,7 +191,7 @@ class UI(ParentView):
             self.selected_workstation[0],
         )
 
-        batches = self.engine.read(True, sql, args) or []
+        batches = self.engine.db.read(True, sql, args) or []
         self.set_values(batches)
 
     # -------------------------------------------------------------------------
@@ -242,7 +242,7 @@ class UI(ParentView):
                 self.selected_workstation[0],
                 self.elements,
             )
-            rs = self.engine.read(True, sql, args)
+            rs = self.engine.db.read(True, sql, args)
 
             # Create card for this batch
             card = ttk.Frame(self.frm_plots, style="App.TFrame", padding=(6, 4))

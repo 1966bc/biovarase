@@ -299,14 +299,14 @@ class UI(ChildView):
             """
             args = (logged_org_id,)
 
-        rows = self.engine.read(True, sql, args) or []
+        rows = self.engine.db.read(True, sql, args) or []
 
         # Build parent lookup for path generation (need all orgs for path)
         all_orgs_sql = """
             SELECT org_id, parent_id, org_type, description
             FROM organizations WHERE status = 1
         """
-        all_rows = self.engine.read(True, all_orgs_sql, ()) or []
+        all_rows = self.engine.db.read(True, all_orgs_sql, ()) or []
         org_dict = {row["org_id"]: row for row in all_rows}
 
         def get_path(org_id):
@@ -380,7 +380,7 @@ class UI(ChildView):
                 self.cbOrg.current(org_index)
 
         except Exception as e:
-            self.engine.on_log("_set_values", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _get_values(self):
         """
@@ -434,7 +434,7 @@ class UI(ChildView):
             FROM organizations
             WHERE org_id = ?
         """
-        row = self.engine.read(False, sql, (org_id,))
+        row = self.engine.db.read(False, sql, (org_id,))
         if not row:
             return None
 
@@ -469,7 +469,7 @@ class UI(ChildView):
         title = self.engine.app_title
 
         # 1) Generic field validation
-        if self.engine.on_fields_control(self.frm_main, title) is False:
+        if self.engine.tools.on_fields_control(self.frm_main, title) is False:
             return
 
         # 2) Nickname uniqueness check
@@ -503,11 +503,11 @@ class UI(ChildView):
             sql = self.engine.build_sql(self.parent.table, op="insert")
             target_id = None  # will be resolved from last_id
 
-        last_id = self.engine.write(sql, tuple(args))
+        last_id = self.engine.db.write(sql, tuple(args))
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(title, msg, parent=self)
@@ -568,10 +568,10 @@ class UI(ChildView):
                 pswrd,
                 int(self.selected_item.get("user_id")),   # <-- FIX: use child copy
             )
-            self.engine.write(sql, args)
+            self.engine.db.write(sql, args)
             messagebox.showinfo(self.engine.app_title, "Password reset.", parent=self)
         except Exception as e:
-            self.engine.on_log("_on_reset", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _check_nicknam(self):
         """
@@ -588,9 +588,9 @@ class UI(ChildView):
 
         sql = "SELECT user_id, nickname FROM users WHERE nickname = ?;"
         try:
-            row = self.engine.read(False, sql, (nickname,))
+            row = self.engine.db.read(False, sql, (nickname,))
         except Exception as e:
-            self.engine.on_log("_check_nickname", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             return 1
 
         if not row:

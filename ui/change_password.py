@@ -106,7 +106,7 @@ class UI(ParentView):
 
         user_id = self.engine.log_user["user_id"]
         sql = "SELECT pswrd FROM users WHERE user_id = ?;"
-        row = self.engine.read(False, sql, (user_id,))
+        row = self.engine.db.read(False, sql, (user_id,))
         return row["pswrd"] if row else None
 
     def _match_old_password(self):
@@ -136,7 +136,7 @@ class UI(ParentView):
         """Handles the save logic, including password validation and DB update."""
         
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.parent.title()) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.parent.title()) is False:
                 return
             
         if not messagebox.askyesno(self.parent.title(),
@@ -174,11 +174,11 @@ class UI(ParentView):
         hashed = self._hash_new_password(new_pw)
         user_id = self.engine.log_user["user_id"]
         sql = "UPDATE users SET pswrd = ? WHERE user_id = ?;"
-        result = self.engine.write(sql, (hashed, user_id))
+        result = self.engine.db.write(sql, (hashed, user_id))
         if result is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.parent.title(), msg, parent=self)

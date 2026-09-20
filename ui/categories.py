@@ -116,7 +116,7 @@ class UI(ParentView):
             """
             args = (self.engine.get_lab_id(),)
 
-        rows = self.engine.read(True, sql, args) or []
+        rows = self.engine.db.read(True, sql, args) or []
 
         for index, row in enumerate(rows):
             lab_name = row.get("lab_name")
@@ -152,7 +152,7 @@ class UI(ParentView):
             self.selected_item = None
             return
 
-        self.selected_item = self.engine.get_selected(self.table, self.primary_key, pk)
+        self.selected_item = self.engine.db.get_selected(self.table, self.primary_key, pk)
 
     def on_item_activated(self, _evt=None):
         """Open editor for update."""

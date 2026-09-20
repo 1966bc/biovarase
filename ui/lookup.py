@@ -64,7 +64,7 @@ class LookupUI(ParentView):
 
         # Table metadata
         self.table = table
-        self.primary_key = self.engine.get_primary_key(self.table)
+        self.primary_key = self.engine.db.get_primary_key(self.table)
         self.desc_field = desc_field
         self.label_text = label_text or self._derive_label_from_table(table)
 
@@ -204,7 +204,7 @@ class LookupUI(ParentView):
             table=self.table,
         )
 
-        rows = self.engine.read(True, sql, ()) or []
+        rows = self.engine.db.read(True, sql, ()) or []
 
         # Store all items for filtering
         self.all_items = [(row["pk"], row["description"], row.get("status", 1)) for row in rows]
@@ -258,7 +258,7 @@ class LookupUI(ParentView):
             self.selected_item = None
             return
 
-        self.selected_item = self.engine.get_selected(
+        self.selected_item = self.engine.db.get_selected(
             self.table,
             self.primary_key,
             pk,

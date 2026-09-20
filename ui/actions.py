@@ -104,7 +104,7 @@ class UI(ParentView):
             FROM actions
             ORDER BY code ASC;
         """
-        rows = self.engine.read(True, sql, ()) or []
+        rows = self.engine.db.read(True, sql, ()) or []
 
         for row in rows:
             status_text = "Enabled" if row["status"] == 1 else "Disabled"
@@ -134,7 +134,7 @@ class UI(ParentView):
             self.selected_item = None
             return
 
-        self.selected_item = self.engine.get_selected(
+        self.selected_item = self.engine.db.get_selected(
             self.table, self.primary_key, pk
         )
 
@@ -289,7 +289,7 @@ class ActionEditor(ChildView):
 
         # Check for duplicate code
         sql = "SELECT action_id FROM actions WHERE code = ? LIMIT 1;"
-        existing = self.engine.read(False, sql, (code_val,))
+        existing = self.engine.db.read(False, sql, (code_val,))
         if existing:
             current_id = self.selected_item.get("action_id") if self.selected_item else None
             if existing["action_id"] != current_id:
@@ -326,16 +326,16 @@ class ActionEditor(ChildView):
                 VALUES (?, ?, ?);
             """
 
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
-            msg = self.engine.get_user_friendly_db_error(err) if err else "Save failed."
+            msg = self.engine.tools.get_database_error(err) if err else "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 
         # Refresh parent
         self.parent._set_values()
-        self.engine.notify("actions_changed")
+        self.engine.events.notify("actions_changed")
         self.on_cancel()
 
     def on_cancel(self, evt=None):

@@ -127,7 +127,7 @@ class UI(ParentView):
 
         args = (selected_test_method["test_method_id"], self.selected_workstation[0])
 
-        rs = self.engine.read(True, sql, args)
+        rs = self.engine.db.read(True, sql, args)
 
         if not rs:
             return
@@ -170,7 +170,7 @@ class UI(ParentView):
             batch_id = batch["batch_id"]
 
             args = (batch_id, self.selected_workstation[0], self.elements)
-            rs = self.engine.read(True, sql, args)
+            rs = self.engine.db.read(True, sql, args)
 
             if not rs:
                 continue
@@ -188,12 +188,12 @@ class UI(ParentView):
             if not series:
                 continue
 
-            mean = self.engine.get_mean(series)
-            cv = self.engine.get_cv(series)
-            te = self.engine.get_te(target, mean, cv)
-            tea = self.engine.get_tea(self.cvw, self.cvb)
-            bias = self.engine.get_bias(mean, target)
-            z_score = self.engine.get_zscore()
+            mean = self.engine.qc.get_mean(series)
+            cv = self.engine.qc.get_cv(series)
+            te = self.engine.qc.get_te(target, mean, cv)
+            tea = self.engine.qc.get_tea(self.cvw, self.cvb)
+            bias = self.engine.qc.get_bias(mean, target)
+            z_score = self.engine.qc.get_zscore()
 
             x_data = self.get_x_data(rs)
             dates = x_data["dates"]

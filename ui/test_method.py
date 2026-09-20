@@ -40,7 +40,7 @@ class UI(ParentView):
         # State vars
         self.code = tk.StringVar()
         # limit code to 10 chars via engine helper
-        self.code.trace("w", lambda *args, c=10, v=self.code: self.engine.limit_chars(c, v, *args))
+        self.code.trace("w", lambda *args, c=10, v=self.code: self.engine.tools.limit_chars(c, v, *args))
         self.is_mandatory = tk.BooleanVar()
         self.status = tk.BooleanVar()
 
@@ -122,7 +122,7 @@ class UI(ParentView):
         Decides mode/title, (re)loads values, brings front, sets focus.
 
         selected_test:
-            Hybrid dict returned by engine.get_selected("tests", ...), with:
+            Hybrid dict returned by engine.db.get_selected("tests", ...), with:
                 - "test_id"
                 - "description"
                 - numeric keys [0], [1], ... for backward compatibility.
@@ -192,7 +192,7 @@ class UI(ParentView):
             ORDER BY description
         """
         lab_id = self.engine.get_lab_id()
-        rows = self.engine.read(True, sql, (lab_id,)) or []
+        rows = self.engine.db.read(True, sql, (lab_id,)) or []
         for idx, row in enumerate(rows):
             self.dict_categories[idx] = row["category_id"]
             values.append(row["description"])
@@ -207,7 +207,7 @@ class UI(ParentView):
             "WHERE status = 1 "
             "ORDER BY description;"
         )
-        rows = self.engine.read(True, sql, ()) or []
+        rows = self.engine.db.read(True, sql, ()) or []
         for idx, row in enumerate(rows):
             self.dict_samples[idx] = row["sample_id"]
             values.append(row["description"])
@@ -222,7 +222,7 @@ class UI(ParentView):
             "WHERE status = 1 "
             "ORDER BY description;"
         )
-        rows = self.engine.read(True, sql, ()) or []
+        rows = self.engine.db.read(True, sql, ()) or []
         for idx, row in enumerate(rows):
             self.dict_units[idx] = row["unit_id"]
             values.append(row["description"])
@@ -237,7 +237,7 @@ class UI(ParentView):
             "WHERE status = 1 "
             "ORDER BY description;"
         )
-        rows = self.engine.read(True, sql, ()) or []
+        rows = self.engine.db.read(True, sql, ()) or []
         for idx, row in enumerate(rows):
             self.dict_methods[idx] = row["method_id"]
             values.append(row["description"])
@@ -273,7 +273,7 @@ class UI(ParentView):
               AND org_type = 'section'
             ORDER BY description;
         """
-        rs = self.engine.read(True, sql, (lab_id,)) or []
+        rs = self.engine.db.read(True, sql, (lab_id,)) or []
 
         for idx, row in enumerate(rs):
             self.dict_sections[idx] = row["section_id"]
@@ -286,7 +286,7 @@ class UI(ParentView):
         Load the selected test_method into the form.
 
         self.selected_item is the hybrid dict returned by:
-            engine.get_selected("test_methods", "test_method_id", pk)
+            engine.db.get_selected("test_methods", "test_method_id", pk)
 
         Expected keys:
             - "test_method_id"
@@ -411,7 +411,7 @@ class UI(ParentView):
     def _on_save(self, _evt=None):
         # Optional global validation hook
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
         if not messagebox.askyesno(self.engine.app_title,
@@ -433,11 +433,11 @@ class UI(ParentView):
             # INSERT
             sql = self.engine.build_sql("test_methods", op="insert")
 
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
@@ -448,7 +448,7 @@ class UI(ParentView):
         self._reselect_in_parent(last_id)
 
         # Notify observers for cross-window refresh
-        self.engine.notify("test_method_changed")
+        self.engine.events.notify("test_method_changed")
 
         self.on_cancel()
 

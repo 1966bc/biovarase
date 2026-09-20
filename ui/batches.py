@@ -121,9 +121,9 @@ class UI(ParentView):
         self.selected_batch = None
 
         # Subscribe to events (Observer pattern)
-        self.engine.subscribe("batch_changed", self._on_batch_changed)
-        self.engine.subscribe("tests_changed", self._on_tests_changed)
-        self.engine.subscribe("test_method_changed", self._on_tests_changed)
+        self.engine.events.subscribe("batch_changed", self._on_batch_changed)
+        self.engine.events.subscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.subscribe("test_method_changed", self._on_tests_changed)
 
         # Build interface
         self._build_ui()
@@ -307,7 +307,7 @@ class UI(ParentView):
                 self._load_tree()
                 self._loaded = True
         except (AttributeError, ValueError, KeyError) as e:
-            self.engine.on_log("on_open", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             # Fail safe: keep window usable even if tree loading fails
 
     # ---------------------------------------------------------------------
@@ -323,7 +323,7 @@ class UI(ParentView):
             self._load_tree()
             self._loaded = True
         except (AttributeError, ValueError, KeyError) as e:
-            self.engine.on_log("reload", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _load_tree(self, _evt=None):
         """
@@ -425,7 +425,7 @@ class UI(ParentView):
 
         # Get user's org info
         sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
-        org = self.engine.read(False, sql, (user_org_id,))
+        org = self.engine.db.read(False, sql, (user_org_id,))
         if not org:
             return
 
@@ -437,7 +437,7 @@ class UI(ParentView):
         elif org_type == "section":
             # Get parent lab
             sql = "SELECT parent_id FROM organizations WHERE org_id = ?"
-            parent = self.engine.read(False, sql, (user_org_id,))
+            parent = self.engine.db.read(False, sql, (user_org_id,))
             lab_id = parent["parent_id"] if parent else None
         else:
             lab_id = None
@@ -447,7 +447,7 @@ class UI(ParentView):
 
         # Get lab info
         sql = "SELECT org_id, description FROM organizations WHERE org_id = ?"
-        lab = self.engine.read(False, sql, (lab_id,))
+        lab = self.engine.db.read(False, sql, (lab_id,))
         if not lab:
             return
 
@@ -466,7 +466,7 @@ class UI(ParentView):
 
         # Get user's org info
         sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
-        org = self.engine.read(False, sql, (user_org_id,))
+        org = self.engine.db.read(False, sql, (user_org_id,))
         if not org:
             return
 
@@ -517,10 +517,10 @@ class UI(ParentView):
             args = (parent_id, org_type)
 
         try:
-            rows = self.engine.read(True, sql, args) or []
+            rows = self.engine.db.read(True, sql, args) or []
             return [(r["org_id"], r["description"]) for r in rows]
         except Exception as e:
-            self.engine.on_log("_load_orgs_by_type", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             return []
 
     def _load_workstations(self, section_org_id):
@@ -540,10 +540,10 @@ class UI(ParentView):
             ORDER BY description ASC
         """
         try:
-            rows = self.engine.read(True, sql, (section_org_id,)) or []
+            rows = self.engine.db.read(True, sql, (section_org_id,)) or []
             return [(r["workstation_id"], r["description"]) for r in rows]
         except Exception as e:
-            self.engine.on_log("_load_workstations", e, type(e), sys.modules[__name__])
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             return []
 
     # Legacy methods for backward compatibility (deprecated)
@@ -594,7 +594,7 @@ class UI(ParentView):
         except (ValueError, TypeError) as e:
             return
 
-        self.selected_workstation = self.engine.get_selected(
+        self.selected_workstation = self.engine.db.get_selected(
             "workstations",
             "workstation_id",
             pk,
@@ -653,7 +653,7 @@ class UI(ParentView):
                 tests.description ASC;
         """
 
-        rs = self.engine.read(True, sql, (workstation_id,)) or []
+        rs = self.engine.db.read(True, sql, (workstation_id,)) or []
 
         count = 0
         for row in rs:
@@ -716,7 +716,7 @@ class UI(ParentView):
                 batches.rank ASC;
         """
 
-        rs = self.engine.read(True, sql, (test_method_id, workstation_id)) or []
+        rs = self.engine.db.read(True, sql, (test_method_id, workstation_id)) or []
 
         count = 0
         for row in rs:
@@ -765,7 +765,7 @@ class UI(ParentView):
         except (ValueError, TypeError) as e:
             return
 
-        self.selected_test_method = self.engine.get_selected(
+        self.selected_test_method = self.engine.db.get_selected(
             "test_methods",
             "test_method_id",
             pk,
@@ -791,7 +791,7 @@ class UI(ParentView):
         except (ValueError, TypeError) as e:
             return
 
-        self.selected_test_method = self.engine.get_selected(
+        self.selected_test_method = self.engine.db.get_selected(
             "test_methods",
             "test_method_id",
             pk,
@@ -825,7 +825,7 @@ class UI(ParentView):
         except (ValueError, TypeError) as e:
             return
 
-        self.selected_batch = self.engine.get_selected("batches", "batch_id", pk)
+        self.selected_batch = self.engine.db.get_selected("batches", "batch_id", pk)
 
     def _on_batch_activated(self, _evt=None):
         """
@@ -844,7 +844,7 @@ class UI(ParentView):
         except (ValueError, TypeError) as e:
             return
 
-        self.selected_batch = self.engine.get_selected("batches", "batch_id", batch_id)
+        self.selected_batch = self.engine.db.get_selected("batches", "batch_id", batch_id)
         if not self.selected_batch:
             return
 
@@ -856,7 +856,7 @@ class UI(ParentView):
         except (ValueError, TypeError) as e:
             return
 
-        self.selected_test_method = self.engine.get_selected(
+        self.selected_test_method = self.engine.db.get_selected(
             "test_methods",
             "test_method_id",
             test_method_id,
@@ -910,9 +910,9 @@ class UI(ParentView):
             evt: Tkinter event (unused, for event binding compatibility)
         """
         # Unsubscribe from events (Observer pattern)
-        self.engine.unsubscribe("batch_changed", self._on_batch_changed)
-        self.engine.unsubscribe("tests_changed", self._on_tests_changed)
-        self.engine.unsubscribe("test_method_changed", self._on_tests_changed)
+        self.engine.events.unsubscribe("batch_changed", self._on_batch_changed)
+        self.engine.events.unsubscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.unsubscribe("test_method_changed", self._on_tests_changed)
 
         if self.child is not None:
             try:

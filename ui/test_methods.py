@@ -71,7 +71,7 @@ class UI(ParentView):
         self.search_var.trace_add("write", self._on_search_changed)
 
         # Subscribe to tests changes (Observer pattern)
-        self.engine.subscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.subscribe("tests_changed", self._on_tests_changed)
 
         self.show(on_screen=True)
         
@@ -203,7 +203,7 @@ class UI(ParentView):
     def _update_lab_title(self):
         """Set window title with current lab description."""
         lab_id = self.engine.current_ids.get("lab_id")
-        lab_row = self.engine.read(False, SQL_LAB_DESCRIPTION, (lab_id,))
+        lab_row = self.engine.db.read(False, SQL_LAB_DESCRIPTION, (lab_id,))
         lab_name = lab_row["description"] if lab_row else "?"
         self.title(f"Test Methods – Lab: {lab_name}")
 
@@ -212,7 +212,7 @@ class UI(ParentView):
         self.lstTests.delete(0, tk.END)
         self.dict_tests = {}
 
-        rs = self.engine.read(True, SQL_TESTS, ()) or []
+        rs = self.engine.db.read(True, SQL_TESTS, ()) or []
 
         # Store all tests for filtering
         self.all_tests = [(row["test_id"], row["description"]) for row in rs]
@@ -249,7 +249,7 @@ class UI(ParentView):
 
     def _clear_methods(self):
         """Clear the methods tree."""
-        self.engine.clear_treeview(self.lstMethods)
+        self.engine.tools.clear_treeview(self.lstMethods)
 
     def _load_methods_for_selected_test(self):
         """Populate methods tree for the currently selected test."""
@@ -261,7 +261,7 @@ class UI(ParentView):
         lab_id = self.engine.current_ids["lab_id"]
 
         args = (test_id, lab_id)
-        rows = self.engine.read(True, SQL_TEST_METHODS, args) or []
+        rows = self.engine.db.read(True, SQL_TEST_METHODS, args) or []
 
         for row in rows:
             tags = ("inactive",) if int(row["status"]) != 1 else ()
@@ -290,7 +290,7 @@ class UI(ParentView):
 
         idx = sel[0]
         pk = self.dict_tests.get(idx)
-        self.selected_test = self.engine.get_selected("tests", "test_id", pk)
+        self.selected_test = self.engine.db.get_selected("tests", "test_id", pk)
         self._load_methods_for_selected_test()
 
     def on_test_activated(self, _evt=None):
@@ -311,7 +311,7 @@ class UI(ParentView):
         if not sel or not self.selected_test:
             return
         pk = int(sel[0])
-        selected_item = self.engine.get_selected("test_methods", "test_method_id", pk)
+        selected_item = self.engine.db.get_selected("test_methods", "test_method_id", pk)
         self.child = test_method_editor.UI(self, sel[0])
         self.child.on_open(self.selected_test, selected_item)
 
@@ -339,7 +339,7 @@ class UI(ParentView):
             messagebox.showwarning(self.engine.app_title, "Select a Test Method.", parent=self)
             return
         pk = int(sel[0])
-        selected_tm = self.engine.get_selected("test_methods", "test_method_id", pk)
+        selected_tm = self.engine.db.get_selected("test_methods", "test_method_id", pk)
         self.child = goal_editor.UI(self, index=pk)
         self.child.on_open()
 
@@ -357,8 +357,7 @@ class UI(ParentView):
                 self._load_methods_for_selected_test()
 
         except Exception as e:
-            self.engine.on_log("test_methods.refresh_context_from_section",
-                               e, type(e), __name__)
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _on_tests_changed(self, *args):
         """Refresh tests listbox and methods treeview when a test is added/updated."""
@@ -367,5 +366,5 @@ class UI(ParentView):
             self._load_methods_for_selected_test()
 
     def on_cancel(self, _evt=None):
-        self.engine.unsubscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.unsubscribe("tests_changed", self._on_tests_changed)
         super().on_cancel()

@@ -127,7 +127,7 @@ class UI(ParentView):
 
         # Get background color for Calendarium
         try:
-            bg = self.engine.get_rgb(240, 240, 237)
+            bg = self.engine.tools.get_rgb(240, 240, 237)
         except Exception:
             bg = "#f0f0ed"
 
@@ -291,24 +291,24 @@ class UI(ParentView):
         self.current_from = from_date
         self.current_to = to_date
 
-        self.engine.busy(self)
+        self.engine.tools.busy(self)
         try:
             self._load_data(from_date, to_date)
         finally:
-            self.engine.not_busy(self)
+            self.engine.tools.not_busy(self)
 
     def _load_data(self, from_date, to_date):
         """Query results and aggregate by test_method + workstation."""
         lab_id = self.engine.current_ids.get("lab_id")
 
-        rows = self.engine.read(
+        rows = self.engine.db.read(
             True,
             SQL_RESULTS,
             (from_date.isoformat(), to_date.isoformat(), lab_id),
         ) or []
 
         if not rows:
-            self.engine.clear_treeview(self.tree)
+            self.engine.tools.clear_treeview(self.tree)
             self.dict_items.clear()
             self.aggregated.clear()
             self.lst_details.delete(0, tk.END)
@@ -427,16 +427,16 @@ class UI(ParentView):
             return None, None
 
         try:
-            avg = self.engine.get_mean(results)
-            cv = self.engine.get_cv(results)
-            bias = self.engine.get_bias(avg, target)
+            avg = self.engine.qc.get_mean(results)
+            cv = self.engine.qc.get_cv(results)
+            bias = self.engine.qc.get_bias(avg, target)
             return cv, bias
         except Exception:
             return None, None
 
     def _populate_tree(self):
         """Populate treeview with aggregated data."""
-        self.engine.clear_treeview(self.tree)
+        self.engine.tools.clear_treeview(self.tree)
         self.dict_items.clear()
         self.lst_details.delete(0, tk.END)
 
@@ -573,7 +573,7 @@ class UI(ParentView):
         if self.current_from is None or self.current_to is None:
             return
 
-        rows = self.engine.read(
+        rows = self.engine.db.read(
             True,
             SQL_ACTIONS,
             (
@@ -717,7 +717,7 @@ class UI(ParentView):
         if not filepath:
             return
 
-        self.engine.busy(self)
+        self.engine.tools.busy(self)
         try:
             wb = Workbook()
             ws = wb.active
@@ -810,19 +810,14 @@ class UI(ParentView):
             )
 
         except Exception as e:
-            self.engine.on_log(
-                "_save_excel",
-                e,
-                type(e),
-                __name__,
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             messagebox.showerror(
                 self.engine.app_title,
                 f"Export failed: {e}",
                 parent=self,
             )
         finally:
-            self.engine.not_busy(self)
+            self.engine.tools.not_busy(self)
 
     def on_cancel(self, evt=None):
         """Close window."""

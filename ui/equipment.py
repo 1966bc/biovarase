@@ -110,19 +110,14 @@ class UI(ChildView):
         if self.index is not None:
             self.title("Update Equipment")
             try:
-                self.selected_item = self.engine.get_selected(
+                self.selected_item = self.engine.db.get_selected(
                     self.parent.table,
                     self.parent.primary_key,
                     int(self.index),
                 )
             except Exception as exc:
                 try:
-                    self.engine.on_log(
-                        "equipment.on_open:get_selected",
-                        exc,
-                        type(exc),
-                        sys.modules[__name__],
-                    )
+                    self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
                 except Exception as e:
                     pass
                 self.selected_item = None
@@ -164,15 +159,10 @@ class UI(ChildView):
         """
 
         try:
-            rows = self.engine.read(True, sql, ()) or []
+            rows = self.engine.db.read(True, sql, ()) or []
         except Exception as exc:
             try:
-                self.engine.on_log(
-                    "equipment._set_suppliers:read_dict",
-                    exc,
-                    type(exc),
-                    sys.modules[__name__],
-                )
+                self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             except Exception as e:
                 pass
             rows = []
@@ -244,7 +234,7 @@ class UI(ChildView):
 
         # 1) Optional global validation hook
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, title) is False:
                 return
 
         # 1b) Description validation (required + duplicates)
@@ -280,11 +270,11 @@ class UI(ChildView):
             target_pk = None
 
         # 5) Execute write
-        last_id = self.engine.write(sql, tuple(args))
+        last_id = self.engine.db.write(sql, tuple(args))
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(title, msg, parent=self)
@@ -325,12 +315,7 @@ class UI(ChildView):
             self.parent.on_item_selected()
         except Exception as exc:
             try:
-                self.engine.on_log(
-                    "equipment._reselect_in_parent",
-                    exc,
-                    type(exc),
-                    sys.modules[__name__],
-                )
+                self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             except Exception as e:
                 pass
 
@@ -352,7 +337,7 @@ class UI(ChildView):
         pk_field = self.parent.primary_key
 
         raw = self.description.get()
-        norm = self.engine.get_clean_text(raw, compress=True)
+        norm = self.engine.tools.get_clean_text(raw, compress=True)
 
         # Empty check
         if not norm:
@@ -366,7 +351,7 @@ class UI(ChildView):
         # UPDATE mode: skip DB duplicate check if description has not changed
         if self.index is not None and self.selected_item:
             current = self.selected_item.get(desc_field, "")
-            current_norm = self.engine.get_clean_text(current, compress=True)
+            current_norm = self.engine.tools.get_clean_text(current, compress=True)
 
             if norm.casefold() == current_norm.casefold():
                 # Same logical value, just apply normalization
@@ -382,15 +367,10 @@ class UI(ChildView):
         )
 
         try:
-            row = self.engine.read(False, sql, (norm,))
+            row = self.engine.db.read(False, sql, (norm,))
         except Exception as exc:
             try:
-                self.engine.on_log(
-                    "equipment._check_description:read_dict",
-                    exc,
-                    type(exc),
-                    sys.modules[__name__],
-                )
+                self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             except Exception as e:
                 pass
 

@@ -26,7 +26,7 @@ class UI(ChildView):
         
     
         self.symbol = tk.StringVar()
-        self.symbol.trace("w", lambda x, y, z, c=1, v=self.symbol: self.engine.limit_chars(c, v, x, y, z))
+        self.symbol.trace("w", lambda x, y, z, c=1, v=self.symbol: self.engine.tools.limit_chars(c, v, x, y, z))
         
         self.description = tk.StringVar()
         self.status = tk.BooleanVar()
@@ -130,7 +130,7 @@ class UI(ChildView):
         """
         # Optional global validation hook
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
          # Uniqueness check for symbol
@@ -164,11 +164,11 @@ class UI(ChildView):
             # INSERT path
             sql = self.engine.build_sql(self.parent.table, op="insert")
 
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
@@ -196,7 +196,7 @@ class UI(ChildView):
         """
 
         # read_dict con fetch=True → lista di dict
-        rs = self.engine.read(True, sql, (symbol,)) or []
+        rs = self.engine.db.read(True, sql, (symbol,)) or []
 
         if not rs:
             return 1  # nessun duplicato
@@ -263,7 +263,7 @@ class UI(ChildView):
             LIMIT 1;
         """
 
-        rs = self.engine.read(False, sql, (norm,)) or []
+        rs = self.engine.db.read(False, sql, (norm,)) or []
 
         if rs:
             row = rs[0]

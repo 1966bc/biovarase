@@ -58,7 +58,7 @@ class UI(ChildView):
         # Store received datetime internally (not user-editable)
         self.received_datetime = None  # type: Optional[datetime]
 
-        self.float_vcmd = self.engine.get_validate_float(self)
+        self.float_vcmd = self.engine.tools.get_validate_float(self)
 
         # Layout root - single column, rows expand
         self.columnconfigure(0, weight=1)
@@ -68,7 +68,7 @@ class UI(ChildView):
         self._build_ui()
 
         # Register window in engine (per PROJECT_RULES.md section 7.1)
-        self.engine.dict_instances[self.winfo_name()] = self
+        self.engine.windows.dict_instances[self.winfo_name()] = self
         self.show()
 
     def _build_ui(self):
@@ -145,7 +145,7 @@ class UI(ChildView):
 
         # Two widgets for "Received" field:
         # 1. Calendarium (editable) - shown only when inserting new result
-        bg = getattr(self.engine, "BASE_BG_RGB", self.engine.get_rgb(240, 240, 237))
+        bg = getattr(self.engine, "BASE_BG_RGB", self.engine.tools.get_rgb(240, 240, 237))
         self.calendarium_received = Calendarium(frm_content, "")
         self.calendarium_received.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
@@ -299,12 +299,7 @@ class UI(ChildView):
             # Display formatted datetime with time (read-only)
             self.received_display.set(self.engine.format_datetime(received))
         except Exception as e:
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                e,
-                type(e),
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
         # Result value
         try:
@@ -312,12 +307,7 @@ class UI(ChildView):
             self.result.set(round(value, 3))
         except (ValueError, TypeError, KeyError) as e:
             self.result.set(0.0)
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                e,
-                type(e),
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
         # Status
         try:
@@ -325,12 +315,7 @@ class UI(ChildView):
             self.status.set(status_val)
         except (KeyError, TypeError) as e:
             self.status.set(1)
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                e,
-                type(e),
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
         # Reagent lot (optional field, may be NULL or default value)
         try:
@@ -341,12 +326,7 @@ class UI(ChildView):
             self.reagent_lot.set(reagent_lot)
         except (KeyError, TypeError) as e:
             self.reagent_lot.set(DEFAULT_REAGENT_LOT)
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                e,
-                type(e),
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _get_values(self):
         """The row as a dictionary keyed by column name.
@@ -405,7 +385,7 @@ class UI(ChildView):
         Args:
             evt: Optional Tkinter event (from key binding or button click)
         """
-        if not self.engine.on_fields_control(self.frm_main, self.engine.app_title):
+        if not self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title):
             return
 
         # Validate Calendarium date if in INSERT mode (editable date field)
@@ -439,7 +419,7 @@ class UI(ChildView):
         self._set_index(last_id)
 
         # Notify observers
-        self.engine.notify("result_changed", last_id)
+        self.engine.events.notify("result_changed", last_id)
 
         self.on_cancel()
 
@@ -451,16 +431,11 @@ class UI(ChildView):
         instead of hardcoded window names.
         """
         try:
-            win = self.engine.dict_instances.get("main")
+            win = self.engine.windows.dict_instances.get("main")
             if win and win.winfo_exists():
                 win.set_results()
         except Exception as e:
-            self.engine.on_log(
-                inspect.stack()[0][3],
-                e,
-                type(e),
-                sys.modules[__name__],
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
 
     def _set_index(self, last_id):
         """
@@ -523,12 +498,12 @@ class UI(ChildView):
             self.engine.get_log_ip(),
             pk,
         )
-        self.engine.write(sql, args)
+        self.engine.db.write(sql, args)
 
         self._update_main_results_lists()
 
         # Notify observers
-        self.engine.notify("result_changed", pk)
+        self.engine.events.notify("result_changed", pk)
 
         self.on_cancel()
 
@@ -542,5 +517,5 @@ class UI(ChildView):
             _evt: Optional Tkinter event (from key binding or button click)
         """
         # Unregister from engine (per PROJECT_RULES.md section 7.1)
-        self.engine.dict_instances.pop(self.winfo_name(), None)
+        self.engine.windows.dict_instances.pop(self.winfo_name(), None)
         self.destroy()

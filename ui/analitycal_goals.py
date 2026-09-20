@@ -111,7 +111,7 @@ class UI(ParentView):
     def on_export(self, evt=None):
         """Validate input, run query, dispatch to engine exporter."""
         # Field-level validation (engine-driven)
-        if self.engine.on_fields_control(self) is False:
+        if self.engine.tools.on_fields_control(self) is False:
             return
 
         # Clamp again 1..999 (even if Spinbox is used)
@@ -156,11 +156,11 @@ class UI(ParentView):
         lab_id = self.engine.get_lab_id()
 
         # MUST use read_dict(): result rows are dictionaries
-        rs = self.engine.read(True, sql, (lab_id,))
+        rs = self.engine.db.read(True, sql, (lab_id,))
 
         if rs:
             # Dispatch to exporter (engine side) with dict-based rows
-            self.engine.get_analitical_goals(limit, rs)
+            self.engine.exporter.get_analitical_goals(limit, rs)
             self._on_close()
         else:
             msg = "No record data to compute."

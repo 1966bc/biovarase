@@ -103,10 +103,10 @@ class UI(ParentView):
 
     def set_values(self) -> None:
         """Load controls from the database and populate the Treeview."""
-        rs = self.engine.read(True, SQL, ()) or []
+        rs = self.engine.db.read(True, SQL, ()) or []
 
         # Clear current content
-        self.engine.clear_treeview(self.lstItems)
+        self.engine.tools.clear_treeview(self.lstItems)
 
         # Repopulate
         for row in rs:
@@ -137,7 +137,7 @@ class UI(ParentView):
             return
 
         primary_key_value = int(sel[0])
-        self.selected_item = self.engine.get_selected(
+        self.selected_item = self.engine.db.get_selected(
             self.table,
             self.primary_key,
             primary_key_value,

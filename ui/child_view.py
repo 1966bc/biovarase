@@ -9,7 +9,7 @@
 ChildView - Base class for editor dialogs in Biovarase.
 
 Provides:
-    - Automatic registration in engine.dict_instances
+    - Automatic registration in engine.windows.dict_instances
     - Anti-flash: hides window during construction, shows after centering
     - Transient binding to parent window
 
@@ -60,7 +60,7 @@ class ChildView(tk.Toplevel):
         Initialize the child view.
 
         Window is hidden during construction (anti-flash).
-        Automatically registers in engine.dict_instances.
+        Automatically registers in engine.windows.dict_instances.
 
         Args:
             parent: Parent widget
@@ -89,7 +89,7 @@ class ChildView(tk.Toplevel):
 
         # Register in dict_instances
         if name:
-            self.engine.dict_instances[name] = self
+            self.engine.windows.dict_instances[name] = self
 
     def show(self, on_screen=False):
         """
@@ -101,7 +101,7 @@ class ChildView(tk.Toplevel):
         Args:
             on_screen: If True, center on screen. If False (default), center on parent.
         """
-        self.engine.center_me(self, on_screen=on_screen)
+        self.engine.tools.center_me(self, on_screen=on_screen)
         self.deiconify()
         self.lift()
         self.focus_set()
@@ -117,5 +117,5 @@ class ChildView(tk.Toplevel):
             evt: Optional event object
         """
         if self._dialog_name:
-            self.engine.dict_instances.pop(self._dialog_name, None)
+            self.engine.windows.dict_instances.pop(self._dialog_name, None)
         self.destroy()

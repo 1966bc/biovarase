@@ -17,7 +17,7 @@ class UI(ParentView):
 
     - Grid-only layout.
     - Loads current observations from engine on open.
-    - Validates integer input via engine.get_validate_integer().
+    - Validates integer input via engine.tools.get_validate_integer().
     - Hotkeys: Alt+S (Save), Alt+C/Esc (Cancel), Enter (Save).
     """
 
@@ -41,7 +41,7 @@ class UI(ParentView):
 
         # Form state
         self.observations = tk.IntVar()
-        self.vcmd = self.engine.get_validate_integer(self)
+        self.vcmd = self.engine.tools.get_validate_integer(self)
 
         # Root columns: form (col 0) + buttons (col 1)
         self.columnconfigure(0, weight=1)
@@ -111,7 +111,7 @@ class UI(ParentView):
         """Validate and persist observations, then notify parent and close."""
         # Optional global validation hook
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
         if not messagebox.askyesno(self.engine.app_title,

@@ -117,7 +117,7 @@ class UI(ChildView):
         self.dict_suppliers.clear()
         values = []
 
-        rs = self.engine.read(True, SQL_SUPPLIERS, ()) or []
+        rs = self.engine.db.read(True, SQL_SUPPLIERS, ()) or []
         for idx, row in enumerate(rs):
             supplier_id = row.get("supplier_id")
             description = row.get("description", "")
@@ -185,7 +185,7 @@ class UI(ChildView):
         """Validate, build SQL and write the record."""
         # Global validation hook if present
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
         if not messagebox.askyesno(
@@ -207,11 +207,11 @@ class UI(ChildView):
         else:
             sql = self.engine.build_sql(self.parent.table, op="insert")
 
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)

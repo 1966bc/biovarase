@@ -220,7 +220,7 @@ class Editor(ChildView):
         """
         # Engine-level field validation (if available)
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(
+            if self.engine.tools.on_fields_control(
                 self.frm_main,
                 self.engine.app_title,
             ) is False:
@@ -256,11 +256,11 @@ class Editor(ChildView):
             sql = self.engine.build_sql(self.table, op="insert")
 
         # Execute and refresh
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
@@ -277,7 +277,7 @@ class Editor(ChildView):
             self._reselect_in_parent()
 
         # Notify observers for cross-window refresh
-        self.engine.notify(f"{self.table}_changed")
+        self.engine.events.notify(f"{self.table}_changed")
 
         self.on_cancel()  # Close window
 
@@ -325,7 +325,7 @@ class Editor(ChildView):
             "LIMIT 1;"
         )
         try:
-            row = self.engine.read(False, sql, (norm,))
+            row = self.engine.db.read(False, sql, (norm,))
         except Exception as exc:
             messagebox.showerror(
                 self.engine.app_title,

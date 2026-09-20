@@ -82,7 +82,7 @@ class UI(ParentView):
         self.dict_items.clear()
 
         # PROJECT_RULES → read_dict(), niente indici su tuple
-        rows = self.engine.read(True, "SELECT * FROM samples ORDER BY description;", ())
+        rows = self.engine.db.read(True, "SELECT * FROM samples ORDER BY description;", ())
 
         for index, row in enumerate(rows or []):
             sample_id = row.get("sample_id")
@@ -96,7 +96,7 @@ class UI(ParentView):
             if status != 1:
                 self.lstItems.itemconfig(
                     index,
-                    {"bg": self.engine.get_rgb(211, 211, 211)}
+                    {"bg": self.engine.tools.get_rgb(211, 211, 211)}
                 )
 
             # Mappa index → PK (sample_id)
@@ -112,7 +112,7 @@ class UI(ParentView):
             return
         idx = sel[0]
         pk = self.dict_items.get(idx)
-        self.selected_item = self.engine.get_selected(self.table, self.primary_key, pk)
+        self.selected_item = self.engine.db.get_selected(self.table, self.primary_key, pk)
         
     def _on_item_activated(self, _evt=None):
         sel = self.lstItems.curselection()

@@ -95,7 +95,7 @@ class UI(ChildView):
             if hasattr(self.engine, "get_base_bg_color_hex"):
                 bg = self.engine.get_base_bg_color_hex()
             else:
-                bg = self.engine.get_rgb(240, 240, 237)
+                bg = self.engine.tools.get_rgb(240, 240, 237)
         except Exception as e:
             bg = "#d9d9d9"
 
@@ -203,7 +203,7 @@ class UI(ChildView):
         # Show creator name
         try:
             sql = "SELECT first_name, last_name FROM users WHERE user_id = ?"
-            user = self.engine.read(False, sql, (created_by,))
+            user = self.engine.db.read(False, sql, (created_by,))
             if user:
                 creator_name = f"{user['first_name']} {user['last_name']}"
                 if not self.can_edit:
@@ -234,7 +234,7 @@ class UI(ChildView):
             WHERE status = 1
             ORDER BY description ASC;
         """
-        rs = self.engine.read(True, sql, ()) or []
+        rs = self.engine.db.read(True, sql, ()) or []
 
         self.dict_actions = {}
         voices = []
@@ -336,7 +336,7 @@ class UI(ChildView):
             return
 
         # Generic field validation
-        if not self.engine.on_fields_control(self):
+        if not self.engine.tools.on_fields_control(self):
             return
 
         # Calendarium validation
@@ -389,11 +389,11 @@ class UI(ChildView):
                 """
                 args = (result_id, action_id, description, modified_date, status, user_id)
 
-            last_id = self.engine.write(sql, args)
+            last_id = self.engine.db.write(sql, args)
             if last_id is None:
                 err = self.engine.last_write_error
                 if err:
-                    msg = self.engine.get_user_friendly_db_error(err)
+                    msg = self.engine.tools.get_database_error(err)
                 else:
                     msg = "Save failed."
                 messagebox.showerror(self.engine.app_title, msg, parent=self)
@@ -401,7 +401,7 @@ class UI(ChildView):
 
             # Notify observers (daily_validation, main, etc.)
             note_id = last_id if self.index is None else int(self.index)
-            self.engine.notify("note_changed", note_id)
+            self.engine.events.notify("note_changed", note_id)
 
             # Reload master Treeview (if parent has _set_values, e.g. notes.py)
             if hasattr(self.parent, "_set_values"):
@@ -419,13 +419,7 @@ class UI(ChildView):
 
         except Exception as e:
             # Log secondo PROJECT_RULES
-            self.engine.on_log(
-                "_on_save",
-                e,
-                type(e),
-                __import__(__name__),
-                caller=type(self).__name__,
-            )
+            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             messagebox.showerror(
                 self.engine.app_title,
                 "Error while saving data." + "\n" + "Please check the log file.",

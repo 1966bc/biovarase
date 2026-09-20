@@ -161,7 +161,7 @@ class UI(ChildView):
             ORDER BY w.description
         """
 
-        rows = self.engine.read(True, sql, (lab_id,))
+        rows = self.engine.db.read(True, sql, (lab_id,))
         self.workstations = list(rows) if rows else []
 
         values = [f"{ws['description']} ({ws['serial']})" for ws in self.workstations]
@@ -208,7 +208,7 @@ class UI(ChildView):
             ORDER BY t.description, s.description
         """
 
-        rows = self.engine.read(True, sql, (workstation_id,))
+        rows = self.engine.db.read(True, sql, (workstation_id,))
         self.test_methods = list(rows) if rows else []
 
         values = [f"{tm['test_name']} - {tm['sample_name']}" for tm in self.test_methods]
@@ -248,7 +248,7 @@ class UI(ChildView):
             ORDER BY rank, description
         """
 
-        rows = self.engine.read(True, sql, (
+        rows = self.engine.db.read(True, sql, (
             test_method["test_method_id"],
             workstation["workstation_id"]
         ))
@@ -334,22 +334,22 @@ class UI(ChildView):
         batch2 = self.batches_level2[level2_idx]
 
         # Get full test_method record
-        test_method = self.engine.get_selected(
+        test_method = self.engine.db.get_selected(
             "test_methods",
             "test_method_id",
             test_method_partial["test_method_id"]
         )
 
         # Get full workstation record
-        workstation_full = self.engine.get_selected(
+        workstation_full = self.engine.db.get_selected(
             "workstations",
             "workstation_id",
             workstation["workstation_id"]
         )
 
         # Get full batch records
-        batch1_full = self.engine.get_selected("batches", "batch_id", batch1["batch_id"])
-        batch2_full = self.engine.get_selected("batches", "batch_id", batch2["batch_id"])
+        batch1_full = self.engine.db.get_selected("batches", "batch_id", batch1["batch_id"])
+        batch2_full = self.engine.db.get_selected("batches", "batch_id", batch2["batch_id"])
 
         # Get series data for each batch
         observations = int(self.engine.get_observations())

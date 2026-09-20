@@ -150,7 +150,7 @@ class UI(ChildView):
             WHERE description = ? AND org_id = ?
             LIMIT 1
         """
-        row = self.engine.read(False, sql, (desc, org_id))
+        row = self.engine.db.read(False, sql, (desc, org_id))
         if row:
             current_id = self.selected_item.get("category_id") if self.selected_item else None
             if current_id is None or row["category_id"] != current_id:
@@ -191,16 +191,16 @@ class UI(ChildView):
                 VALUES (?, ?, ?)
             """
 
-        last_id = self.engine.write(sql, args)
+        last_id = self.engine.db.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
             if err:
-                msg = self.engine.get_user_friendly_db_error(err)
+                msg = self.engine.tools.get_database_error(err)
             else:
                 msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 
         self.parent._set_values()
-        self.engine.notify("categories_changed")
+        self.engine.events.notify("categories_changed")
         self.on_cancel()

@@ -37,7 +37,7 @@ class UI(ParentView):
 
         self.child = None            # child editor (ui.user.UI)
         self.dict_items = {}         # treeview iid -> user_id
-        self.selected_item = None    # hybrid dict from engine.get_selected()
+        self.selected_item = None    # hybrid dict from engine.db.get_selected()
         self.items = tk.StringVar()  # status text (items count)
 
         self.bind("<Return>", self.on_item_activated)
@@ -85,7 +85,7 @@ class UI(ParentView):
         self.lstItems.heading("lab", text="Laboratory", anchor=tk.W)
 
         # Tag for inactive users
-        self.lstItems.tag_configure("inactive", background=self.engine.get_rgb(211, 211, 211))
+        self.lstItems.tag_configure("inactive", background=self.engine.tools.get_rgb(211, 211, 211))
 
         sb = ttk.Scrollbar(frm_left, orient=tk.VERTICAL, command=self.lstItems.yview)
         self.lstItems.configure(yscrollcommand=sb.set)
@@ -121,7 +121,7 @@ class UI(ParentView):
             - Role >= 3 (Lab Admin and below): sees only users from their lab
             - Inactive users (status=0): grayed out background
         """
-        self.engine.clear_treeview(self.lstItems)
+        self.engine.tools.clear_treeview(self.lstItems)
         self.dict_items.clear()
         self.selected_item = None
 
@@ -183,7 +183,7 @@ class UI(ParentView):
             """
             args = (user_org_id,)
 
-        rows = self.engine.read(True, sql, args) or []
+        rows = self.engine.db.read(True, sql, args) or []
 
         for row in rows:
             user_id = int(row["user_id"])
@@ -225,7 +225,7 @@ class UI(ParentView):
             self.selected_item = None
             return
 
-        self.selected_item = self.engine.get_selected(self.table, self.primary_key, pk)
+        self.selected_item = self.engine.db.get_selected(self.table, self.primary_key, pk)
 
     def on_item_activated(self, _evt=None):
         """

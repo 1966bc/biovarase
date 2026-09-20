@@ -108,7 +108,7 @@ class UI(ParentView):
         self.lstItems.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         sb_notes.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.lstItems.tag_configure("status", background=self.engine.get_rgb(211, 211, 211))
+        self.lstItems.tag_configure("status", background=self.engine.tools.get_rgb(211, 211, 211))
 
         self.lstItems.bind("<<TreeviewSelect>>", self._on_item_selected)
         self.lstItems.bind("<Double-1>", self._on_item_activated)
@@ -182,14 +182,14 @@ class UI(ParentView):
         """
         if not isinstance(self.selected_result, dict):
             # No valid result bound → clear list
-            self.engine.clear_treeview(self.lstItems)
+            self.engine.tools.clear_treeview(self.lstItems)
             self.items.set("Items: 0")
             self.selected_item = None
             return
 
         result_id = self.selected_result.get("result_id")
         if result_id is None:
-            self.engine.clear_treeview(self.lstItems)
+            self.engine.tools.clear_treeview(self.lstItems)
             self.items.set("Items: 0")
             self.selected_item = None
             return
@@ -206,10 +206,10 @@ class UI(ParentView):
             WHERE notes.result_id = ?;
         """
 
-        rs = self.engine.read(True, sql, (result_id,)) or []
+        rs = self.engine.db.read(True, sql, (result_id,)) or []
 
         # Clear current content
-        self.engine.clear_treeview(self.lstItems)
+        self.engine.tools.clear_treeview(self.lstItems)
 
         count = 0
         for row in rs:
@@ -245,7 +245,7 @@ class UI(ParentView):
         note_id = sel[0]
 
         # get_selected returns a hybrid dict; we only use named keys.
-        self.selected_item = self.engine.get_selected(
+        self.selected_item = self.engine.db.get_selected(
             self.table,
             self.primary_key,
             note_id,

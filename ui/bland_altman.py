@@ -208,7 +208,7 @@ class UI(ParentView):
               AND c.org_id = ?
             LIMIT 1
         """
-        row = self.engine.read(False, sql, (test_id, self.engine.get_lab_id()))
+        row = self.engine.db.read(False, sql, (test_id, self.engine.get_lab_id()))
         if not row:
             return
 
@@ -273,7 +273,7 @@ class UI(ParentView):
               AND tm.status = 1
             ORDER BY c.description
         """
-        rows = self.engine.read(True, sql, (lab_org_id,)) or []
+        rows = self.engine.db.read(True, sql, (lab_org_id,)) or []
 
         values = []
         for idx, row in enumerate(rows):
@@ -311,7 +311,7 @@ class UI(ParentView):
               AND tm.status = 1
             ORDER BY t.description
         """
-        rows = self.engine.read(True, sql, (category_id,)) or []
+        rows = self.engine.db.read(True, sql, (category_id,)) or []
 
         values = []
         for idx, row in enumerate(rows):
@@ -350,7 +350,7 @@ class UI(ParentView):
               AND b.description != ''
             ORDER BY b.description
         """
-        rows = self.engine.read(True, sql, (test_id,)) or []
+        rows = self.engine.db.read(True, sql, (test_id,)) or []
 
         values = []
         for idx, row in enumerate(rows):
@@ -393,7 +393,7 @@ class UI(ParentView):
               AND e.status = 1
             ORDER BY w.description
         """
-        rows = self.engine.read(True, sql, (test_id, level)) or []
+        rows = self.engine.db.read(True, sql, (test_id, level)) or []
 
         values = []
         for idx, row in enumerate(rows):
@@ -525,7 +525,7 @@ class UI(ParentView):
               AND r2.workstation_id = ?
             ORDER BY result_date
         """
-        rows = self.engine.read(
+        rows = self.engine.db.read(
             True, sql,
             (test_id, test_id, level, level, ws1_id, ws2_id)
         ) or []

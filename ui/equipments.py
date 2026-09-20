@@ -99,15 +99,10 @@ class UI(ParentView):
         self.dict_items.clear()
 
         try:
-            rows = self.engine.read(True, SQL, ()) or []
+            rows = self.engine.db.read(True, SQL, ()) or []
         except Exception as e:
             try:
-                self.engine.on_log(
-                    "equipments.set_values:read_dict",
-                    e,
-                    type(e),
-                    sys.modules[__name__],
-                )
+                self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             except Exception as e:
                 pass
             rows = []
@@ -140,19 +135,14 @@ class UI(ParentView):
             return
 
         try:
-            self.selected_item = self.engine.get_selected(
+            self.selected_item = self.engine.db.get_selected(
                 self.table,
                 self.primary_key,
                 pk,
             )
         except Exception as e:
             try:
-                self.engine.on_log(
-                    "equipments.on_item_selected:get_selected",
-                    e,
-                    type(e),
-                    sys.modules[__name__],
-                )
+                self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             except Exception as e:
                 pass
             self.selected_item = None

@@ -152,16 +152,11 @@ class UI(ParentView):
         try:
             # Optional: show busy state if Engine provides it
             if hasattr(self.engine, "busy"):
-                self.engine.busy(self)
-            self.engine.get_notes(args)
+                self.engine.tools.busy(self)
+            self.engine.exporter.get_notes(args)
         except Exception as exc:
             try:
-                self.engine.on_log(
-                    "export_notes._on_export:get_notes",
-                    exc,
-                    type(exc),
-                    sys.modules[__name__],
-                )
+                self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
             except Exception as e:
                 pass
 
@@ -173,7 +168,7 @@ class UI(ParentView):
         finally:
             try:
                 if hasattr(self.engine, "not_busy"):
-                    self.engine.not_busy(self)
+                    self.engine.tools.not_busy(self)
             except Exception as e:
                 pass
 

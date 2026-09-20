@@ -58,7 +58,7 @@ class Login(ttk.Frame):
         lang = self.engine.get_language()
         set_language(lang)
 
-        self.engine.dict_instances[self.winfo_name()] = self
+        self.engine.windows.dict_instances[self.winfo_name()] = self
         self.parent = parent
         self.parent.protocol("WM_DELETE_WINDOW",
                              self.nametowidget(".").on_exit)
@@ -158,12 +158,11 @@ class Login(ttk.Frame):
 
         Behavior:
             - Validates non-empty fields
-            - Calls engine.on_login() for database verification
             - Opens main window on success
             - Shows warning and increments counter on failure
             - Exits after MAX_LOGIN_ATTEMPTS failed attempts
         """
-        if self.engine.on_fields_control(
+        if self.engine.tools.on_fields_control(
             self.frm_main,
             self.engine.app_title
         ) == False:
@@ -171,7 +170,7 @@ class Login(ttk.Frame):
 
         nick, password = self.get_values()
 
-        rs = self.engine.on_login((nick, password))
+        rs = self.engine.on_login(nick, password)
 
         if rs:
             self.engine.set_log_user(rs)
@@ -209,5 +208,5 @@ class Login(ttk.Frame):
         Args:
             evt: Tkinter event (optional)
         """
-        self.engine.con.close()
+        self.engine.db.con.close()
         self.quit()

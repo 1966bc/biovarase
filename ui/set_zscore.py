@@ -40,7 +40,7 @@ class UI(ParentView):
 
         # Form state
         self.z_score = tk.DoubleVar()
-        self.float_vcmd = self.engine.get_validate_float(self)
+        self.float_vcmd = self.engine.tools.get_validate_float(self)
 
         # Root columns: form (col 0) + buttons (col 1)
         self.columnconfigure(0, weight=1)
@@ -96,7 +96,7 @@ class UI(ParentView):
         """Populate current value and set focus."""
         self.title("Set Z-score")
         try:
-            self.z_score.set(self.engine.get_zscore())
+            self.z_score.set(self.engine.qc.get_zscore())
         except Exception as e:
             # Fallback: default to 0.0 if engine getter is unavailable
             self.z_score.set(0.0)
@@ -109,7 +109,7 @@ class UI(ParentView):
         """Validate and persist z-score, then notify parent and close."""
         # Optional global validation hook
         if hasattr(self.engine, "on_fields_control"):
-            if self.engine.on_fields_control(self.frm_main, self.engine.app_title) is False:
+            if self.engine.tools.on_fields_control(self.frm_main, self.engine.app_title) is False:
                 return
 
         if not messagebox.askyesno(self.engine.app_title,
