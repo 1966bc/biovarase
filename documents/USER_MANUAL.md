@@ -703,16 +703,24 @@ python3 biovarase.py --trace
 
 # Appendix A: the sample laboratory
 
-The program ships with a database of a laboratory that never existed, run by
-people who are no longer here to mind: Francis Aston, Hans Krebs, Maud
+The program ships with a real laboratory that has invented numbers in it:
+the mass spectrometry section of a hospital clinical biochemistry
+department, set up the way it actually is. The panels are the ones it
+reports, the matrices are the ones it receives, the instruments are the ones
+on the bench and the methods are the ones in its procedures - therapeutic
+drug monitoring, immunosuppressants, steroid hormones, vitamins,
+catecholamines, alcohol markers and drugs of abuse, on two mass
+spectrometers, a chromatograph and a gas chromatograph with a headspace
+sampler. 44 analytes, 56 methods over seven matrices, 133 lots, 8348 results
+over six months.
+
+The data is what is invented. The concentrations are the ones those analytes
+are really controlled at, and the lots behave as lots do, but nothing in
+that file was measured: it was generated, so that a database could be
+shipped without shipping a laboratory's own. The people are invented as
+well, and are people no longer here to mind: Francis Aston, Hans Krebs, Maud
 Menten, Leonor Michaelis, Rosalyn Yalow, Archibald Garrod. Everybody's
 password is `pass`.
-
-What it measures is real, and so are the concentrations: therapeutic drug
-monitoring, immunosuppressants, steroid hormones, vitamins, catecholamines,
-alcohol markers and drugs of abuse, on two mass spectrometers, a
-chromatograph and a gas chromatograph with a headspace sampler. 44 analytes,
-56 methods over seven matrices, 133 lots, 8348 results over six months.
 
 Four series have something wrong with them on purpose, because a program for
 quality control whose sample data is all in control teaches nothing:
@@ -762,6 +770,14 @@ uncertainty: the expanded uncertainty the Performance box reports.
 **EFLM Biological Variation Database** - the **?** menu opens it - for the
 within-subject and between-subject variation the analytical goals are
 computed from, and the grading of each estimate.
+
+**Nordtest TR 569**, *Internal Quality Control - Handbook for Chemical
+Laboratories*, the Trollbook, also in the **?** menu. Written for chemical
+laboratories rather than clinical ones, and the better for it: it starts
+from what the control material is and ends at the chart, with the arithmetic
+in the open. The Istituto Superiore di Sanita published an Italian
+translation of the fourth edition as Rapporti ISTISAN 12/29; the English is
+now at edition 6.
 
 **Westgard multirules**, as in *Basic QC Practices*: the six rules and the
 order they are read in.

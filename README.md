@@ -7,7 +7,7 @@ measures, the lots of control material open on its instruments, the results
 run on them, and the Levey-Jennings chart that says whether the method can
 report today.
 
-![Biovarase: a Levey-Jennings chart with the statistics of the series](documents/images/biovarase.png)
+![Biovarase: a Levey-Jennings chart with the statistics of the series](documents/images/banner.png)
 
 Python 3 with Tkinter and SQLite. Three dependencies, no server, no browser,
 and a database that is one file.
@@ -68,15 +68,22 @@ total error. See [documents/ANALYTICAL_GOALS.md](documents/ANALYTICAL_GOALS.md).
 
 ## The sample data
 
-`sql/biovarase.sl3` is a laboratory that never existed, run by people who are
-no longer here to mind: Francis Aston, Hans Krebs, Maud Menten, Leonor
-Michaelis, Rosalyn Yalow, Archibald Garrod.
-
-What it measures is real, and so are the concentrations: therapeutic drug
+`sql/biovarase.sl3` is a real laboratory with invented numbers in it: the
+mass spectrometry section of a hospital clinical biochemistry department,
+as it is actually set up. The panels are the ones it reports, the matrices
+are the ones it receives, the instruments are the ones on the bench and the
+methods are the ones written in its procedures — therapeutic drug
 monitoring, immunosuppressants, steroid hormones, vitamins, catecholamines,
 alcohol markers and drugs of abuse, on two mass spectrometers, a
-chromatograph and a gas chromatograph with a headspace sampler — 44 analytes,
+chromatograph and a gas chromatograph with a headspace sampler. 44 analytes,
 56 methods over seven matrices, 133 lots, 8348 results over six months.
+
+What is invented is the data. The concentrations are the ones those analytes
+are actually controlled at and the lots behave as lots behave, but no result
+in that file was measured: they were generated, so that a database could be
+published without publishing a laboratory's own. The people are invented
+too, and are people who are no longer here to mind: Francis Aston, Hans
+Krebs, Maud Menten, Leonor Michaelis, Rosalyn Yalow, Archibald Garrod.
 
 Four series have something wrong with them, because a program for quality
 control whose sample data is all in control teaches nothing: a calibration

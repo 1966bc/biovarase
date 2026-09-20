@@ -59,6 +59,13 @@ from ui.window import Window
 #: formulae that use it are in documents/ANALYTICAL_GOALS.md.
 BIOLOGICAL_VARIATION = "https://biologicalvariation.eu/"
 
+#: Nordtest TR 569, the Trollbook: how to plan and run internal quality
+#: control, from the control material to the chart, written for analysts
+#: rather than for statisticians. Free to read, and not ours to ship.
+HANDBOOK = ("https://www.nordtest.info/wp/2026/03/18/internal-quality-control"
+            "-handbook-for-chemical-laboratories-trollboken-troll-book-nt-tr-569"
+            "-english-edition-6/")
+
 #: The columns of each list, as Tools.get_tree wants them:
 #: (identifier, heading, anchor, stretch, minwidth, width).
 BATCHES = (("#0", "id", tk.W, False, 0, 0),
@@ -221,6 +228,8 @@ class Main(Window, ttk.Frame):
         m_help.add_separator()
         m_help.add_command(label="Biological variation database", underline=0,
                            command=self.on_biological_variation)
+        m_help.add_command(label="Internal quality control handbook", underline=0,
+                           command=self.on_handbook)
         m_help.add_separator()
         m_help.add_command(label="About", underline=0, command=self.on_about)
         m_help.add_command(label="Licence", underline=0, command=self.on_licence)
@@ -339,6 +348,17 @@ class Main(Window, ttk.Frame):
         each estimate and how they were graded.
         """
         self.engine.open_url(BIOLOGICAL_VARIATION)
+
+    def on_handbook(self, evt=None):
+        """Nordtest TR 569, the handbook this kind of work is taught from.
+
+        Written for chemical laboratories rather than clinical ones, and the
+        better for it: it starts from what the control material is and ends
+        at the chart, with the arithmetic in the open. There is an Italian
+        translation of the fourth edition, published by the Istituto
+        Superiore di Sanità as Rapporti ISTISAN 12/29.
+        """
+        self.engine.open_url(HANDBOOK)
 
     def on_about(self, evt=None):
         """What this is, who wrote it, and what it is running on."""
