@@ -15,6 +15,7 @@ are, and the few questions about this laboratory that are asked from more than
 one window.
 """
 
+import datetime
 import os
 import subprocess
 import sys
@@ -87,13 +88,14 @@ class Engine:
         return os.path.join(os.path.dirname(__file__), file)
 
     def get_laboratory(self):
-        """Whose laboratory this is, for the title bar and the exports.
+        """Whose laboratory this is: the site, the laboratory, the section.
 
-        @return: name and site
+        @return: site, lab, section
         @rtype: tuple
         """
-        return (self.config.get("laboratory", "name"),
-                self.config.get("laboratory", "site"))
+        return (self.config.get("laboratory", "site"),
+                self.config.get("laboratory", "lab"),
+                self.config.get("laboratory", "section"))
 
     def get_database(self):
         """The database file, from the settings.
@@ -305,6 +307,14 @@ class Engine:
     DATE_FORMATS = {"dd-mm-yyyy": "%d-%m-%Y",
                     "mm-dd-yyyy": "%m-%d-%Y",
                     "yyyy-mm-dd": "%Y-%m-%d"}
+
+    def get_today(self):
+        """Today, as a date: what an expiration is compared against.
+
+        @return: today
+        @rtype: date
+        """
+        return datetime.date.today()
 
     def get_date_format(self):
         """The date format from the settings, as strftime wants it.

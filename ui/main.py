@@ -21,6 +21,7 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import ui.actions
+import ui.batches
 import ui.categories
 import ui.controls
 import ui.equipments
@@ -110,6 +111,8 @@ class Main(Window, ttk.Frame):
         bar.add_cascade(label="File", underline=0, menu=m_file)
 
         m_qc = tk.Menu(bar, tearoff=0)
+        m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
+        m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
         m_qc.add_command(label="Edit result", underline=0, command=self.on_edit_result)
         m_qc.add_command(label="Note", underline=0, command=self.on_note)
@@ -134,6 +137,10 @@ class Main(Window, ttk.Frame):
             bar.add_cascade(label="Edit", underline=0, menu=m_edit)
 
         self.parent.config(menu=bar)
+
+    def on_batches(self, evt=None):
+        """The lots and the results on them: where the material is administered."""
+        self.engine.windows.show("batches", lambda: ui.batches.UI(self))
 
     def on_master_data(self, module):
         """Open a master data list, or bring to the front the one open."""
@@ -299,8 +306,8 @@ class Main(Window, ttk.Frame):
 
         # Packed from the right, so they read left to right as they are added
         # in reverse: laboratory, observations, z, ddof.
-        name, site = self.engine.get_laboratory()
-        for caption, value in (("Lab:", "{0} - {1}".format(name, site)),
+        site, lab, section = self.engine.get_laboratory()
+        for caption, value in (("Section:", section),
                                ("Observations:", self.engine.get_observations()),
                                ("Z score:", self.engine.qc.get_zscore()),
                                ("ddof:", self.engine.qc.get_ddof())):
@@ -425,7 +432,7 @@ class Main(Window, ttk.Frame):
 
         self.engine.tools.clear_treeview(self.lst_batches)
         self.dict_batches.clear()
-        today = datetime.date.today()
+        today = self.engine.get_today()
         for row in rows:
             if row["expiration"] is not None and row["expiration"] < today:
                 tags = ("expired",)

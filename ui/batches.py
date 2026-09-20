@@ -4,919 +4,347 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-"""
-Batches Master Window
+"""The lots of control material, and the results entered on them.
 
-Hierarchical batch management interface for laboratory quality control.
+Three lists across: the analytes as this laboratory measures them, the lots
+open on the one chosen, and the results on the lot. This is where the
+material is administered - a new lot when the box arrives, a target
+recomputed, a result typed in the wrong place taken out again - while the
+main window is where the control is read.
 
-This module provides a singleton master window that displays a three-pane
-hierarchical view of QC batches organized by:
-    - Sites → Labs → Sections → Workstations (left pane)
-    - Test Methods assigned to selected workstation (middle pane)
-    - Batches for selected test method + workstation (right pane)
-
-The window implements role-based access control:
-    - App Admin (role=0): See all organizations - global access
-    - Country/Regional/Lab Admin (1-3): See descendants of their org
-    - Superuser (role=4): QC validation within their lab
-    - Technician (role=5): Data entry within their scope
-    - Viewer (role=6): Read-only access
-
-Architecture:
-    - Singleton master window (PROJECT_RULES 7.1)
-    - Uses pack() layout (PROJECT_RULES 7.2)
-    - 100% dictionary-based data access (PROJECT_RULES 5.2)
-    - Window registry pattern for Engine communication (PROJECT_RULES 16.3)
-    - Three-tier role-based filtering (admin/superuser/technician)
+Deleting a result is here and nowhere else, and it is meant to be rare: a
+result entered on the wrong lot, or entered twice. What is wrong with a
+measurement that was made is said by excluding it, which leaves it on the
+chart in grey; deleting is for what never happened.
 """
 
-import sys
 import tkinter as tk
-from tkinter import ttk
 from tkinter import messagebox
+from tkinter import ttk
 
-from ui.parent_view import ParentView
-import ui.batch as batch
+import ui.batch
+import ui.result
 
-# Module constants
-STATUS_ACTIVE = 1
+from ui.lookup import Lookup
+from ui.window import Window
 
-# Pane weight ratios (left, middle, right)
-PANE_WEIGHTS = (0.28, 0.36, 0.36)
+METHODS = (("#0", "id", tk.W, False, 0, 0),
+           ("#1", "Analyte", tk.W, True, 140, 180),
+           ("#2", "Matrix", tk.W, False, 70, 90),
+           ("#3", "Unit", tk.W, False, 50, 60))
 
-# Tree node types (now based on organizations.org_type)
-NODE_TYPE_COUNTRY = "country"
-NODE_TYPE_REGION = "region"
-NODE_TYPE_SITE = "site"
-NODE_TYPE_LAB = "lab"
-NODE_TYPE_SECTION = "section"
-NODE_TYPE_WORKSTATION = "workstation"
+BATCHES = (("#0", "id", tk.W, False, 0, 0),
+           ("#1", "Liv", tk.W, False, 30, 40),
+           ("#2", "Lot", tk.W, True, 90, 110),
+           ("#3", "Workstation", tk.W, False, 70, 90),
+           ("#4", "Target", tk.E, False, 60, 70),
+           ("#5", "SD", tk.E, False, 55, 65),
+           ("#6", "Expiration", tk.W, False, 80, 90),
+           ("#7", "Results", tk.E, False, 55, 65))
 
-# Legacy aliases for backward compatibility
-NODE_TYPE_SITES = NODE_TYPE_SITE
-NODE_TYPE_LABS = NODE_TYPE_LAB
-NODE_TYPE_SECTIONS = NODE_TYPE_SECTION
-NODE_TYPE_WORKSTATIONS = NODE_TYPE_WORKSTATION
-
-# User roles - imported from engine for consistency
-from engine import (
-    ROLE_APP_ADMIN, ROLE_COUNTRY_ADMIN, ROLE_REGIONAL_ADMIN,
-    ROLE_LAB_ADMIN, ROLE_SUPERUSER, ROLE_TECHNICIAN, ROLE_VIEWER
-)
-# Legacy aliases
-ROLE_ADMIN = ROLE_APP_ADMIN
-ROLE_AUTOLOGIN = ROLE_VIEWER
+RESULTS = (("#0", "id", tk.W, False, 0, 0),
+           ("#1", "Date", tk.W, True, 120, 145),
+           ("#2", "Value", tk.CENTER, False, 55, 70),
+           ("#3", "In use", tk.CENTER, False, 45, 55))
 
 
-class UI(ParentView):
-    """
-    Batches master window (singleton).
+class UI(Window, tk.Toplevel):
+    """The lots of every analyte, and what has been measured on them."""
 
-    Provides hierarchical batch management through a three-pane interface:
-        - Left pane: Site/Lab/Section/Workstation tree navigation
-        - Middle pane: Test methods assigned to selected workstation
-        - Right pane: Batches for selected test method + workstation combination
-
-    Role-Based Access Control:
-        - App Admin (role=0): Global view, all organizations
-        - Country/Regional/Lab Admin (1-3): Descendants of their org
-        - Superuser (role=4): Lab-wide QC management
-        - Technician (role=5): Data entry in assigned scope
-        - Viewer (role=6): Read-only access
-
-    Data Filtering:
-        App Admin → No filtering (global)
-        Admin hierarchy → WHERE org_id IN descendants
-        Superuser/Technician/Viewer → WHERE lab_id = ?
-
-    Attributes:
-        _loaded: Flag for lazy tree loading
-        _weights: Pane weight ratios for sash placement
-        selected_workstation: Currently selected workstation (dict)
-        selected_test_method: Currently selected test method (dict)
-        selected_batch: Currently selected batch (dict)
-        child: Reference to open batch editor window
-    """
+    #: The name it is registered under, so only one is ever open.
+    TABLE = "batches"
 
     def __init__(self, parent):
-        """
-        Initialize the batches window.
+        super().__init__(name="batches")
 
-        Args:
-            parent: Parent widget (usually main window)
-        """
-        super().__init__(parent, name="batches")
+        self.parent = parent
+        self.dict_methods = {}
+        self.dict_batches = {}
+        self.dict_results = {}
+        self.method = None
+        self.batch = None
+        self.panels = None
 
-        if self._reusing:
-            return
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.init_ui()
+        self.engine.tools.center_me(self)
 
-        self._loaded = False
-        self.resizable(True, True)
-        self.geometry("900x600")
+        self.engine.events.subscribe("batches", self.on_batches_changed)
+        self.engine.events.subscribe("results", self.on_results_changed)
 
-        # Selection state
-        self.child = None
-        self.selected_workstation = None
-        self.selected_test_method = None
-        self.selected_batch = None
+    def init_ui(self):
+        """Three lists across, each one narrowing the next."""
+        frm_main = ttk.Frame(self, style="App.TFrame", padding=6)
+        across = ttk.PanedWindow(frm_main, orient=tk.HORIZONTAL)
 
-        # Subscribe to events (Observer pattern)
-        self.engine.events.subscribe("batches", self._on_batch_changed)
-        self.engine.events.subscribe("tests", self._on_tests_changed)
-        self.engine.events.subscribe("test_methods", self._on_tests_changed)
+        self.init_methods(across)
+        self.init_batches(across)
+        self.init_results(across)
 
-        # Build interface
-        self._build_ui()
+        across.pack(fill=tk.BOTH, expand=1)
+        frm_main.pack(fill=tk.BOTH, expand=1)
 
-        # Set minimum size and show
-        self.update_idletasks()
-        self.minsize(800, 500)
-        self.show()
+    def init_methods(self, container):
+        """The analytes, with the panel they belong to above them."""
+        frm = ttk.LabelFrame(container, text="Test methods")
 
-    # ---------------------------------------------------------------------
-    # UI Construction
-    # ---------------------------------------------------------------------
-    def _build_ui(self):
-        """
-        Build the three-pane interface.
+        self.cb_panel = self.engine.tools.get_combo(frm)
+        self.cb_panel.bind("<<ComboboxSelected>>", self.on_panel)
+        self.cb_panel.pack(fill=tk.X, padx=4, pady=4)
 
-        Creates:
-            - Left pane: Hierarchical tree (Sites → Labs → Sections → Workstations)
-            - Middle pane: Test methods list
-            - Right pane: Batches list
+        self.lst_methods = self.engine.tools.get_tree(frm, METHODS)
+        self.lst_methods.bind("<<TreeviewSelect>>", self.on_selected_method)
 
-        Uses pack() layout as required for master windows (PROJECT_RULES 7.2).
-        Widget creation follows Inventarium pattern (direct ttk.Treeview).
-        """
-        # PanedWindow must be stored on self (used by _place_sashes)
-        self.pw = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashwidth=6)
-        self.pw.pack(fill=tk.BOTH, expand=1, padx=5, pady=5)
+        container.add(frm, weight=2)
 
-        # Remember pane weight ratios for sash placement
-        self._weights = PANE_WEIGHTS
+    def init_batches(self, container):
+        """The lots open on the analyte chosen, and what can be done to one."""
+        frm = ttk.LabelFrame(container, text="Batches")
 
-        pane_left = ttk.Frame(self.pw, style="App.TFrame")
-        pane_mid = ttk.Frame(self.pw, style="App.TFrame")
-        pane_right = ttk.Frame(self.pw, style="App.TFrame")
+        self.lst_batches = self.engine.tools.get_tree(frm, BATCHES)
+        self.lst_batches.tag_configure("expired", foreground="#c0392b")
+        self.lst_batches.tag_configure("discarded", foreground="gray")
+        self.lst_batches.bind("<<TreeviewSelect>>", self.on_selected_batch)
+        self.lst_batches.bind("<Double-Button-1>", self.on_edit_batch)
 
-        self.pw.add(pane_left, minsize=160)
-        self.pw.add(pane_mid, minsize=300)
-        self.pw.add(pane_right, minsize=300)
+        buttons = self.engine.tools.get_button_column(frm,
+                                                      (("Add", self.on_add_batch),
+                                                       ("Edit", self.on_edit_batch)),
+                                                      window=self)
+        buttons.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # ---------------------------------------------------------------------
-        # Left pane: Sites → Labs → Sections → Workstations (hierarchical tree)
-        # ---------------------------------------------------------------------
-        self.Sites = ttk.Treeview(pane_left, show="tree")
+        container.add(frm, weight=3)
 
-        self.Sites.column("#0", width=220, minwidth=180, stretch=True)
-        self.Sites.heading("#0", text="Sites", anchor=tk.W)
+    def init_results(self, container):
+        """The results on the lot chosen, with the three things done to them."""
+        frm = ttk.LabelFrame(container, text="Results")
 
-        sb_sites = ttk.Scrollbar(pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
-        self.Sites.configure(yscrollcommand=sb_sites.set)
-        self.Sites.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        sb_sites.pack(side=tk.RIGHT, fill=tk.Y)
+        self.lst_results = self.engine.tools.get_tree(frm, RESULTS)
+        self.lst_results.tag_configure("excluded", foreground="gray")
+        self.lst_results.bind("<Double-Button-1>", self.on_edit_result)
 
-        self.Sites.bind("<<TreeviewSelect>>", self._on_branch_selected)
+        buttons = self.engine.tools.get_button_column(frm,
+                                                      (("Add", self.on_add_result),
+                                                       ("Edit", self.on_edit_result),
+                                                       ("Delete", self.on_delete_result),
+                                                       ("Close", self.on_cancel)),
+                                                      window=self)
+        buttons.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # ---------------------------------------------------------------------
-        # Middle pane: Test Methods
-        # ---------------------------------------------------------------------
-        frm_tests = ttk.Frame(pane_mid)
-        self.lblTests = ttk.LabelFrame(frm_tests, style="App.TLabelframe", text="Test Methods")
+        container.add(frm, weight=2)
 
-        cols_tests = ("test", "code", "sample", "method", "unit")
-        self.lstTestsMethods = ttk.Treeview(self.lblTests, columns=cols_tests, show="headings")
+    # ------------------------------------------------------------- the data
 
-        self.lstTestsMethods.column("test", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("test", text="Test", anchor=tk.W)
-
-        self.lstTestsMethods.column("code", width=60, minwidth=60, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("code", text="Code", anchor=tk.W)
-
-        self.lstTestsMethods.column("sample", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("sample", text="Sample", anchor=tk.W)
-
-        self.lstTestsMethods.column("method", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("method", text="Method", anchor=tk.W)
-
-        self.lstTestsMethods.column("unit", width=80, minwidth=80, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("unit", text="Unit", anchor=tk.W)
-
-        sb_tests = ttk.Scrollbar(self.lblTests, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
-        self.lstTestsMethods.configure(yscrollcommand=sb_tests.set)
-        self.lstTestsMethods.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        sb_tests.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Tags for status (use foreground for better ttk theme compatibility)
-        self.lstTestsMethods.tag_configure("status", foreground="gray")
-
-        self.lstTestsMethods.bind("<<TreeviewSelect>>", self._on_test_method_selected)
-        self.lstTestsMethods.bind("<Double-1>", self._on_test_method_activated)
-
-        self.lblTests.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        frm_tests.pack(fill=tk.BOTH, expand=1)
-
-        # ---------------------------------------------------------------------
-        # Right pane: Batches
-        # ---------------------------------------------------------------------
-        frm_batches = ttk.Frame(pane_right)
-        self.lblBatches = ttk.LabelFrame(frm_batches, style="App.TLabelframe", text="Batches")
-
-        cols_batches = ("control", "lot", "description", "expiration", "target")
-        self.lstBatches = ttk.Treeview(self.lblBatches, columns=cols_batches, show="headings")
-
-        self.lstBatches.column("control", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstBatches.heading("control", text="Control", anchor=tk.W)
-
-        self.lstBatches.column("lot", width=80, minwidth=80, anchor=tk.W, stretch=True)
-        self.lstBatches.heading("lot", text="Lot", anchor=tk.W)
-
-        self.lstBatches.column("description", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstBatches.heading("description", text="Description", anchor=tk.W)
-
-        self.lstBatches.column("expiration", width=80, minwidth=80, anchor=tk.CENTER, stretch=True)
-        self.lstBatches.heading("expiration", text="Expiration", anchor=tk.CENTER)
-
-        self.lstBatches.column("target", width=80, minwidth=80, anchor=tk.CENTER, stretch=True)
-        self.lstBatches.heading("target", text="Target", anchor=tk.CENTER)
-
-        sb_batches = ttk.Scrollbar(self.lblBatches, orient=tk.VERTICAL, command=self.lstBatches.yview)
-        self.lstBatches.configure(yscrollcommand=sb_batches.set)
-        self.lstBatches.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        sb_batches.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Tags for status and expired/expiring batches
-        # Use foreground for status (better ttk theme compatibility)
-        self.lstBatches.tag_configure("status", foreground="gray")
-        self.lstBatches.tag_configure("expired", background="coral")
-        self.lstBatches.tag_configure("expiring", background="khaki")
-
-        self.lstBatches.bind("<<TreeviewSelect>>", self._on_batch_selected)
-        self.lstBatches.bind("<Double-1>", self._on_batch_activated)
-
-        self.lblBatches.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        frm_batches.pack(fill=tk.BOTH, expand=1)
-
-        # Place sashes after first draw
-        self.after_idle(self._place_sashes)
-
-    def _place_sashes(self):
-        """
-        Place PanedWindow sashes based on configured weight ratios.
-
-        Uses self._weights to calculate proportional sash positions.
-        Retries if window width not yet available.
-        Fail-safe: does nothing if placement fails.
-        """
-        try:
-            if not hasattr(self, "pw") or not hasattr(self, "_weights"):
-                return
-
-            w = self.pw.winfo_width()
-            if w <= 1:
-                # Window not yet drawn, retry after 50ms
-                self.after(50, self._place_sashes)
-                return
-
-            a, b, c = self._weights
-            tot = a + b + c
-            x0 = int(w * (a / tot))
-            x1 = int(w * ((a + b) / tot))
-
-            self.pw.sash_place(0, x0, 1)
-            self.pw.sash_place(1, x1, 1)
-        except (AttributeError, tk.TclError) as e:
-            # Fail safe: do nothing if sash placement fails
-            pass
-
-    # ---------------------------------------------------------------------
-    # Window Lifecycle
-    # ---------------------------------------------------------------------
     def on_open(self):
-        """
-        Called when window is opened or re-opened.
 
-        Performs lazy loading of the tree on first open.
-        Sets window title and loads hierarchical data.
-        """
-        self.title("Batches — Workstations ↔ Test Methods")
+        self.title("Batches")
+        self.set_panels()
+        self.set_methods()
 
-        # Lazy load of the tree
-        try:
-            if not getattr(self, "_loaded", False):
-                self._load_tree()
-                self._loaded = True
-        except (AttributeError, ValueError, KeyError) as e:
-            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
-            # Fail safe: keep window usable even if tree loading fails
+    def set_panels(self):
+        """The categories, with every one of them first in the list."""
+        self.panels = Lookup(self.engine, self.cb_panel, "categories")
+        captions = ["All panels"] + list(self.cb_panel.cget("values"))
+        self.panels.ids = {index + 1: key for index, key in self.panels.ids.items()}
+        self.engine.tools.set_combo(self.cb_panel, captions)
+        self.cb_panel.current(0)
 
-    # ---------------------------------------------------------------------
-    # Tree Loading
-    # ---------------------------------------------------------------------
-    def reload(self):
-        """
-        Force reload of the entire tree.
+    def set_methods(self):
+        """The analytes in use, of the panel chosen or of all of them."""
+        sql = """SELECT tm.test_method_id, t.description AS analyte,
+                        s.description AS matrix, u.description AS unit
+                   FROM test_methods tm
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN samples s ON s.sample_id = tm.sample_id
+                   JOIN units u ON u.unit_id = tm.unit_id
+                  WHERE tm.status = 1
+                    AND (? IS NULL OR tm.category_id = ?)
+               ORDER BY t.description, s.description"""
+        panel = self.panels.get_id()
+        rows = self.engine.db.read(True, sql, (panel, panel))
 
-        Used when data changes externally (e.g., after adding new workstation).
-        """
-        try:
-            self._load_tree()
-            self._loaded = True
-        except (AttributeError, ValueError, KeyError) as e:
-            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
-
-    def _load_tree(self, _evt=None):
-        """
-        Populate the Organizations hierarchy tree from the organizations table.
-
-        Structure: Country → Region → Site → Lab → Section → Workstation
-
-        Role-based filtering:
-            - App Admin (role=0): See all organizations
-            - Country Admin (role=1): See their country and descendants
-            - Regional Admin (role=2): See their region and descendants
-            - Lab Admin+ (role>=3): See ONLY their assigned lab and sections
-
-        Args:
-            _evt: Optional Tkinter event (unused, for event binding compatibility)
-        """
-        self.Sites.delete(*self.Sites.get_children())
-        root = self.Sites.insert("", tk.END, iid="root", text="Organizations")
-
-        # Determine user role and org scope
-        try:
-            role = int(self.engine.log_user.get("role", ROLE_TECHNICIAN))
-        except (ValueError, TypeError, KeyError):
-            role = ROLE_TECHNICIAN
-
-        user_org_id = self.engine.log_user.get("org_id")
-
-        if role == ROLE_APP_ADMIN:  # App Admin - full tree
-            self._build_full_tree(root)
-        elif role >= ROLE_LAB_ADMIN:  # Lab Admin, Superuser, Technician, Viewer - only their lab
-            self._build_lab_only_tree(root, user_org_id)
-        else:  # Country/Regional Admin (role 1-2) - their scope and descendants
-            self._build_scoped_tree(root, user_org_id, role)
-
-        self.Sites.item(root, open=True)
-        # Auto-expand all nodes for better UX
-        self._expand_all(root)
-
-    def _expand_all(self, parent_iid):
-        """Recursively expand all tree nodes."""
-        for child in self.Sites.get_children(parent_iid):
-            self.Sites.item(child, open=True)
-            self._expand_all(child)
-
-    def _build_full_tree(self, root):
-        """Build full organization tree (App Admin only)."""
-        countries = self._load_orgs_by_type(None, "country")
-        for country_id, country_name in countries:
-            country_iid = f"country_{country_id}"
-            self.Sites.insert(root, tk.END, iid=country_iid, text=country_name,
-                              values=(country_id, NODE_TYPE_COUNTRY))
-            self._build_regions(country_iid, country_id)
-
-    def _build_regions(self, parent_iid, country_id):
-        """Build regions under a country."""
-        regions = self._load_orgs_by_type(country_id, "region")
-        for region_id, region_name in regions:
-            region_iid = f"region_{region_id}"
-            self.Sites.insert(parent_iid, tk.END, iid=region_iid, text=region_name,
-                              values=(region_id, NODE_TYPE_REGION))
-            self._build_sites(region_iid, region_id)
-
-    def _build_sites(self, parent_iid, region_id):
-        """Build sites under a region."""
-        sites = self._load_orgs_by_type(region_id, "site")
-        for site_id, site_name in sites:
-            site_iid = f"site_{site_id}"
-            self.Sites.insert(parent_iid, tk.END, iid=site_iid, text=site_name,
-                              values=(site_id, NODE_TYPE_SITE))
-            self._build_labs(site_iid, site_id)
-
-    def _build_labs(self, parent_iid, site_id):
-        """Build labs under a site."""
-        labs = self._load_orgs_by_type(site_id, "lab")
-        for lab_id, lab_name in labs:
-            lab_iid = f"lab_{lab_id}"
-            self.Sites.insert(parent_iid, tk.END, iid=lab_iid, text=lab_name,
-                              values=(lab_id, NODE_TYPE_LAB))
-            self._build_sections(lab_iid, lab_id)
-
-    def _build_sections(self, parent_iid, lab_id):
-        """Build sections under a lab, including workstations."""
-        sections = self._load_orgs_by_type(lab_id, "section")
-        for section_id, section_name in sections:
-            sec_iid = f"sec_{section_id}"
-            self.Sites.insert(parent_iid, tk.END, iid=sec_iid, text=section_name,
-                              values=(section_id, NODE_TYPE_SECTION))
-            # Load workstations under this section
-            workstations = self._load_workstations(section_id)
-            for ws_id, ws_descr in workstations:
-                ws_iid = f"ws_{ws_id}"
-                self.Sites.insert(sec_iid, tk.END, iid=ws_iid, text=ws_descr,
-                                  values=(ws_id, NODE_TYPE_WORKSTATION))
-
-    def _build_lab_only_tree(self, root, user_org_id):
-        """Build tree showing only user's assigned lab (role >= 3)."""
-        if user_org_id is None:
-            return
-
-        # Get user's org info
-        sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
-        org = self.engine.db.read(False, sql, (user_org_id,))
-        if not org:
-            return
-
-        org_type = org["org_type"]
-
-        # Find the lab_id based on org_type
-        if org_type == "lab":
-            lab_id = user_org_id
-        elif org_type == "section":
-            # Get parent lab
-            sql = "SELECT parent_id FROM organizations WHERE org_id = ?"
-            parent = self.engine.db.read(False, sql, (user_org_id,))
-            lab_id = parent["parent_id"] if parent else None
-        else:
-            lab_id = None
-
-        if lab_id is None:
-            return
-
-        # Get lab info
-        sql = "SELECT org_id, description FROM organizations WHERE org_id = ?"
-        lab = self.engine.db.read(False, sql, (lab_id,))
-        if not lab:
-            return
-
-        # Insert lab node
-        lab_iid = f"lab_{lab_id}"
-        self.Sites.insert(root, tk.END, iid=lab_iid, text=lab["description"],
-                          values=(lab_id, NODE_TYPE_LAB))
-
-        # Build sections under this lab (with workstations)
-        self._build_sections(lab_iid, lab_id)
-
-    def _build_scoped_tree(self, root, user_org_id, role):
-        """Build tree for Country/Regional Admin (role 1-2)."""
-        if user_org_id is None:
-            return
-
-        # Get user's org info
-        sql = "SELECT org_id, org_type, description FROM organizations WHERE org_id = ?"
-        org = self.engine.db.read(False, sql, (user_org_id,))
-        if not org:
-            return
-
-        org_type = org["org_type"]
-
-        if org_type == "country":
-            # Country admin - show country and all descendants
-            country_iid = f"country_{user_org_id}"
-            self.Sites.insert(root, tk.END, iid=country_iid, text=org["description"],
-                              values=(user_org_id, NODE_TYPE_COUNTRY))
-            self._build_regions(country_iid, user_org_id)
-        elif org_type == "region":
-            # Regional admin - show region and all descendants
-            region_iid = f"region_{user_org_id}"
-            self.Sites.insert(root, tk.END, iid=region_iid, text=org["description"],
-                              values=(user_org_id, NODE_TYPE_REGION))
-            self._build_sites(region_iid, user_org_id)
-        else:
-            # Fallback to lab-only view
-            self._build_lab_only_tree(root, user_org_id)
-
-    def _load_orgs_by_type(self, parent_id, org_type):
-        """
-        Load organizations of a specific type under a parent.
-
-        Args:
-            parent_id: Parent org_id (None for root/countries)
-            org_type: Organization type ('country', 'region', 'site', 'lab', 'section')
-
-        Returns:
-            List of (org_id, description) tuples
-        """
-        if parent_id is None:
-            sql = """
-                SELECT org_id, description
-                FROM organizations
-                WHERE parent_id IS NULL AND org_type = ? AND status = 1
-                ORDER BY description ASC
-            """
-            args = (org_type,)
-        else:
-            sql = """
-                SELECT org_id, description
-                FROM organizations
-                WHERE parent_id = ? AND org_type = ? AND status = 1
-                ORDER BY description ASC
-            """
-            args = (parent_id, org_type)
-
-        try:
-            rows = self.engine.db.read(True, sql, args) or []
-            return [(r["org_id"], r["description"]) for r in rows]
-        except Exception as e:
-            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
-            return []
-
-    def _load_workstations(self, section_org_id):
-        """
-        Load active workstations for a given section (by org_id).
-
-        Args:
-            section_org_id: The section's org_id
-
-        Returns:
-            List of (workstation_id, description) tuples
-        """
-        sql = """
-            SELECT workstation_id, description
-            FROM workstations
-            WHERE org_id = ? AND status = 1
-            ORDER BY description ASC
-        """
-        try:
-            rows = self.engine.db.read(True, sql, (section_org_id,)) or []
-            return [(r["workstation_id"], r["description"]) for r in rows]
-        except Exception as e:
-            self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
-            return []
-
-    # Legacy methods for backward compatibility (deprecated)
-    def _load_labs(self, site_id):
-        """Deprecated: Use _load_orgs_by_type instead."""
-        return self._load_orgs_by_type(site_id, "lab")
-
-    def _load_sections(self, lab_id):
-        """Deprecated: Use _load_orgs_by_type instead."""
-        return self._load_orgs_by_type(lab_id, "section")
-
-    # ---------------------------------------------------------------------
-    # Selection Handlers
-    # ---------------------------------------------------------------------
-    def _on_branch_selected(self, _evt=None):
-        """
-        Handle tree node selection.
-
-        If a workstation is selected, loads its test methods.
-        If a non-workstation node is selected, clears test methods and batches.
-
-        Args:
-            _evt: Tkinter event (unused, for event binding compatibility)
-        """
-        iid = self.Sites.focus()
-        if not iid:
-            return
-
-        item = self.Sites.item(iid)
-        vals = item.get("values") or []
-        if len(vals) < 2:
-            return
-
-        ref_id, ref_type = vals[0], vals[1]
-        if ref_type != NODE_TYPE_WORKSTATIONS:
-            # Clear middle/right panes when not on a workstation
-            self.lstTestsMethods.delete(*self.lstTestsMethods.get_children())
-            self.lstBatches.delete(*self.lstBatches.get_children())
-            self.lblTests["text"] = f"Test Methods: 0"
-            self.lblBatches["text"] = f"Batches 0"
-            self.selected_workstation = None
-            self.selected_test_method = None
-            self.selected_batch = None
-            return
-
-        try:
-            pk = int(ref_id)
-        except (ValueError, TypeError) as e:
-            return
-
-        self.selected_workstation = self.engine.db.get_selected(
-            "workstations",
-            "workstation_id",
-            pk,
-        )
-        if not self.selected_workstation:
-            return
-
-        self._set_tests_methods()
-
-    def _set_tests_methods(self):
-        """
-        Load test methods assigned to the currently selected workstation.
-
-        Populates the middle pane (test methods list).
-        Clears the batches list (right pane).
-        """
-        # Clear existing lists
-        self.lstTestsMethods.delete(*self.lstTestsMethods.get_children())
-        self.lstBatches.delete(*self.lstBatches.get_children())
-        self.lblBatches["text"] = f"Batches 0"
-
-        if not self.selected_workstation:
-            self.lblTests["text"] = f"Test Methods: 0"
-            return
-
-        workstation_id = self.selected_workstation["workstation_id"]
-
-        sql = """
-            SELECT
-                test_methods.test_method_id,
-                tests.description AS test_description,
-                test_methods.code,
-                IFNULL(samples.description, 'NA') AS sample,
-                IFNULL(methods.description, 'NA') AS method,
-                IFNULL(units.description, 'NA') AS unit,
-                test_methods.status
-            FROM
-                workstation_test_methods
-            JOIN
-                test_methods ON workstation_test_methods.test_method_id = test_methods.test_method_id
-            JOIN
-                tests ON tests.test_id = test_methods.test_id
-            LEFT JOIN
-                samples ON test_methods.sample_id = samples.sample_id
-            LEFT JOIN
-                methods ON test_methods.method_id = methods.method_id
-            LEFT JOIN
-                units ON test_methods.unit_id = units.unit_id
-            WHERE
-                workstation_test_methods.workstation_id = ?
-            AND
-                test_methods.status = 1
-            AND
-                tests.status = 1
-            ORDER BY
-                tests.description ASC;
-        """
-
-        rs = self.engine.db.read(True, sql, (workstation_id,)) or []
-
-        count = 0
-        for row in rs:
-            status = int(row["status"])
-            tags = ("status",) if status != STATUS_ACTIVE else ()
-            self.lstTestsMethods.insert(
-                "",
-                tk.END,
-                iid=str(row["test_method_id"]),
-                text=str(row["test_method_id"]),
-                values=(
-                    row["test_description"],
-                    row["code"],
-                    row["sample"],
-                    row["method"],
-                    row["unit"],
-                ),
-                tags=tags,
-            )
-            count += 1
-
-        self.lblTests["text"] = f"Test Methods: {count}"
+        self.engine.tools.clear_treeview(self.lst_methods)
+        self.dict_methods.clear()
+        for row in rows:
+            item = self.lst_methods.insert("", tk.END,
+                                           values=(row["analyte"],
+                                                   row["matrix"],
+                                                   row["unit"]))
+            self.dict_methods[item] = row["test_method_id"]
 
     def set_batches(self):
+        """Every lot of the analyte, in use or not, with how many results it has.
+
+        The count is the reason this list is worth looking at: a lot with no
+        results is one that was opened and never run, and a lot with three
+        hundred is one nobody has closed.
         """
-        Load batches for the selected test method and workstation.
+        sql = """SELECT b.batch_id, b.rank, b.lot_number, b.target, b.sd,
+                        b.expiration, b.status,
+                        w.description AS workstation,
+                        (SELECT COUNT(*) FROM results r
+                          WHERE r.batch_id = b.batch_id) AS results
+                   FROM batches b
+                   JOIN workstations w ON w.workstation_id = b.workstation_id
+                  WHERE b.test_method_id = ?
+               ORDER BY b.status DESC, b.rank, w.description"""
+        rows = self.engine.db.read(True, sql, (self.method,))
 
-        Populates the right pane (batches list).
-        Only loads batches that have both lot_number and expiration date.
+        self.engine.tools.clear_treeview(self.lst_batches)
+        self.dict_batches.clear()
+        today = self.engine.get_today()
+        for row in rows:
+            tags = []
+            if not row["status"]:
+                tags.append("discarded")
+            elif row["expiration"] is not None and row["expiration"] < today:
+                tags.append("expired")
+
+            item = self.lst_batches.insert(
+                "", tk.END,
+                values=("L{0}".format(row["rank"]),
+                        row["lot_number"],
+                        row["workstation"],
+                        row["target"],
+                        row["sd"],
+                        self.engine.format_date(row["expiration"]),
+                        row["results"]),
+                tags=tuple(tags))
+            self.dict_batches[item] = row["batch_id"]
+
+    def set_results(self):
+        """The results on the lot, newest first, excluded ones in grey."""
+        sql = """SELECT r.result_id, r.result, r.received, r.status
+                   FROM results r
+                  WHERE r.batch_id = ?
+               ORDER BY r.received DESC
+                  LIMIT ?"""
+        rows = self.engine.db.read(True, sql, (self.batch, self.engine.get_records()))
+
+        self.engine.tools.clear_treeview(self.lst_results)
+        self.dict_results.clear()
+        for row in rows:
+            if row["status"]:
+                tags = ()
+                in_use = "yes"
+            else:
+                tags = ("excluded",)
+                in_use = "no"
+
+            item = self.lst_results.insert(
+                "", tk.END,
+                values=(self.engine.format_datetime(row["received"]),
+                        row["result"],
+                        in_use),
+                tags=tags)
+            self.dict_results[item] = row["result_id"]
+
+    # ------------------------------------------------------------ the doing
+
+    def on_panel(self, evt=None):
+        self.set_methods()
+        self.on_reset()
+
+    def on_selected_method(self, evt=None):
+        """An analyte chosen: its lots."""
+        self.method = self.dict_methods.get(self.lst_methods.focus())
+
+        if self.method is not None:
+            self.set_batches()
+            self.batch = None
+            self.engine.tools.clear_treeview(self.lst_results)
+            self.dict_results.clear()
+
+    def on_selected_batch(self, evt=None):
+        """A lot chosen: the results on it."""
+        self.batch = self.dict_batches.get(self.lst_batches.focus())
+
+        if self.batch is not None:
+            self.set_results()
+
+    def on_reset(self):
+        """Empty the two lists that hang off the analyte."""
+        self.method = None
+        self.batch = None
+        self.engine.tools.clear_treeview(self.lst_batches)
+        self.engine.tools.clear_treeview(self.lst_results)
+        self.dict_batches.clear()
+        self.dict_results.clear()
+
+    def on_batches_changed(self, row_id=None):
+        if self.method is not None:
+            self.set_batches()
+
+    def on_results_changed(self, row_id=None):
+        if self.batch is not None:
+            self.set_results()
+            self.set_batches()
+
+    def on_add_batch(self, evt=None):
+        """Open a lot on the analyte chosen: a new box of control material."""
+        if self.method is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a test method first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "batch", lambda: ui.batch.UI(self, self.method))
+
+    def on_edit_batch(self, evt=None):
+        """Correct a lot: its target, its SD, its expiration."""
+        if self.batch is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   self.engine.no_selected,
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "batch", lambda: ui.batch.UI(self, self.method, self.batch))
+
+    def on_add_result(self, evt=None):
+        if self.batch is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a batch first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace("result",
+                                        lambda: ui.result.UI(self, self.batch))
+
+    def on_edit_result(self, evt=None):
+        result_id = self.dict_results.get(self.lst_results.focus())
+
+        if result_id is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   self.engine.no_selected,
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "result", lambda: ui.result.UI(self, self.batch, result_id))
+
+    def on_delete_result(self, evt=None):
+        """Remove a result from the lot it never belonged to.
+
+        Deleting is for what did not happen - a result entered twice, or on
+        the wrong lot. A measurement that was made and came out wrong is
+        excluded instead, which keeps it on the chart in grey and keeps the
+        series honest. Either way the audit trail holds what it was.
         """
-        self.lstBatches.delete(*self.lstBatches.get_children())
-        self.lblBatches["text"] = f"Batches 0"
+        result_id = self.dict_results.get(self.lst_results.focus())
 
-        if not (self.selected_test_method and self.selected_workstation):
-            return
-
-        test_method_id = self.selected_test_method["test_method_id"]
-        workstation_id = self.selected_workstation["workstation_id"]
-
-        sql = """
-            SELECT
-                batches.batch_id,
-                controls.description AS control,
-                batches.lot_number   AS lot,
-                batches.description  AS batch_description,
-                DATE_FORMAT(batches.expiration, '%d-%m-%Y') AS expiration,
-                ROUND(batches.target, 3) AS target,
-                batches.status
-            FROM
-                batches
-            JOIN
-                controls ON batches.control_id = controls.control_id
-            WHERE
-                batches.test_method_id = ?
-                AND batches.workstation_id = ?
-                AND batches.lot_number IS NOT NULL
-                AND batches.expiration IS NOT NULL
-            ORDER BY
-                batches.expiration DESC,
-                batches.rank ASC;
-        """
-
-        rs = self.engine.db.read(True, sql, (test_method_id, workstation_id)) or []
-
-        count = 0
-        for row in rs:
-            status = int(row["status"])
-            tags = ("status",) if status != STATUS_ACTIVE else ()
-
-            self.lstBatches.insert(
-                "",
-                tk.END,
-                iid=str(row["batch_id"]),
-                text=str(row["batch_id"]),
-                values=(
-                    row["control"],
-                    row["lot"],
-                    row["batch_description"],
-                    row["expiration"],
-                    row["target"],
-                ),
-                tags=tags,
-            )
-            count += 1
-
-        self.lblBatches["text"] = f"Batches {count}"
-
-    # ---------------------------------------------------------------------
-    # Event Handlers
-    # ---------------------------------------------------------------------
-    def _on_test_method_selected(self, _evt=None):
-        """
-        Handle test method selection in the middle pane.
-
-        Loads batches for the selected test method + workstation combination.
-
-        Args:
-            _evt: Tkinter event (unused, for event binding compatibility)
-        """
-        sel = self.lstTestsMethods.selection()
-        if not sel:
-            self.selected_test_method = None
-            self.lstBatches.delete(*self.lstBatches.get_children())
-            self.lblBatches["text"] = f"Batches 0"
-            return
-
-        try:
-            pk = int(sel[0])
-        except (ValueError, TypeError) as e:
-            return
-
-        self.selected_test_method = self.engine.db.get_selected(
-            "test_methods",
-            "test_method_id",
-            pk,
-        )
-        self.set_batches()
-
-    def _on_test_method_activated(self, _evt=None):
-        """
-        Handle double-click on test method.
-
-        Opens batch editor in INSERT mode to create a new batch
-        for the selected test method + workstation combination.
-
-        Args:
-            _evt: Tkinter event (unused, for event binding compatibility)
-        """
-        sel = self.lstTestsMethods.selection()
-        if not sel:
-            return
-
-        try:
-            pk = int(sel[0])
-        except (ValueError, TypeError) as e:
-            return
-
-        self.selected_test_method = self.engine.db.get_selected(
-            "test_methods",
-            "test_method_id",
-            pk,
-        )
-        if not self.selected_test_method or not self.selected_workstation:
-            return
-
-        try:
-            if hasattr(self, "child") and self.child is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except (AttributeError, tk.TclError) as e:
-            pass
-
-        self.child = batch.UI(self)
-        self.child.on_open(self.selected_test_method, self.selected_workstation)
-
-    def _on_batch_selected(self, _evt=None):
-        """
-        Handle batch selection in the right pane.
-
-        Args:
-            _evt: Tkinter event (unused, for event binding compatibility)
-        """
-        sel = self.lstBatches.selection()
-        if not sel:
-            self.selected_batch = None
-            return
-
-        try:
-            pk = int(sel[0])
-        except (ValueError, TypeError) as e:
-            return
-
-        self.selected_batch = self.engine.db.get_selected("batches", "batch_id", pk)
-
-    def _on_batch_activated(self, _evt=None):
-        """
-        Handle double-click on batch.
-
-        Opens batch editor in UPDATE mode to edit the selected batch.
-
-        Args:
-            _evt: Tkinter event (unused, for event binding compatibility)
-        """
-        sel_batch = self.lstBatches.selection()
-        if not sel_batch:
-            return
-        try:
-            batch_id = int(sel_batch[0])
-        except (ValueError, TypeError) as e:
-            return
-
-        self.selected_batch = self.engine.db.get_selected("batches", "batch_id", batch_id)
-        if not self.selected_batch:
-            return
-
-        sel_test = self.lstTestsMethods.selection()
-        if not sel_test:
-            return
-        try:
-            test_method_id = int(sel_test[0])
-        except (ValueError, TypeError) as e:
-            return
-
-        self.selected_test_method = self.engine.db.get_selected(
-            "test_methods",
-            "test_method_id",
-            test_method_id,
-        )
-        if not self.selected_test_method or not self.selected_workstation:
-            return
-
-        try:
-            if hasattr(self, "child") and self.child is not None and self.child.winfo_exists():
-                self.child.destroy()
-        except (AttributeError, tk.TclError) as e:
-            pass
-
-        self.child = batch.UI(self, index=batch_id)
-        self.child.on_open(self.selected_test_method, self.selected_workstation, self.selected_batch)
-
-    # ---------------------------------------------------------------------
-    # Observer Pattern Callbacks
-    # ---------------------------------------------------------------------
-    def _on_batch_changed(self, data=None):
-        """
-        Callback when a batch is modified elsewhere.
-
-        Refreshes the batches list for the current selection.
-
-        Args:
-            data: Optional event data (unused)
-        """
-        self.set_batches()
-
-    def _on_tests_changed(self, data=None):
-        """
-        Callback when a test is modified (e.g., status changed).
-
-        Refreshes the test methods list for the current workstation.
-
-        Args:
-            data: Optional event data (unused)
-        """
-        if self.selected_workstation:
-            self.set_test_methods()
+        if result_id is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   self.engine.no_selected,
+                                   parent=self)
+        elif messagebox.askyesno(self.engine.app_title,
+                                 "{0}\n\nThe result is removed from the lot."
+                                 " What it was stays in the audit trail.".format(
+                                     self.engine.ask_to_delete),
+                                 parent=self):
+            self.engine.db.write("DELETE FROM results WHERE result_id = ?",
+                                 (result_id,))
+            self.engine.events.notify("results", None)
 
     def on_cancel(self, evt=None):
-        """
-        Close window safely.
-
-        Unsubscribes from events, closes any open child editor,
-        and calls parent cleanup.
-
-        Args:
-            evt: Tkinter event (unused, for event binding compatibility)
-        """
-        # Unsubscribe from events (Observer pattern)
-        self.engine.events.unsubscribe("batches", self._on_batch_changed)
-        self.engine.events.unsubscribe("tests", self._on_tests_changed)
-        self.engine.events.unsubscribe("test_methods", self._on_tests_changed)
-
-        if self.child is not None:
-            try:
-                self.child.destroy()
-            except Exception:
-                pass
-        super().on_cancel(evt)
+        """Stop being told about changes, and go."""
+        self.engine.events.unsubscribe("batches", self.on_batches_changed)
+        self.engine.events.unsubscribe("results", self.on_results_changed)
+        self.destroy()
