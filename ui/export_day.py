@@ -53,6 +53,12 @@ class UI(Window, tk.Toplevel):
         self.day = Calendarium(frm_fields, "")
         self.day.grid(row=0, column=1, padx=6, pady=4, sticky=tk.W)
 
+        # The count follows the date as it is typed: a window that says how
+        # many results a day holds, and keeps saying it about the day it was
+        # opened on, is worse than one that says nothing.
+        for variable in (self.day.day, self.day.month, self.day.year):
+            variable.trace_add("write", self.on_day)
+
         ttk.Label(frm_fields, style="App.TLabel",
                   textvariable=self.count).grid(row=1, column=0, columnspan=2,
                                                 sticky=tk.W, pady=(4, 0))
@@ -80,13 +86,27 @@ class UI(Window, tk.Toplevel):
         self.day.set_today()
         self.set_count()
 
+    def on_day(self, *args):
+        """The date changed under the fingers: count that day instead."""
+        self.set_count()
+
     def set_count(self):
-        """How many controls that day holds, before anybody waits for a sheet."""
-        row = self.engine.db.read(False,
-                                  "SELECT COUNT(*) AS n FROM results"
-                                  " WHERE DATE(received) = ? AND status = 1",
-                                  (self.day.get_iso(),))
-        self.count.set("{0} results on that day.".format(row["n"]))
+        """How many controls that day holds, before anybody waits for a sheet.
+
+        A day half typed is not a date - 31 of a month being changed to
+        February, a year at 202 on the way to 2026 - so what is not a date
+        yet is said to be so, and the count waits.
+        """
+        day = self.day.get_date()
+
+        if day is None:
+            self.count.set("...")
+        else:
+            row = self.engine.db.read(False,
+                                      "SELECT COUNT(*) AS n FROM results"
+                                      " WHERE DATE(received) = ? AND status = 1",
+                                      (day.isoformat(),))
+            self.count.set("{0} results on that day.".format(row["n"]))
 
     def get_form(self, day):
         """The PDF, written where the system keeps temporary files."""

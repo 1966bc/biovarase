@@ -34,6 +34,7 @@ import ui.methods
 import ui.note
 import ui.result
 import ui.samples
+import ui.statistics
 import ui.suppliers
 import ui.tests
 import ui.units
@@ -139,6 +140,7 @@ class Main(Window, ttk.Frame):
         bar.add_cascade(label="File", underline=0, menu=m_file)
 
         m_qc = tk.Menu(bar, tearoff=0)
+        m_qc.add_command(label="Statistics", underline=0, command=self.on_statistics)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
@@ -228,6 +230,17 @@ class Main(Window, ttk.Frame):
     def on_licence(self, evt=None):
         """The licence, as the file in the repository says it."""
         self.engine.windows.replace("licence", lambda: ui.licence.UI(self))
+
+    def on_statistics(self, evt=None):
+        """Everything this series says, for the lot and the period chosen."""
+        if self.batch is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a batch first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "statistics",
+                lambda: ui.statistics.UI(self, self.batch, self.since))
 
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
