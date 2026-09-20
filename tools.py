@@ -210,6 +210,11 @@ class Tools:
         self.style.configure("StatusBar.TLabel",
                              padding=(6, 4), border=0, relief=tk.FLAT,
                              font="TkDefaultFont")
+        # The values in the status bar: the same font, in bold, so a number
+        # is told apart from the word that names it without a second colour.
+        self.style.configure("StatusBarValue.TLabel",
+                             padding=(0, 4), border=0, relief=tk.FLAT,
+                             font=(None, 0, "bold"))
 
         # The name of the application, in the About window: the default
         # family, larger and bold, so it grows with the rest of the text.

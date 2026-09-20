@@ -273,25 +273,44 @@ class Main(Window, ttk.Frame):
         self.bias_chart = BiasCanvas(container, height=70)
         self.bias_chart.pack(side=tk.TOP, fill=tk.X, pady=(4, 0))
 
+    #: The colour of the dot, by role: it says at a glance who is at the
+    #: keyboard, which matters on a shared terminal.
+    ROLE_COLOURS = {0: "#c0392b", 1: "#666666"}
+
     def init_status_bar(self):
         """Who is working, on which laboratory, with which numbers.
 
-        The last part matters more than it looks: a mean read with ddof 0 and
-        one read with ddof 1 are different numbers, and so is a total error
-        computed at z 1.65 or at 1.96.
+        The numbers on the right matter more than they look: a mean read with
+        ddof 0 and one read with ddof 1 are different numbers, and so is a
+        total error computed at z 1.65 or at 1.96. They are shown where they
+        are read, rather than kept in a settings file nobody opens.
         """
+        bar = ttk.Frame(self, style="StatusBar.TFrame")
+
+        role = self.engine.log_user.get("role")
+        tk.Label(bar, text="\u25cf", font=("TkDefaultFont", 12),
+                 fg=self.ROLE_COLOURS.get(role, "#666666"),
+                 bg=self.engine.tools.get_rgb(240, 240, 237)).pack(side=tk.LEFT,
+                                                                   padx=(4, 0))
+
+        self.status.set("{0} {1}".format(self.engine.log_user["last_name"],
+                                         self.engine.log_user["first_name"] or ""))
+        ttk.Label(bar, style="StatusBar.TLabel", anchor=tk.W,
+                  textvariable=self.status).pack(side=tk.LEFT)
+
+        # Packed from the right, so they read left to right as they are added
+        # in reverse: laboratory, observations, z, ddof.
         name, site = self.engine.get_laboratory()
+        for caption, value in (("Lab:", "{0} - {1}".format(name, site)),
+                               ("Observations:", self.engine.get_observations()),
+                               ("Z score:", self.engine.qc.get_zscore()),
+                               ("ddof:", self.engine.qc.get_ddof())):
+            ttk.Label(bar, style="StatusBarValue.TLabel",
+                      text=value).pack(side=tk.RIGHT, padx=(0, 8))
+            ttk.Label(bar, style="StatusBar.TLabel",
+                      text=caption).pack(side=tk.RIGHT)
 
-        self.status.set("{0} - {1}   |   {2}   |   ddof {3}, z {4}, observations {5}"
-                        .format(name,
-                                site,
-                                self.engine.log_user["nickname"],
-                                self.engine.qc.get_ddof(),
-                                self.engine.qc.get_zscore(),
-                                self.engine.get_observations()))
-
-        ttk.Label(self, style="StatusBar.TLabel", anchor=tk.W,
-                  textvariable=self.status).pack(side=tk.BOTTOM, fill=tk.X)
+        bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     # ------------------------------------------------------------- the data
 
