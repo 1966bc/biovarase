@@ -28,6 +28,7 @@ import ui.categories
 import ui.change_password
 import ui.controls
 import ui.equipments
+import ui.export_day
 import ui.methods
 import ui.note
 import ui.result
@@ -158,12 +159,22 @@ class Main(Window, ttk.Frame):
                                    command=lambda m=module: self.on_master_data(m))
             bar.add_cascade(label="Edit", underline=0, menu=m_edit)
 
+        m_exports = tk.Menu(bar, tearoff=0)
+        m_exports.add_command(label="Controls of a day", underline=0,
+                              command=self.on_export_day)
+        bar.add_cascade(label="Exports", underline=1, menu=m_exports)
+
         m_about = tk.Menu(bar, tearoff=0)
         m_about.add_command(label="About", underline=0, command=self.on_about)
         m_about.add_command(label="Licence", underline=0, command=self.on_licence)
         bar.add_cascade(label="?", menu=m_about)
 
         self.parent.config(menu=bar)
+
+    def on_export_day(self, evt=None):
+        """The controls of a day, as a sheet: what was run and how it came out."""
+        self.engine.windows.replace("export_day",
+                                    lambda: ui.export_day.UI(self))
 
     def on_backup(self, evt=None):
         """A copy of the database file, named after the moment it was taken.

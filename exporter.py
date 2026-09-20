@@ -4,19 +4,27 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-""" This is the exporter module of Biovarase."""
+"""Sheets out of the data, for the people who ask for them on paper.
 
-import sys
-import inspect
+One sheet per question, written with openpyxl and opened straight away in
+whatever the system uses for spreadsheets. Nothing here computes anything of
+its own: the statistics come from the engine, the rules from the Westgard
+module, so a number in a sheet and the same number on the screen cannot
+disagree.
+"""
+
+import datetime
+import os
 import tempfile
-from datetime import date, datetime
 
-import openpyxl
-from westgards import WESTGARD_ACCEPT
-from openpyxl.styles import Font, PatternFill
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
-from openpyxl.workbook import Workbook
-from openpyxl.worksheet.worksheet import Worksheet
+
+#: The colours a cell is filled with, by how far the result is from target.
+WARNING = PatternFill("solid", fgColor="FFE8A1")
+VIOLATION = PatternFill("solid", fgColor="F5B7B1")
+HEADING = PatternFill("solid", fgColor="D6DBDF")
 
 
 class Exporter:
@@ -26,909 +34,157 @@ class Exporter:
         #: The engine, for the database, the statistics and the rules.
         self.engine = engine
 
-    """Mixin responsible for Excel export utilities (openpyxl based)."""
-
-    # ------------------------------------------------------------------ #
-    #  Generic helpers                                                   #
-    # ------------------------------------------------------------------ #
-
     def __str__(self):
-        mro = [cls.__name__ for cls in Exporter.__mro__]
-        return "class: {0}\nMRO: {1}".format(self.__class__.__name__, mro)
+        return "class: {0}".format(self.__class__.__name__)
 
-    def create_workbook(self, title="Biovarase"):
-        """Create a new workbook with a single active sheet named *title*."""
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = title
-        return wb, ws
+    # ----------------------------------------------------------- the sheets
 
-    def save_and_launch(self, workbook, suffix=".xlsx"):
+    def get_day(self, day):
+        """Every control run on one day, with the series each one belongs to.
+
+        The question asked at the end of a morning: what was run, what came
+        out, and is any of it out of control. Each line is a result, and the
+        statistics beside it are those of its series up to that moment - not
+        of the series as it stands now, which would be reading today's run
+        against tomorrow's evidence.
+
+        @param name: day
+        @return: path of the file written
+        @rtype: string
         """
-        Save the workbook to a temporary file and launch it with the OS handler.
+        sql = """SELECT r.result_id, r.result, r.received, r.batch_id,
+                        t.description AS analyte,
+                        s.description AS sample,
+                        c.description AS category,
+                        u.description AS unit,
+                        m.description AS method,
+                        w.description AS workstation, w.serial,
+                        b.lot_number, b.description AS level, b.target, b.sd,
+                        ctl.description AS control,
+                        sup.description AS supplier,
+                        usr.last_name AS entered_by
+                   FROM results r
+                   JOIN batches b ON b.batch_id = r.batch_id
+                   JOIN test_methods tm ON tm.test_method_id = b.test_method_id
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN samples s ON s.sample_id = tm.sample_id
+                   JOIN units u ON u.unit_id = tm.unit_id
+                   JOIN methods m ON m.method_id = tm.method_id
+                   LEFT JOIN categories c ON c.category_id = tm.category_id
+                   JOIN workstations w ON w.workstation_id = b.workstation_id
+                   JOIN controls ctl ON ctl.control_id = b.control_id
+                   JOIN suppliers sup ON sup.supplier_id = ctl.supplier_id
+                   LEFT JOIN users usr ON usr.user_id = r.created_by
+                  WHERE DATE(r.received) = ? AND r.status = 1
+               ORDER BY c.description, t.description, w.description, b.rank"""
+        rows = self.engine.db.read(True, sql, (day.isoformat(),))
 
-        Returns:
-            str: full path of the created file.
+        headings = ("Category", "Analyte", "Sample", "Method", "Workstation",
+                    "Serial", "Control", "Supplier", "Lot", "Level", "Unit",
+                    "Target", "SD", "Result", "z", "Mean", "sd", "CV%",
+                    "Bias%", "U%", "Westgard", "N", "Time", "Entered by")
+
+        book, sheet = self.get_workbook("QC {0}".format(self.engine.format_date(day)))
+        self.set_headings(sheet, headings)
+
+        for number, row in enumerate(rows, start=2):
+            series = self.engine.get_series(row["batch_id"],
+                                            self.engine.get_observations(),
+                                            row["result_id"])
+            mean = self.engine.qc.get_mean(series)
+            cv = self.engine.qc.get_cv(series)
+            bias = self.engine.qc.get_bias(mean, row["target"])
+            z = self.get_z(row["result"], row["target"], row["sd"])
+
+            values = (row["category"], row["analyte"], row["sample"], row["method"],
+                      row["workstation"], row["serial"], row["control"],
+                      row["supplier"], row["lot_number"], row["level"], row["unit"],
+                      row["target"], row["sd"], row["result"], z, mean,
+                      self.engine.qc.get_sd(series), cv, bias,
+                      self.engine.qc.get_uncertainty(cv, bias),
+                      self.get_rule(row, series), len(series),
+                      row["received"].strftime("%H:%M"), row["entered_by"])
+
+            for column, value in enumerate(values, start=1):
+                cell = sheet.cell(row=number, column=column, value=value)
+                if abs(z) >= 3:
+                    cell.fill = VIOLATION
+                elif abs(z) >= 2:
+                    cell.fill = WARNING
+
+        self.set_widths(sheet, headings)
+
+        return self.save(book, "qc_{0}".format(day.isoformat()))
+
+    def get_rule(self, row, series):
+        """The rule read on the series this result closes, or NED."""
+        if len(series) < self.engine.get_observations():
+            found = "NED"
+        else:
+            found = self.engine.westgards.get_westgard_violation_rule(row["target"],
+                                                                      row["sd"],
+                                                                      series)
+        return found
+
+    def get_z(self, result, target, sd):
+        """How many standard deviations a result sits from its target."""
+        found = 0.0
+        if sd != 0:
+            found = round((result - target) / sd, 2)
+
+        return found
+
+    # ------------------------------------------------------- the mechanics
+
+    def get_workbook(self, title):
+        """A workbook with one sheet, named.
+
+        @param name: title
+        @return: book, sheet
+        @rtype: tuple
         """
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-        tmp.close()
-        path = tmp.name
-        workbook.save(path)
-        # Launcher mixin: open file with system handler
-        self.engine.open_file(path)  # type: ignore
+        book = Workbook()
+        sheet = book.active
+        # Excel refuses a sheet name longer than this, or holding / \ ? * [ ]
+        sheet.title = title[:31].replace("/", "-")
+
+        return (book, sheet)
+
+    def set_headings(self, sheet, headings):
+        """The first row: the names of the columns, in bold, and frozen."""
+        for column, heading in enumerate(headings, start=1):
+            cell = sheet.cell(row=1, column=column, value=heading)
+            cell.font = Font(bold=True)
+            cell.fill = HEADING
+            cell.alignment = Alignment(horizontal="center")
+
+        sheet.freeze_panes = "A2"
+
+    def set_widths(self, sheet, headings):
+        """Columns as wide as what is in them, up to a point."""
+        for column, heading in enumerate(headings, start=1):
+            longest = len(str(heading))
+            for cell in sheet[get_column_letter(column)]:
+                if cell.value is not None:
+                    longest = max(longest, len(str(cell.value)))
+            sheet.column_dimensions[get_column_letter(column)].width = min(longest + 2,
+                                                                           34)
+
+    def save(self, book, name):
+        """Write the workbook where the system keeps temporary files, and open it.
+
+        A sheet asked for on a morning is looked at and forgotten: it is
+        given a name that says what it is and where it lands, and whoever
+        wants to keep it saves it themselves, wherever they keep such things.
+
+        @param name: book, name
+        @return: path of the file written
+        @rtype: string
+        """
+        path = os.path.join(tempfile.gettempdir(),
+                            "{0}_{1}.xlsx".format(name,
+                                                  datetime.datetime.now().strftime("%H%M%S")))
+        book.save(path)
+        self.engine.open_file(path)
+
         return path
-
-    def get_counts(self, selected_date):
-        """
-        Export the counts of executed test methods, starting from a given date.
-
-        Fully PROJECT_RULES compliant:
-        - read_dict() with clear SQL aliases
-        - NO positional indexing
-        - descriptive dictionary keys
-        """
-
-        try:
-            sql = """
-                SELECT
-                    tm.test_method_id     AS test_method_id,
-                    tm.code               AS code,
-                    t.description         AS test_description,
-                    s.sample              AS sample,
-                    c.description         AS category,
-                    COUNT(r.batch_id)     AS total_count
-                FROM tests AS t
-                INNER JOIN test_methods AS tm ON t.test_id = tm.test_id
-                INNER JOIN batches      AS b  ON tm.test_method_id = b.test_method_id
-                INNER JOIN categories   AS c  ON tm.category_id = c.category_id
-                INNER JOIN samples      AS s  ON tm.sample_id = s.sample_id
-                INNER JOIN organizations AS section ON tm.org_id = section.org_id
-                INNER JOIN results      AS r  ON b.batch_id = r.batch_id
-                WHERE t.status = 1
-                  AND tm.status = 1
-                  AND section.parent_id = ?
-                  AND section.org_type = 'section'
-                  AND DATE(r.received) >= ?
-                  AND r.is_delete = 0
-                GROUP BY tm.test_method_id
-                ORDER BY t.description;
-            """
-
-            args = (self.get_lab_id(), selected_date)
-            rows = self.engine.db.read(True, sql, args)
-
-            workbook, worksheet = self.create_workbook("Biovarase")
-            row_num = 1
-
-            headers = ("Code", "Test", "Sample", "Category", "Count")
-            font_bold = Font(bold=True)
-
-            # Header
-            for col_num, text in enumerate(headers, start=1):
-                cell = worksheet.cell(row=row_num, column=col_num, value=text)
-                cell.font = font_bold
-
-            row_num += 1
-
-            # Data rows
-            for row in rows:
-                worksheet.cell(row=row_num, column=1, value=row["code"])
-                worksheet.cell(row=row_num, column=2, value=row["test_description"])
-                worksheet.cell(row=row_num, column=3, value=row["sample"])
-                worksheet.cell(row=row_num, column=4, value=row["category"])
-                worksheet.cell(row=row_num, column=5, value=row["total_count"])
-                row_num += 1
-
-            self.save_and_launch(workbook)
-
-        except Exception as e:
-            self.on_log(
-                inspect.stack()[0][3],
-                sys.exc_info()[1],
-                sys.exc_info()[0],
-                sys.modules[__name__],
-            )
-
-    def get_notes(self, args):
-        """
-        Export notes data (date ≥ selected_date, filtered by lab_id).
-
-        Fully compliant with PROJECT_RULES:
-        - uses read_dict() → dictionary rows
-        - no positional indexing
-        - explicit and readable SQL
-        """
-
-        sql = """
-            SELECT
-                tests.description               AS test_description,
-                batches.lot_number              AS batch_lot,
-                batches.target                  AS batch_target,
-                batches.sd                      AS batch_sd,
-                results.result                  AS result_value,
-                DATE_FORMAT(results.received, '%d-%m-%Y %H-%i-%s') AS received_fmt,
-                actions.description             AS action_description,
-                notes.description               AS note_description,
-                notes.modified                  AS note_modified,
-                equipments.description          AS equipment_description,
-                workstations.description        AS workstation_description,
-                workstations.serial             AS workstation_serial,
-                lab.description                 AS lab_description,
-                section.description             AS section_description
-            FROM tests
-            INNER JOIN test_methods ON tests.test_id = test_methods.test_id
-            INNER JOIN batches ON test_methods.test_method_id = batches.test_method_id
-            INNER JOIN results ON batches.batch_id = results.batch_id
-            INNER JOIN workstations ON results.workstation_id = workstations.workstation_id
-            INNER JOIN equipments ON workstations.equipment_id = equipments.equipment_id
-            INNER JOIN organizations section ON section.org_id = workstations.org_id
-            INNER JOIN organizations lab ON lab.org_id = section.parent_id
-            INNER JOIN notes ON results.result_id = notes.result_id
-            INNER JOIN actions ON notes.action_id = actions.action_id
-            WHERE DATE(results.received) >= ?
-              AND section.parent_id = ?
-              AND section.org_type = 'section'
-              AND tests.status  = 1
-              AND batches.status = 1
-              AND results.is_delete = 0
-            ORDER BY notes.modified DESC;
-        """
-
-        rows = self.engine.db.read(True, sql, args)
-
-        workbook, worksheet = self.create_workbook("Biovarase")
-        row_num = 1
-
-        headers = (
-            "Test", "Batch", "Target", "SD", "Result",
-            "Received", "Action", "Description", "Modified",
-            "Instrument", "Workstation", "Serial", "Lab", "Section"
-        )
-
-        font_bold = Font(bold=True, name="Arial")
-
-        # Header
-        for col_num, text in enumerate(headers, start=1):
-            cell = worksheet.cell(row=row_num, column=col_num, value=text)
-            cell.font = font_bold
-
-        row_num += 1
-
-        # Data rows
-        if rows:
-            for row in rows:
-                worksheet.cell(row=row_num, column=1,  value=row["test_description"])
-                worksheet.cell(row=row_num, column=2,  value=row["batch_lot"])
-                worksheet.cell(row=row_num, column=3,  value=row["batch_target"])
-                worksheet.cell(row=row_num, column=4,  value=round(row["batch_sd"], 3))
-                worksheet.cell(row=row_num, column=5,  value=round(row["result_value"], 2))
-                worksheet.cell(row=row_num, column=6,  value=row["received_fmt"])
-                worksheet.cell(row=row_num, column=7,  value=row["action_description"])
-                worksheet.cell(row=row_num, column=8,  value=row["note_description"])
-                worksheet.cell(row=row_num, column=9,  value=row["note_modified"])
-                worksheet.cell(row=row_num, column=10, value=row["equipment_description"])
-                worksheet.cell(row=row_num, column=11, value=row["workstation_description"])
-                worksheet.cell(row=row_num, column=12, value=row["workstation_serial"])
-                worksheet.cell(row=row_num, column=13, value=row["lab_description"])
-                worksheet.cell(row=row_num, column=14, value=row["section_description"])
-
-                row_num += 1
-
-        self.save_and_launch(workbook)
-
-    # ------------------------------------------------------------------ #
-    #  Quick data analysis helpers                                       #
-    # ------------------------------------------------------------------ #
-
-    def _color(self, name):
-        """Return ARGB for openpyxl PatternFill. Uses Tools mixin if available."""
-        fn = getattr(self, "_convert_color", None)
-        if callable(fn):
-            return fn(name)  # type: ignore
-
-        lut = {
-            "red": "FFFF0000",
-            "yellow": "FFFFFF00",
-            "green": "FF00FF00",
-        }
-        n = str(name).strip().lstrip("#")
-        if len(n) in (6, 8) and all(c in "0123456789ABCDEFabcdef" for c in n):
-            return n.upper() if len(n) == 8 else ("FF" + n.upper())
-        return lut.get(name.lower(), "FF000000")  # default black
-
-    def _normalize_date(self, selected_date):
-        """Accept date|datetime|(date,) and return (date_obj, 'YYYY-MM-DD')."""
-        d = (
-            selected_date[0]
-            if isinstance(selected_date, (tuple, list)) and selected_date
-            else selected_date
-        )
-
-        if isinstance(d, datetime):
-            d = d.date()
-
-        if not isinstance(d, date):
-            raise TypeError("selected_date must be a date; got: {0}".format(type(d)))
-
-        return d, d.isoformat()
-
-    def _setup_sheet(self, workbook):
-        """Create sheet, set widths, header, freeze, filter. Return (worksheet, next_row)."""
-
-        ws = workbook.active
-        ws.title = "Biovarase"
-
-        # column widths
-        ws.column_dimensions[get_column_letter(1)].width = 8
-        ws.column_dimensions[get_column_letter(2)].width = 20
-        ws.column_dimensions[get_column_letter(3)].width = 16
-        ws.column_dimensions[get_column_letter(4)].width = 14
-        ws.column_dimensions[get_column_letter(5)].width = 20
-        for col in range(6, 16):
-            ws.column_dimensions[get_column_letter(col)].width = 10
-        ws.column_dimensions[get_column_letter(16)].width = 14
-        ws.column_dimensions[get_column_letter(17)].width = 18
-        ws.column_dimensions[get_column_letter(18)].width = 18
-        ws.column_dimensions[get_column_letter(19)].width = 18
-        ws.column_dimensions[get_column_letter(20)].width = 18
-
-        # header
-        header = (
-            'Type', 'Test', 'Batch', 'Expiration', 'Equipment',
-            'Target', 'Result', 'avg', 'bias', 'SD', 'sd', 'cv',
-            'U',          # NEW: expanded uncertainty (absolute units)
-            'Wstg',       # Westgard rule
-            'Date', 'Category', 'Workstation', 'Control',
-            'Supplier', 'Mandatory'
-        )
-
-        row = 1
-        bold = Font(bold=True, name='Arial')
-        for idx, title in enumerate(header, start=1):
-            c = ws.cell(row=row, column=idx, value=title)
-            c.font = bold
-
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = "A1:{0}1".format(get_column_letter(len(header)))
-
-        return ws, row + 1
-
-    def _fetch_test_methods(self, lab_id, category_id=None, db=None):
-        """
-        Return test methods for a given lab as list of dicts with keys:
-          - test_method_id
-          - sample
-          - test_description
-          - category_description
-
-        Args:
-            lab_id: Laboratory ID
-            category_id: Optional category filter (None or 0 = all, >0 = specific category)
-            db: Optional database connection (BackgroundConnection or self)
-        """
-        sql = """
-            SELECT
-                tm.test_method_id       AS test_method_id,
-                s.sample                AS sample,
-                t.description           AS test_description,
-                c.description           AS category_description
-            FROM tests AS t
-            INNER JOIN test_methods AS tm ON t.test_id     = tm.test_id
-            INNER JOIN categories  AS c  ON tm.category_id = c.category_id
-            INNER JOIN samples     AS s  ON tm.sample_id   = s.sample_id
-            INNER JOIN organizations AS section ON tm.org_id = section.org_id
-            WHERE section.parent_id = ?
-              AND section.org_type = 'section'
-              AND t.status = 1
-              AND tm.status = 1
-        """
-
-        args = [lab_id]
-
-        # Apply category filter if specified (and not 0 which means "All")
-        if category_id and category_id > 0:
-            sql += " AND tm.category_id = ?"
-            args.append(category_id)
-
-        sql += " ORDER BY t.description;"
-
-        return (db or self).read(True, sql, tuple(args)) or []  # type: ignore
-
-    def _fetch_batches(self, test_method_id, lab_id, db=None):
-        sql = """
-            SELECT
-                b.batch_id,
-                b.org_id,
-                b.control_id,
-                b.test_method_id,
-                b.workstation_id,
-                b.lot_number,
-                b.expiration,
-                b.target,
-                b.sd,
-                b.description,
-                b.lower,
-                b.upper,
-                b.rank,
-                b.status,
-                b.log_time,
-                b.log_id,
-                b.log_ip,
-                DATE_FORMAT(b.expiration, '%d-%m-%Y') AS expiration_fmt,
-                w.serial AS workstation_serial,
-                e.description AS equipment_description
-            FROM batches AS b
-            INNER JOIN workstations AS w ON b.workstation_id = w.workstation_id
-            INNER JOIN equipments   AS e ON w.equipment_id   = e.equipment_id
-            INNER JOIN organizations AS section ON section.org_id = w.org_id
-            WHERE b.status = 1
-              AND b.test_method_id = ?
-              AND section.parent_id = ?
-              AND section.org_type = 'section'
-        """
-        return (db or self).read(True, sql, (test_method_id, lab_id)) or []
-
-    def _fetch_results(self, batch_id, day_sql, workstation_id, db=None):
-        """
-        Return result rows for a given batch, day and workstation as list of dicts.
-
-        Keys:
-          - result_id
-          - result_value      (rounded)
-          - received_text     (formatted)
-          - received_datetime (datetime)
-          - workstation_serial
-          - workstation_id
-          - received_date     (date)
-
-        Args:
-            db: Optional database connection (BackgroundConnection or self)
-        """
-        sql = """
-            SELECT
-                r.result_id                          AS result_id,
-                ROUND(r.result, 2)                   AS result_value,
-                DATE_FORMAT(
-                    r.received, '%d-%m-%Y %H-%i-%s'
-                )                                    AS received_text,
-                r.received                           AS received_datetime,
-                w.serial                             AS workstation_serial,
-                w.workstation_id                     AS workstation_id,
-                DATE(r.received)                     AS received_date
-            FROM results AS r
-            INNER JOIN workstations AS w
-                    ON r.workstation_id = w.workstation_id
-            WHERE r.batch_id = ?
-              AND DATE(r.received) = CAST(? AS DATE)
-              AND w.workstation_id = ?
-              AND r.status = 1
-              AND r.is_delete = 0
-            ORDER BY r.received DESC;
-        """
-        return (db or self).read(True, sql, (batch_id, day_sql, workstation_id)) or []  # type: ignore
-
-    def _fetch_control(self, control_id, db=None):
-        """Return (control_desc, supplier_desc) or (None, None)."""
-        sql = """
-            SELECT
-                c.description AS control_description,
-                s.description AS supplier_description
-            FROM controls AS c
-            INNER JOIN suppliers AS s
-                    ON c.supplier_id = s.supplier_id
-            WHERE c.control_id = ?;
-        """
-        row = (db or self).read(False, sql, (control_id,))  # type: ignore
-        if not row:
-            return None, None
-        return row["control_description"], row["supplier_description"]
-
-    def _compute_series_metrics(self, series):
-        """Return (avg, sd, cv) from series."""
-        avg = self.engine.qc.get_mean(series)  # type: ignore
-        sd = self.engine.qc.get_sd(series)     # type: ignore
-        cv = self.engine.qc.get_cv(series)     # type: ignore
-        return avg, sd, cv
-
-    def _westgard_rule_safe(self, target, sd, series, batch_row, tm_row):
-        """Return Westgard rule or 'NED' if series length is insufficient."""
-        if len(series) > 9:
-            return self.engine.westgards.get_westgard_violation_rule(  # type: ignore
-                target,
-                sd,
-                series,
-                batch_row,
-                tm_row,
-            )
-        return "NED"
-
-    def _result_color(self, res, target, sd):
-        """Return 'red' (>=3SD), 'yellow' (>=2SD), else None."""
-        up_2sd = target + (sd * 2)
-        up_3sd = target + (sd * 3)
-        dn_2sd = target - (sd * 2)
-        dn_3sd = target - (sd * 3)
-
-        if res >= up_3sd or res <= dn_3sd:
-            return "red"
-        if (up_2sd <= res < up_3sd) or (dn_3sd < res <= dn_2sd):
-            return "yellow"
-        return None
-
-    def _highlight_expiration(self, ws, row_idx, expiration_date, received_date, expiration_text):
-        """Write expiration text and color cell by days remaining."""
-        cell = ws.cell(row=row_idx, column=4, value=expiration_text)  # Expiration column
-
-        if expiration_date is None or received_date is None:
-            return
-
-        days = (expiration_date - received_date).days
-        if days <= 0:
-            color = self._color("red")
-            cell.fill = PatternFill(
-                start_color=color,
-                end_color=color,
-                fill_type="solid",
-            )
-        elif days <= 15:
-            color = self._color("yellow")
-            cell.fill = PatternFill(
-                start_color=color,
-                end_color=color,
-                fill_type="solid",
-            )
-
-    def quick_data_analysis(self, selected_date, category_id=None, db=None):
-        """
-        Generate 'Biovarase' Excel report for a given day.
-
-        Args:
-            selected_date: Date to generate report for
-            category_id: Optional category filter (None = all categories, 0 = all, >0 = specific category)
-            db: Optional database connection (BackgroundConnection for threaded export)
-        """
-
-        # 1) Normalize date
-        day_obj, day_sql = self._normalize_date(selected_date)
-
-        # 2) Workbook + sheet
-        workbook, worksheet = self.create_workbook('Biovarase')
-        worksheet, row_num = self._setup_sheet(workbook)
-
-        # 3) Context
-        checked_tests = []
-        mandatory_tests = self.get_mandatory()
-
-        # 4) Lab id from user context
-        lab_id = self.get_lab_id()
-        if lab_id is None:
-            # No valid lab context → nothing to export
-            return
-
-        # 5) Fetch test methods (with optional category filter)
-        for row in self._fetch_test_methods(lab_id, category_id, db=db):
-            tm_id = row["test_method_id"]
-            tm_sample = row["sample"]
-            tm_test_desc = row["test_description"]
-            tm_category_desc = row["category_description"]
-
-            # 6) Batches per test method
-            for batch in self._fetch_batches(tm_id, lab_id, db=db):
-
-                b_batch_id = batch["batch_id"]
-                b_org_id = batch["org_id"]
-                b_control_id = batch["control_id"]
-                b_test_method_id = batch["test_method_id"]
-                b_workstation_id = batch["workstation_id"]
-
-                b_lot_number = batch["lot_number"]
-                b_expiration = batch["expiration"]
-                b_target = batch["target"]
-                b_sd = batch["sd"]
-
-                b_description = batch["description"]
-                b_lower = batch["lower"]
-                b_upper = batch["upper"]
-                b_rank = batch["rank"]
-                b_status = batch["status"]
-                b_log_time = batch["log_time"]
-                b_log_id = batch["log_id"]
-                b_log_ip = batch["log_ip"]
-
-                b_expiration_fmt = batch["expiration_fmt"]
-                b_ws_serial = batch["workstation_serial"]
-                b_equipment_desc = batch["equipment_description"]
-
-                # 7) Results of the day
-                results = self._fetch_results(b_batch_id, day_sql, b_workstation_id, db=db)
-                if not results:
-                    continue
-
-                # 8) Control info
-                control_desc, control_supplier = self._fetch_control(b_control_id, db=db)
-
-                for row in results:
-                    r_result_id = row["result_id"]
-                    r_result_rounded = row["result_value"]
-                    r_received_str = row["received_text"]
-                    r_received_dt = row["received_datetime"]
-                    r_ws_serial = row["workstation_serial"]
-                    r_workstation_id = row["workstation_id"]
-                    r_received_date = row["received_date"]
-
-                    try:
-                        # Series and stats
-                        series = self.engine.get_series(
-                            b_batch_id,
-                            r_workstation_id,
-                            int(self.engine.get_observations()),
-                            r_result_id,
-                            db=db,
-                        )
-                        if not series:
-                            continue
-
-                        rule = self._westgard_rule_safe(
-                            b_target, b_sd, series,
-                            batch,
-                            (tm_id, tm_sample, tm_test_desc, tm_category_desc),
-                        )
-
-                        avg, sd_calc, cv = self._compute_series_metrics(series)
-
-                        target = float(b_target)
-                        sd_set = float(b_sd)
-                        res = float(r_result_rounded)
-                        bias = self.engine.qc.get_bias(avg, target)
-
-                        # Uncertainty (absolute, same unit as result)
-                        uncertainty = self.engine.qc.get_uncertainty(cv, bias)
-
-                        # Colors by SD bands
-                        r_color = self._result_color(res, target, sd_set)
-
-                        # Write row cells
-                        rc = worksheet.cell(row=row_num, column=1, value=tm_sample)         # Type
-                        worksheet.cell(row=row_num, column=2, value=tm_test_desc)      # Test
-                        worksheet.cell(row=row_num, column=3, value=b_lot_number)      # Batch
-
-                        # Expiration highlight
-                        self._highlight_expiration(worksheet, row_num, b_expiration, r_received_date, b_expiration_fmt)
-
-                        worksheet.cell(row=row_num, column=5, value=b_equipment_desc)  # Equipment
-                        worksheet.cell(row=row_num, column=6, value=target)            # Target
-
-                        # Result + fill
-                        rc = worksheet.cell(row=row_num, column=7, value=res)
-                        if r_color:
-                            rc.fill = PatternFill(
-                                start_color=self._color(r_color),
-                                end_color=self._color(r_color),
-                                fill_type="solid",
-                            )
-
-                        worksheet.cell(row=row_num, column=8, value=avg)               # avg
-                        worksheet.cell(row=row_num, column=9, value=bias)              # bias
-                        worksheet.cell(row=row_num, column=10, value=round(sd_set, 2))  # SD (set)
-                        worksheet.cell(row=row_num, column=11, value=sd_calc)           # sd (calc)
-                        worksheet.cell(row=row_num, column=12, value=cv)                # cv
-                        worksheet.cell(row=row_num, column=13, value=uncertainty)       # U (absolute)
-
-                        wc = worksheet.cell(row=row_num, column=14, value=rule)         # Westgard rule
-                        if rule not in (WESTGARD_ACCEPT, 'No data'):
-                            wc.fill = PatternFill(
-                                start_color=self._color("yellow"),
-                                end_color=self._color("yellow"),
-                                fill_type="solid",
-                            )
-
-                        worksheet.cell(row=row_num, column=15, value=r_received_str)    # Date text
-                        worksheet.cell(row=row_num, column=16, value=tm_category_desc)  # Category
-                        worksheet.cell(row=row_num, column=17, value=r_ws_serial)       # Workstation
-                        worksheet.cell(row=row_num, column=18, value=control_desc)      # Control
-                        worksheet.cell(row=row_num, column=19, value=control_supplier)  # Supplier (control)
-
-                        checked_tests.append(tm_test_desc)
-                        row_num += 1
-
-                    except Exception as e:
-                        # Minimal debug without breaking the loop
-                        print("result:", (r_result_id, r_result_rounded, r_received_str, r_ws_serial, r_workstation_id))
-                        try:
-                            print("series/metrics:", (self.engine.qc.get_cv(series), self.engine.qc.get_sd(series), self.engine.qc.get_mean(series)))
-                        except Exception as e:
-                            print("series/metrics:", None)
-                        print("target/sd:", (b_target, b_sd))
-                        print(
-                            inspect.stack()[0][3],
-                            sys.exc_info()[1],
-                            sys.exc_info()[0],
-                            sys.modules[__name__],
-                        )
-
-        # 9) Mark missing mandatory tests (col 20)
-        for t in checked_tests[:]:
-            if t in mandatory_tests:
-                mandatory_tests.remove(t)
-
-        r = 2
-        for missing in mandatory_tests:
-            mc = worksheet.cell(row=r, column=20, value=missing)
-            mc.fill = PatternFill(
-                start_color=self._color("red"),
-                end_color=self._color("red"),
-                fill_type="solid",
-            )
-            r += 1
-
-        # 10) Save
-        self.save_and_launch(workbook)
-
-    def get_analitical_goals(self, limit, rs):
-        """
-        Build the 'Analytical Goals' Excel report.
-
-        rs is expected to be a list of dictionaries with keys:
-        - batch_id
-        - sample
-        - analyte
-        - batch
-        - expiration
-        - target
-        - cvw
-        - cvb
-        - imp
-        - bias
-        - teap005
-        - teap001
-        - workstation_id
-        """
-
-        workbook, worksheet = self.create_workbook('Biovarase')
-
-        column_widths = [6, 20, 8, 20, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 10, 25]
-        max_width_a = 6
-        max_width_c = 8
-        max_width_e_q = 6
-
-        # header
-        headers = (
-            'T', 'analyte', 'batch', 'expiration', 'target', 'avg',
-            'CVa', 'CVw', 'CVb', 'Imp%', 'Bias%', 'TEa%', 'CVt',
-            'k imp', 'k bias', 'TE%', 'Drc%', 'records', 'wst'
-        )
-        font_bold = Font(bold=True, name='Arial')
-        worksheet.append(list(headers))
-
-        # set bold
-        for cell in worksheet[1]:
-            cell.font = font_bold
-
-        for col_num, text in enumerate(headers):
-            column_widths[col_num] = max(column_widths[col_num], len(str(text)) + 2)
-            if col_num == 0:
-                column_widths[col_num] = min(column_widths[col_num], max_width_a + 2)
-            elif col_num == 2:
-                column_widths[col_num] = min(column_widths[col_num], max_width_c + 2)
-            elif 4 <= col_num <= 16:
-                column_widths[col_num] = min(column_widths[col_num], max_width_e_q + 2)
-
-        row_num = 2
-
-        for row in rs:
-            batch_id = row["batch_id"]
-            workstation_id = row["workstation_id"]
-
-            # series for this batch/workstation
-            series = self.engine.get_series(batch_id, workstation_id, limit)
-
-            if len(series) > 5:
-                cva = self.engine.qc.get_cv(series)
-                sd = self.engine.qc.get_sd(series)
-                avg = self.engine.qc.get_mean(series)
-                cvw = row["cvw"]
-                cvb = row["cvb"]
-                target = float(row["target"])
-
-                formula_imp = self.get_formula_imp(row_num)
-                formula_bias = self.get_formula_bias(row_num)
-                formula_eta = self.get_formula_eta(row_num)
-                formula_cvt = self.get_formula_cvt(row_num)
-                formula_k_imp_res = self.get_formula_k_imp(cva, cvw, row_num)
-                formula_k_bias_res = self.get_formula_k_bias(
-                    avg, target, cvw, cva, row_num
-                )
-                tea_tes_comparison_res = self.engine.qc.get_tea_tes_comparison(
-                    avg, target, cvw, cvb, sd, cva
-                )
-                formula_drc = self.get_formula_drc(row_num)
-
-                # Workstation description (use read_dict + dict access)
-                ws_row = self.engine.db.read(
-                    False,
-                    "SELECT description FROM workstations WHERE workstation_id = ?",
-                    (workstation_id,),
-                )
-                workstation_description = ws_row["description"] if ws_row else None
-
-                row_data = [
-                    row["sample"],                    # T
-                    row["analyte"],                   # analyte
-                    str(row["batch"]),                # batch
-                    str(row["expiration"]),           # expiration
-                    target,                           # target
-                    avg,                              # avg
-                    float(cva) if cva is not None else None,  # CVa
-                    float(cvw) if cvw is not None else None,  # CVw
-                    float(cvb) if cvb is not None else None,  # CVb
-                    '={0}'.format(formula_imp),                # Imp% (col J)
-                    '={0}'.format(formula_bias),               # Bias% (col K)
-                    '={0}'.format(formula_eta),                # TEa% (col L)
-                    '={0}'.format(formula_cvt),                # CVt (col M)
-                    '={0}'.format(formula_k_imp_res[0]) if formula_k_imp_res else None,   # k imp (col N)
-                    '={0}'.format(formula_k_bias_res[0]) if formula_k_bias_res else None, # k bias (col O)
-                    '={0}'.format(tea_tes_comparison_res[0]) if tea_tes_comparison_res else None,  # TE% (col P)
-                    '={0}'.format(formula_drc),                # Drc% (col Q)
-                    len(series),                      # records
-                    workstation_description,          # workstation description
-                ]
-                worksheet.append(row_data)
-
-                # blue color for cva
-                if cva is not None and cva > self.engine.qc.get_imp(cvw):
-                    cell = worksheet.cell(row=row_num, column=7)
-                    cell.fill = PatternFill(
-                        start_color='FF0000FF',
-                        end_color='FF0000FF',
-                        fill_type='solid',
-                    )
-
-                # Apply colors using helper method
-                self._apply_fill_color(worksheet, row_num, 14, formula_k_imp_res)
-                self._apply_fill_color(worksheet, row_num, 15, formula_k_bias_res)
-                self._apply_fill_color(worksheet, row_num, 16, tea_tes_comparison_res)
-
-                row_num += 1
-
-        # set headers width
-        for i, width in enumerate(column_widths):
-            worksheet.column_dimensions[get_column_letter(i + 1)].width = width
-
-        self.save_and_launch(workbook)
-
-    # ------------------------------------------------------------------ #
-    #  Excel formula helpers                                             #
-    # ------------------------------------------------------------------ #
-
-    def get_excel_column_letter(self, col_idx):
-        """Return Excel column letter for a zero-based index."""
-        return get_column_letter(col_idx + 1)
-
-    def get_formula_imp(self, row):
-        """Imp% formula."""
-        return "ROUND((H{0} * 0.5), 2)".format(row)
-
-    def get_formula_bias(self, row):
-        """Bias% formula."""
-        return "ROUND(SQRT(POWER(H{0}, 2) + POWER(I{0}, 2)) * 0.25, 2)".format(row)
-
-    def get_formula_eta(self, row):
-        """TEa% formula."""
-        return "ROUND(({0} * J{1}) + K{1}, 2)".format(self.engine.qc.get_zscore(), row)  # type: ignore
-
-    def get_formula_cvt(self, row):
-        """CVt formula."""
-        return "ROUND(SQRT(POWER(G{0}, 2) + POWER(H{0}, 2)), 2)".format(row)
-
-    def get_formula_k_imp(self, cva, cvw, row):
-        """
-        Return formula and color for k imp.
-
-        Color code:
-            green:  0.25 ≤ k ≤ 0.50
-            yellow: 0.50 ≤ k ≤ 0.75
-            red:    k > 0.75
-        """
-        try:
-            k = round(float(cva) / float(cvw), 2)
-
-            if 0.25 <= k <= 0.50:
-                c = "green"
-            elif 0.50 <= k <= 0.75:
-                c = "yellow"
-            elif k > 0.75:
-                c = "red"
-            else:
-                c = "green"
-
-            f = "ROUND(G{0} / H{0}, 2)".format(row)
-            return f, c
-
-        except (ZeroDivisionError, ValueError, TypeError) as e:
-            return None
-
-    def get_formula_k_bias(self, avg, target, cvw, cva, row):
-        """
-        Return bias k (0.125, 0.25, 0.375) as (formula, color).
-
-        Color code:
-            green:  0.125 ≤ k ≤ 0.25
-            yellow: 0.25  ≤ k ≤ 0.375
-            red:    k > 0.375
-        """
-        try:
-            cvt = self.engine.qc.get_cvt(float(cva), float(cvw))
-            if cvt == 0:
-                return None, None
-            k = round(
-                self.engine.qc.get_bias(float(avg), float(target)) / cvt,
-                2,
-            )
-
-            if 0.125 <= k <= 0.25:
-                c = "green"
-            elif 0.25 <= k <= 0.375:
-                c = "yellow"
-            elif k > 0.375:
-                c = "red"
-            else:
-                c = "green"
-
-            f = (
-                "ROUND((((F{0} - E{0}) / E{0}) * 100) / "
-                "SQRT(POWER(G{0}, 2) + POWER(H{0}, 2)), 2)"
-            ).format(row)
-
-            return f, c
-
-        except (ZeroDivisionError, TypeError):
-            return None, None
-
-    def get_formula_drc(self, row):
-        """Reference Change Value (RCV%) = 2.77 × CVt"""
-        f = "ROUND(SQRT(POWER(G{0}, 2) + POWER(H{0}, 2)) * 2.77, 2)".format(row)
-        return f
-
-    # ------------------------------------------------------------------ #
-    #  Local color conversion (for TE% cells)                            #
-    # ------------------------------------------------------------------ #
-
-    def _convert_color(self, color_name):
-        """Map color names to ARGB codes for openpyxl."""
-        color_map = {
-            "red": "FFFF0000",
-            "yellow": "FFFFFF00",
-            "blue": "FF0000FF",
-            "green": "FF00FF00",
-            "teal": "FF008080",
-        }
-        return color_map.get(color_name.lower(), "FFFFFFFF")  # Default white
-
-    def _apply_fill_color(self, worksheet, row, column, result_tuple):
-        """
-        Apply fill color to a cell based on a result tuple (value, color_name).
-
-        Args:
-            worksheet: openpyxl worksheet
-            row: row number (1-based)
-            column: column number (1-based)
-            result_tuple: tuple like (value, 'red') or None
-        """
-        if result_tuple and len(result_tuple) > 1 and result_tuple[1]:
-            cell = worksheet.cell(row=row, column=column)
-            fill_color = self._convert_color(result_tuple[1])
-            cell.fill = PatternFill(
-                start_color=fill_color,
-                end_color=fill_color,
-                fill_type='solid',
-            )
-
-
-def main():
-    foo = Exporter()
-    print(foo)
-    input('end')
-
-
-if __name__ == "__main__":
-    main()
