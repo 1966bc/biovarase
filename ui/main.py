@@ -16,6 +16,8 @@ control of the antiepileptics this morning.
 """
 
 import datetime
+import os
+import tempfile
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
@@ -231,8 +233,14 @@ class Main(Window, ttk.Frame):
         self.on_export(self.engine.exporter.get_counts, self.since)
 
     def on_export_goals(self, evt=None):
-        """The analytical goals of every method, as they stand."""
-        self.on_export(self.engine.exporter.get_goals)
+        """The analytical goals, as the document that goes with the procedure.
+
+        A PDF and not a sheet: it is read, checked against its sources and
+        filed, and never rearranged.
+        """
+        path = os.path.join(tempfile.gettempdir(), "analytical_goals.pdf")
+        self.on_export(self.engine.report.get_goals, path)
+        self.engine.open_file(path)
 
     def on_export(self, write, *args):
         """Write a sheet while the cursor says the program is busy."""

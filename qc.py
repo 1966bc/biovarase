@@ -100,6 +100,12 @@ class QC:
     def get_cv(self, values, ddof=None):
         """The coefficient of variation, the spread as a percentage of the mean.
 
+        Computed from the standard deviation and the mean as they are, and
+        rounded once at the end. Dividing the rounded SD by the rounded mean
+        would carry two roundings into a third: on a series of 8 to 12 it is
+        the difference between 15.81 and 15.8, and the same mistake on a
+        small CV moves the figure a method is judged by.
+
         A series whose mean is zero has no coefficient of variation - the
         spread would be a percentage of nothing - and is 0.
 
@@ -107,11 +113,18 @@ class QC:
         @return: cv %
         @rtype: float
         """
-        mean = self.get_mean(values)
+        if ddof is None:
+            ddof = self.get_ddof()
 
         found = 0.0
-        if mean != 0:
-            found = round((self.get_sd(values, ddof) / mean) * 100, 2)
+        if values:
+            mean = statistics.mean(values)
+            if mean != 0 and len(values) > 1:
+                if ddof == 1:
+                    deviation = statistics.stdev(values)
+                else:
+                    deviation = statistics.pstdev(values)
+                found = round((deviation / mean) * 100, 2)
 
         return found
 

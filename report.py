@@ -62,6 +62,7 @@ class Report:
         """
         self.day = day
         self.printed = datetime.datetime.now()
+        self.heading = "Internal quality control"
 
         document = BaseDocTemplate(path, pagesize=landscape(A4),
                                    leftMargin=12 * mm, rightMargin=12 * mm,
@@ -97,8 +98,7 @@ class Report:
         canvas.drawString(12 * mm, height - 19 * mm, section)
 
         canvas.setFont("Helvetica-Bold", 12)
-        canvas.drawRightString(width - 12 * mm, height - 14 * mm,
-                               "Internal quality control")
+        canvas.drawRightString(width - 12 * mm, height - 14 * mm, self.heading)
         canvas.setFont("Helvetica", 9)
         canvas.drawRightString(width - 12 * mm, height - 19 * mm,
                                self.engine.format_date(self.day))
@@ -124,6 +124,84 @@ class Report:
                                "page {0}".format(document.page))
 
         canvas.restoreState()
+
+    def get_goals(self, path):
+        """The analytical goals of every method, as a document.
+
+        A table of reference that is read, checked against its sources and
+        filed with the procedure, and never rearranged: which is what makes
+        it a form and not a sheet. What is on it is what the laboratory holds
+        itself to, and the heading says which laboratory and when it was
+        printed.
+
+        @param name: path
+        @return: path
+        @rtype: string
+        """
+        self.day = self.engine.get_today()
+        self.printed = datetime.datetime.now()
+        self.heading = "Analytical goals"
+
+        document = BaseDocTemplate(path, pagesize=landscape(A4),
+                                   leftMargin=12 * mm, rightMargin=12 * mm,
+                                   topMargin=26 * mm, bottomMargin=20 * mm,
+                                   title="Analytical goals",
+                                   author=self.engine.log_user.get("last_name", ""))
+        frame = Frame(document.leftMargin, document.bottomMargin,
+                      document.width, document.height, id="body")
+        document.addPageTemplates([PageTemplate(id="goals", frames=[frame],
+                                                onPage=self.set_page)])
+        document.build(self.get_goals_body())
+
+        return path
+
+    def get_goals_body(self):
+        """The table of goals, and the line that says where they come from."""
+        styles = getSampleStyleSheet()
+        small = ParagraphStyle("small", parent=styles["Normal"], fontSize=8)
+
+        sql = """SELECT t.description AS analyte, s.description AS matrix,
+                        u.description AS unit, m.description AS method,
+                        c.description AS panel,
+                        tm.cvw, tm.cvb, tm.imp, tm.bias, tm.teap005
+                   FROM test_methods tm
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN samples s ON s.sample_id = tm.sample_id
+                   JOIN units u ON u.unit_id = tm.unit_id
+                   JOIN methods m ON m.method_id = tm.method_id
+                   LEFT JOIN categories c ON c.category_id = tm.category_id
+                  WHERE tm.status = 1
+               ORDER BY c.description, t.description, s.description"""
+        rows = self.engine.db.read(True, sql, ())
+
+        columns = (("Panel", 34), ("Analyte", 42), ("Matrix", 20), ("Unit", 16),
+                   ("Method", 26), ("CVi%", 16), ("CVg%", 16),
+                   ("Imprecision%", 24), ("Bias%", 16), ("TEa%", 16))
+
+        data = [[heading for heading, width in columns]]
+        for row in rows:
+            data.append([row["panel"], row["analyte"], row["matrix"], row["unit"],
+                         row["method"], row["cvw"] or "", row["cvb"] or "",
+                         row["imp"], row["bias"], row["teap005"]])
+
+        table = Table(data, colWidths=[width * mm for heading, width in columns],
+                      repeatRows=1)
+        table.setStyle(TableStyle([("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 7),
+                                   ("BACKGROUND", (0, 0), (-1, 0), HEADING_FILL),
+                                   ("FONT", (0, 1), (-1, -1), "Helvetica", 7),
+                                   ("ALIGN", (5, 1), (-1, -1), "RIGHT"),
+                                   ("GRID", (0, 0), (-1, -1), 0.25, colors.grey)]))
+
+        return [table,
+                Spacer(1, 6 * mm),
+                Paragraph("An analyte with a biological variation of its own is"
+                          " held to it: CVa = 0.5 x CVi, bias = 0.25 x"
+                          " sqrt(CVi&sup2; + CVg&sup2;), TEa = k x CVa + bias,"
+                          " k = {0}. A drug has none - the concentration is what"
+                          " the dose made it - and is held to the state of the"
+                          " art, which is the total error in the last column"
+                          " with the imprecision and the bias read back out of"
+                          " it.".format(self.engine.qc.get_zscore()), small)]
 
     def get_who(self):
         """Who produced the record."""
