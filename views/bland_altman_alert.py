@@ -15,7 +15,6 @@ Uses cooperative multitasking with after() to keep UI responsive
 without threading (avoids DB connection conflicts).
 """
 
-import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 import statistics
@@ -23,9 +22,6 @@ import statistics
 from i18n import _
 from views.parent_view import ParentView
 import views.bland_altman
-
-# Lock file used by Abbott import
-ABBOTT_LOCK_FILE = "/tmp/abbott_import.lock"
 
 
 class UI(ParentView):
@@ -159,15 +155,6 @@ class UI(ParentView):
 
     def _on_scan(self, _evt=None):
         """Start scanning all test/level/workstation combinations."""
-        # Check if Abbott import is running
-        if os.path.exists(ABBOTT_LOCK_FILE):
-            messagebox.showwarning(
-                self.engine.app_title,
-                _("Cannot scan while Abbott import is running.\nPlease wait for the import to complete."),
-                parent=self
-            )
-            return
-
         # Check if already scanning
         if self._scanning:
             return

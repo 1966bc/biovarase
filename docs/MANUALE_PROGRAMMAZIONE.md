@@ -1433,10 +1433,10 @@ except:
     connection.rollback()  # Annulla tutto
 ```
 
-#### In Biovarase: Abbott Import
+#### In Biovarase: inserimento di una serie
 
 ```python
-# In abbott_import_v2.py
+# Inserimento di piu' risultati sullo stesso lotto
 try:
     for record in records:
         self.insert_result(record)

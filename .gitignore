@@ -19,7 +19,6 @@ show_expired_batches
 # Logs
 log.txt
 log_*.txt
-abbott_import.log
 
 # Generated reports
 QC_Report_*.txt
@@ -83,7 +82,6 @@ Thumbs.db
 *.dist/
 
 # Local documentation (not for repository)
-ABBOTT_*.md
 BEST_PRACTICES.md
 CONTRIBUTING.md
 DATABASE_CREDENTIALS_SECURITY.md
