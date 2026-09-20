@@ -27,12 +27,11 @@ from ui.window import Window
 class UI(Window, tk.Toplevel):
     """The total error of one series, against the goal of its analyte."""
 
-    def __init__(self, parent, batch_id, since=None):
+    def __init__(self, parent, batch_id):
         super().__init__(name="tea")
 
         self.parent = parent
         self.batch_id = batch_id
-        self.since = since
 
         self.transient(parent.winfo_toplevel())
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
@@ -58,8 +57,7 @@ class UI(Window, tk.Toplevel):
         unit = self.engine.db.get_selected("units", "unit_id", method["unit_id"])
 
         series = self.engine.get_series(self.batch_id,
-                                        self.engine.get_observations(),
-                                        since=self.since)
+                                        self.engine.get_observations())
         mean = self.engine.qc.get_mean(series)
         cv = self.engine.qc.get_cv(series)
         bias = self.engine.qc.get_bias(mean, lot["target"])

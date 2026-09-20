@@ -32,6 +32,7 @@ import ui.equipments
 import ui.export_day
 import ui.methods
 import ui.note
+import ui.plots
 import ui.result
 import ui.samples
 import ui.since
@@ -149,6 +150,7 @@ class Main(Window, ttk.Frame):
         bar.add_cascade(label="File", underline=0, menu=m_file)
 
         m_qc = tk.Menu(bar, tearoff=0)
+        m_qc.add_command(label="Levey-Jennings", underline=0, command=self.on_plots)
         m_qc.add_command(label="Statistics", underline=0, command=self.on_statistics)
         m_qc.add_command(label="Total error", underline=0, command=self.on_tea)
         m_qc.add_command(label="Bland-Altman", underline=0, command=self.on_bland_altman)
@@ -278,6 +280,16 @@ class Main(Window, ttk.Frame):
         """The licence, as the file in the repository says it."""
         self.engine.windows.replace("licence", lambda: ui.licence.UI(self))
 
+    def on_plots(self, evt=None):
+        """Every lot of this analyte, one chart under the other."""
+        if self.test_method is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a test first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "plots", lambda: ui.plots.UI(self, self.test_method, self.since))
+
     def on_statistics(self, evt=None):
         """Everything this series says, for the lot and the period chosen."""
         if self.batch is None:
@@ -287,7 +299,7 @@ class Main(Window, ttk.Frame):
         else:
             self.engine.windows.replace(
                 "statistics",
-                lambda: ui.statistics.UI(self, self.batch, self.since))
+                lambda: ui.statistics.UI(self, self.batch))
 
     def on_tea(self, evt=None):
         """What this series does against what the analyte allows."""
@@ -297,7 +309,7 @@ class Main(Window, ttk.Frame):
                                    parent=self)
         else:
             self.engine.windows.replace(
-                "tea", lambda: ui.tea.UI(self, self.batch, self.since))
+                "tea", lambda: ui.tea.UI(self, self.batch))
 
     def on_bland_altman(self, evt=None):
         """This control on two instruments: how far apart they are."""
@@ -479,10 +491,17 @@ class Main(Window, ttk.Frame):
     HEARTBEAT = 30000
 
     def set_status(self):
-        """The line on the left: who is working, and how far back they look."""
+        """Who is working, how many points the chart holds, and the period.
+
+        Both numbers, because they answer different questions and the window
+        uses them for different things: the chart and the statistics take the
+        last so many results, the list and the comparisons take the period.
+        """
         label = dict((code, label) for code, label in self.PERIODS if code)
-        self.status.set("{0}   |   {1}".format(
-            self.get_who(), label.get(self.period.get(), self.period.get())))
+        self.status.set("{0}   |   last {1} results   |   {2}".format(
+            self.get_who(),
+            self.engine.get_elements(),
+            label.get(self.period.get(), self.period.get())))
 
     def init_status_bar(self):
         """Who is working, on which laboratory, with which numbers.
@@ -707,15 +726,19 @@ class Main(Window, ttk.Frame):
         # them: a point taken out of the statistics is still a run that was
         # made, and it is the only way back to it - double clicking it is how
         # a result is opened again.
+        # The chart is the last N results and not the results of a period.
+        # Westgard rules are read on a number of observations; whether those
+        # thirty took three weeks or three months does not change the rule,
+        # and cutting them by a period chosen for the history would make a
+        # series say NED while its thirty points sit just behind the cut.
         sql = """SELECT r.result_id, ROUND(r.result, 2) AS result, r.received,
                         r.status
                    FROM results r
                   WHERE r.batch_id = ?
-                    AND (? IS NULL OR r.received >= ?)
                ORDER BY r.received DESC
                   LIMIT ?"""
         rows = list(reversed(self.engine.db.read(True, sql,
-                                                 (self.batch, self.since, self.since,
+                                                 (self.batch,
                                                   self.engine.get_elements()))))
         self.chart_results = [row["result_id"] for row in rows]
         series = [row["result"] for row in rows]
@@ -756,8 +779,7 @@ class Main(Window, ttk.Frame):
 
     def set_statistics(self, lot):
         """The three boxes: the lot, the series, and the two compared."""
-        series = self.engine.get_series(self.batch, self.engine.get_observations(),
-                                        since=self.since)
+        series = self.engine.get_series(self.batch, self.engine.get_observations())
         method = self.engine.db.get_selected("test_methods", "test_method_id",
                                              self.test_method)
 

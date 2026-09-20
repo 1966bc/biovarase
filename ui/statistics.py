@@ -7,9 +7,8 @@
 """What one series says, in full.
 
 The main window has room for eight numbers; this is the rest of the answer,
-for the lot and the period already chosen there. A window that answered
-about the whole archive while the status bar said "last 3 months" would be a
-true number answering a question nobody asked.
+on the same series it is showing - the last observations of that lot, which
+is what a Westgard rule is read on and what the chart draws.
 
 Nothing here is computed on its own: the statistics come from engine.qc and
 the rules from engine.westgards, the same ones the chart is drawn with. A
@@ -53,13 +52,12 @@ EXPECTED = ((1, 68.3), (2, 95.4), (3, 99.7))
 class UI(Window, tk.Toplevel):
     """The statistics of one series, and what they are held against."""
 
-    def __init__(self, parent, batch_id, since=None):
+    def __init__(self, parent, batch_id):
         super().__init__(name="statistics")
 
         self.parent = parent
         #: The lot the series belongs to, and the day the period starts.
         self.batch_id = batch_id
-        self.since = since
 
         self.transient(parent.winfo_toplevel())
         self.resizable(0, 0)
@@ -114,8 +112,7 @@ class UI(Window, tk.Toplevel):
 
         lot = self.engine.db.get_selected("batches", "batch_id", self.batch_id)
         series = self.engine.get_series(self.batch_id,
-                                        self.engine.get_observations(),
-                                        since=self.since)
+                                        self.engine.get_observations())
 
         self.title("Statistics - {0} lot {1}".format(lot["description"],
                                                      lot["lot_number"]))
