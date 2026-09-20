@@ -89,7 +89,7 @@ set_results
   set_charts(lot)
     db.read(...)                                          the last N results
     chart.draw_chart(series, target, sd, dates, status)   ljcanvas.py
-    bias_chart.draw_bias(series, target)                  bias_canvas.py
+    profile.draw_profile(series, target, sd)              profile_canvas.py
   set_statistics(lot)
     engine.get_series(batch, observations)
     qc.get_mean / get_cv / get_bias / get_te / get_uncertainty

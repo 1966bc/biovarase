@@ -159,8 +159,8 @@ about the database: it is handed numbers.
 
 ## The charts
 
-Six canvases, drawn by hand on `tk.Canvas`: Levey-Jennings, Youden, total
-error, Bland-Altman, the bias bar and the frequency histogram. No plotting
+Six canvases, drawn by hand on `tk.Canvas`: Levey-Jennings, the profile
+beside it, Youden, total error, Bland-Altman and the frequency histogram. No plotting
 library, which is why the program has three dependencies and starts instantly
 on a slow machine — and why a reader can see how a control chart is built,
 from the scale to the clipping of points beyond four standard deviations.
@@ -176,3 +176,11 @@ Each one has the same shape: a `draw_*` method that takes numbers, a
 `redraw` that decides whether there is room for a chart, an empty grid or
 nothing, and a handful of `get_x` / `get_y` that turn a value into a
 coordinate. None of them knows the database exists.
+
+One of the seven depends on another, and it is the only one that does.
+`ProfileCanvas` reads its margins, its scale and its colours off
+`LeveyJenningsCanvas` instead of having its own. That is the point of it: it
+is drawn beside the chart and is meaningless anywhere else, and a profile
+that chose its own limits would line up with nothing. A margin changed on
+the chart and not on the profile would slide the bars against the bands by a
+few pixels - the kind of wrong nobody notices and nobody can then trust.

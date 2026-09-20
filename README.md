@@ -88,9 +88,12 @@ whether it is still sound. Take the backup every day and keep more than one.
 
 **Watches a series.** A lot of control material on one analyte and one
 instrument is a series. The chart draws the last thirty results with the
-target and the limits at one, two and three standard deviations; the
-statistics under it say what the series is doing, and the Westgard multirule
-says whether that is a reason to stop.
+target and the limits at one, two and three standard deviations; beside it,
+on the same vertical scale, the profile counts how many fell in each half
+deviation — the chart says when, the profile says how often, and a series
+that has quietly moved shows as a lopsided pile before any rule fires. The
+statistics under them say what the series is doing, and the Westgard
+multirule says whether that is a reason to stop.
 
 **Says what kind of wrong.** A rule is broken and the next question is what
 sort of error it is. The Youden plot puts the two levels of the same control
@@ -166,8 +169,9 @@ sqlite3 -init sql/console.sql sql/biovarase.sl3   # look inside it
 
 **Her Majesty `tk.Canvas`.** Six charts and not one plotting library:
 Levey-Jennings with its bands and its points beyond four standard deviations
-clipped as triangles, Youden, total error, Bland-Altman, the bias bar, the
-frequency histogram. Lines, rectangles, polygons and text, on a widget that
+clipped as triangles, the profile that stands beside it on the same scale,
+Youden, total error, Bland-Altman, the frequency histogram. Lines,
+rectangles, polygons and text, on a widget that
 has been in the standard library since Tk itself and will draw anything at
 all for anyone willing to work out the coordinates. Working them out is the
 interesting part: a chart is a scale, a margin and two axes, and once those

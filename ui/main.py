@@ -54,8 +54,8 @@ import ui.users
 import ui.workstations
 import ui.youden
 
-from bias_canvas import BiasCanvas
 from ljcanvas import LeveyJenningsCanvas
+from profile_canvas import ProfileCanvas
 from ui.window import Window
 
 #: The biological variation the analytical goals are computed from: the
@@ -582,19 +582,55 @@ class Main(Window, ttk.Frame):
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
+    #: Where the divider starts, in pixels of profile. Narrow on purpose:
+    #: it is read beside the chart and not instead of it, and every pixel it
+    #: takes is one the chart has not got for a day of the series. After
+    #: that it is the hand's.
+    PROFILE_WIDTH = 150
+
     def init_charts(self, container):
-        """The Levey-Jennings chart, and the bias under it like a footer.
+        """The chart, and the profile standing beside it.
 
-        Two canvases drawn by hand, with no plotting library behind them:
-        the chart answers whether the method is in control, the bar answers
-        how far from the target it sits and in which direction.
+        Two canvases drawn by hand, with no plotting library behind them,
+        answering two questions that the same thirty results hold and only
+        one of which the order they were run in can show. The chart: is the
+        method in control, and since when. The profile: where those results
+        actually sit, which a line walking up and down hides completely.
+
+        There was a third under them, a bar with the target and the mean on
+        it, and it said a third time what the Bias cell says exactly and
+        what the profile now shows. It had a scale of its own, unrelated to
+        the chart above it, so the eye had to change reference to read it -
+        which is the fault the profile does not have, and the reason it is
+        worth the room. What that bar alone knew, the bias in the unit of
+        the method, is on the line under the chart now.
+
+        The profile shares the chart's vertical scale and its margins, so
+        the two line up and are read as one picture. The divider between
+        them can be dragged: what it moves is how wide each one is, and
+        what makes them line up is vertical, so nothing comes apart.
         """
-        self.chart = LeveyJenningsCanvas(container)
-        self.chart.set_point_click_callback(self.on_point)
-        self.chart.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.charts = ttk.PanedWindow(container, orient=tk.HORIZONTAL)
 
-        self.bias_chart = BiasCanvas(container, height=70)
-        self.bias_chart.pack(side=tk.TOP, fill=tk.X, pady=(4, 0))
+        self.chart = LeveyJenningsCanvas(self.charts)
+        self.chart.set_point_click_callback(self.on_point)
+
+        self.profile = ProfileCanvas(self.charts, width=self.PROFILE_WIDTH)
+
+        self.charts.add(self.chart, weight=5)
+        self.charts.add(self.profile, weight=0)
+        # The sash is put where the profile is the width it asked for, once,
+        # the first time the pane is on the screen: before that it has no
+        # width for the sash to be a distance from.
+        self.charts.bind("<Map>", self.on_charts_mapped)
+
+        self.charts.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+    def on_charts_mapped(self, evt=None):
+        """Where the divider starts, asked for once and then left to the hand."""
+        self.charts.unbind("<Map>")
+        self.charts.update_idletasks()
+        self.charts.sashpos(0, self.charts.winfo_width() - self.PROFILE_WIDTH)
 
     #: The periods the menu offers, in order: the code, the label, and a
     #: separator where None stands.
@@ -876,26 +912,33 @@ class Main(Window, ttk.Frame):
                               dates=[row["received"] for row in rows],
                               status=[row["status"] for row in rows],
                               y_axis_caption=self.unit,
-                              bottom_text=self.get_bottom_text(rows))
+                              bottom_text=self.get_bottom_text(rows, lot))
 
-        # The bias bar is about the statistics, so it sees what they see.
-        series = [row["result"] for row in rows if row["status"] == 1]
+        self.profile.draw_profile(series, lot["target"], lot["sd"],
+                                  [row["status"] for row in rows])
 
-        self.bias_chart.draw_bias(series, lot["target"], unit=self.unit)
-
-    def get_bottom_text(self, rows):
-        """How many results the statistics were computed on, of those drawn.
+    def get_bottom_text(self, rows, lot):
+        """What the statistics were computed on, and how far off they came out.
 
         A series of thirty points where two were excluded is not a series of
         thirty, and whoever reads the mean has a right to know first.
-        """
-        counted = len([row for row in rows if row["status"] == 1])
 
-        if counted == len(rows):
-            found = "Computed on {0} results".format(counted)
+        The bias is here in the unit of the method, which is the one thing
+        the Performance box does not say: six point eight per cent means one
+        thing on a drug at 18 ug/mL and another on a hormone at 231 pg/mL,
+        and the number that gets discussed at the bench is the second one.
+        """
+        counted = [row["result"] for row in rows if row["status"] == 1]
+
+        if len(counted) == len(rows):
+            found = "Computed on {0} results".format(len(counted))
         else:
             found = "Computed on {0} of {1} results, {2} excluded".format(
-                counted, len(rows), len(rows) - counted)
+                len(counted), len(rows), len(rows) - len(counted))
+
+        if counted:
+            away = self.engine.qc.get_mean(counted) - lot["target"]
+            found = "{0}   -   bias {1:+.2f} {2}".format(found, away, self.unit)
 
         return found
 
@@ -1046,7 +1089,7 @@ class Main(Window, ttk.Frame):
         self.dict_results.clear()
         self.chart_results = []
         self.chart.clear()
-        self.bias_chart.clear()
+        self.profile.clear()
         for value in self.values.values():
             value.set("")
 

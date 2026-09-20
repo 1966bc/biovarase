@@ -127,14 +127,33 @@ were computed on - `Computed on 30 results`, or `Computed on 28 of 30
 results, 2 excluded`. A series of thirty where two were excluded is not a
 series of thirty, and whoever reads the mean has a right to know first.
 
+The same line ends with the bias **in the unit of the method** -
+`bias +1.22 ug/mL`. The Performance box gives it as a percentage, which is
+what a goal is written in; this is the number that gets said out loud at the
+bench, because six point eight per cent means one thing on a drug at
+18 ug/mL and another on a hormone at 231 pg/mL.
+
 **Double clicking a point opens the result behind it.**
 
-## The bias bar
+## The profile
 
-The bar under the chart puts the target and the mean of the series on the
-same line and writes the distance between them, in per cent and in the unit
-of the method. It answers one question - how far off, and in which direction
-- that the chart answers only by eye.
+To the right of the chart, on the same vertical scale, the results are
+counted into bins half a standard deviation wide and drawn as bars. A bar at
+plus two is level with the chart's plus two, so the two pictures are read as
+one: **the chart says when, the profile says how often.**
+
+It answers what the order of the runs hides. Thirty points walking up and
+down between the bands look much the same whether they are piled neatly
+around the target or split into two camps either side of it, and the profile
+shows the difference at a glance - a lopsided pile is a series that has
+moved, two humps is a series that changed in the middle, and either can be
+there for weeks before a rule fires.
+
+Excluded results are not counted, as they are not counted in the mean.
+
+The divider between the chart and the profile can be dragged. What it moves
+is how wide each one is; what makes them line up is vertical, so nothing
+comes apart.
 
 ## The three boxes
 
