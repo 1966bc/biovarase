@@ -18,11 +18,14 @@ Universe, and Everything, and it kept that number for as long as it ran.
 import tkinter as tk
 from tkinter import messagebox
 
-from app_config import MAIN_WINDOW_MIN_HEIGHT, MAIN_WINDOW_MIN_WIDTH
-
 from engine import Engine
 from ui.login import Login
 from ui.main import Main
+
+#: The main window never gets smaller than this: below it the chart and the
+#: list of results stop being readable together, which is the whole layout.
+MAIN_WINDOW_MIN_WIDTH = 1400
+MAIN_WINDOW_MIN_HEIGHT = 700
 
 __author__ = "Giuseppe Costanzi (1966bc)"
 __copyright__ = "Copyleft"

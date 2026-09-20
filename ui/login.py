@@ -16,8 +16,11 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 
-from app_config import MAX_LOGIN_ATTEMPTS
 from ui.window import Window
+
+#: Tries before the program gives up and closes. Three, as a cash machine
+#: gives three: enough for a typing mistake, not enough to guess with.
+MAX_LOGIN_ATTEMPTS = 3
 
 
 class Login(Window, ttk.Frame):

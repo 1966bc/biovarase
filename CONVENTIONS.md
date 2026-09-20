@@ -17,6 +17,10 @@ The rules this code is written by.
   needs several exits is doing several things and must be split. `raise` is
   allowed, for real errors only.
 - **One thing per line**: a plain `if`/`else`, never `x if condition else y`.
+- **A constant lives where it is read**, at the top of that module, with the
+  comment that says why it is that number. A file collecting the constants of
+  the whole program puts every one of them a jump away from the only code
+  that cares, and grows a name like `app_config` that says nothing.
 - **DRY**: every piece of knowledge is written once. Two copies start
   identical, one gets fixed and the other does not: a list or a form repeated
   goes to a base class, a helper used twice goes to `Tools` or `DBMS`.

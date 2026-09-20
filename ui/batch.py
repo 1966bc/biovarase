@@ -19,10 +19,15 @@ offers the second and writes neither by itself.
 import tkinter as tk
 from tkinter import messagebox
 
-from app_config import BATCH_DESCRIPTION_MAX_LENGTH, LOT_NUMBER_MAX_LENGTH
 from ui.calendarium import Calendarium
 from ui.dialog import Dialog
 from ui.lookup import Lookup
+
+#: As long as the columns in the database, so that the window refuses what
+#: the database would refuse - and says so while it is being typed, rather
+#: than when Save is pressed.
+BATCH_DESCRIPTION_MAX_LENGTH = 15
+LOT_NUMBER_MAX_LENGTH = 20
 
 
 class UI(Dialog):
