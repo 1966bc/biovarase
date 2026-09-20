@@ -16,13 +16,15 @@ the rules from engine.westgards, the same ones the chart is drawn with. A
 second copy of a formula is a second chance to get it wrong, and the two
 would disagree in the one place where being sure matters.
 
-Three blocks, and the third is the one worth opening the window for.
+What it does not do is repeat the main window. The target, the SD, the mean,
+the CV, the bias, the total error and its allowance are already under the
+chart there, and a second copy of them here would be two places to read the
+same number and one more to keep in step. This window holds what does not
+fit there.
 
-The series says what it is: how many results, mean, standard deviation,
-coefficient of variation, and the spread from lowest to highest.
-
-The performance puts that against what the lot declares and what the analyte
-allows: bias, total error, allowable total error, uncertainty, sigma.
+The extremes: lowest, highest, the range between them, and sigma - how many
+times the imprecision fits into what the analyte allows, once the bias has
+taken its share.
 
 The distribution counts how many results fall inside one, two and three
 standard deviations, and says beside each count what a normal distribution
@@ -41,6 +43,7 @@ quoted.
 import tkinter as tk
 from tkinter import ttk
 
+from frequency_histogram_canvas import FrequencyHistogramCanvas
 from ui.window import Window
 
 #: What a normal distribution puts inside one, two and three deviations.
@@ -65,25 +68,45 @@ class UI(Window, tk.Toplevel):
         self.engine.tools.center_me(self)
 
     def init_ui(self):
+        """Two columns and a histogram, rather than four blocks in a tower.
 
-        self.frm_main = ttk.Frame(self, style="App.TFrame", padding=10)
+        The numbers on the left, what they are held against on the right, and
+        the shape of the series under them: a window read at a glance has to
+        fit on a screen at a glance.
+        """
+        self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
 
-        self.frm_series = ttk.LabelFrame(self.frm_main, text="The series")
+        across = ttk.Frame(self.frm_main, style="App.TFrame")
+
+        left = ttk.Frame(across, style="App.TFrame")
+        self.frm_series = ttk.LabelFrame(left, text="Extremes")
         self.frm_series.pack(side=tk.TOP, fill=tk.X)
+        self.frm_spread = ttk.LabelFrame(left, text="Distribution")
+        self.frm_spread.pack(side=tk.TOP, fill=tk.X, pady=(6, 0))
+        left.pack(side=tk.LEFT, fill=tk.Y)
 
-        self.frm_performance = ttk.LabelFrame(self.frm_main, text="Performance")
-        self.frm_performance.pack(side=tk.TOP, fill=tk.X, pady=(8, 0))
+        right = ttk.Frame(across, style="App.TFrame")
+        self.frm_performance = ttk.LabelFrame(right, text="Against the goal")
+        self.frm_performance.pack(side=tk.TOP, fill=tk.X)
+        right.pack(side=tk.LEFT, fill=tk.Y, padx=(10, 0))
 
-        self.frm_spread = ttk.LabelFrame(self.frm_main, text="Distribution")
-        self.frm_spread.pack(side=tk.TOP, fill=tk.X, pady=(8, 0))
+        across.pack(side=tk.TOP, fill=tk.X)
+
+        # The histogram says the same thing the distribution counts say, in
+        # the form the eye reads first: where the results fall, and where the
+        # target and the mean sit among them.
+        frm_shape = ttk.LabelFrame(self.frm_main, text="Shape")
+        self.histogram = FrequencyHistogramCanvas(frm_shape, height=150)
+        self.histogram.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
+        frm_shape.pack(side=tk.TOP, fill=tk.BOTH, expand=1, pady=(6, 0))
 
         self.frm_rules = ttk.LabelFrame(self.frm_main, text="Westgard rules")
-        self.frm_rules.pack(side=tk.TOP, fill=tk.X, pady=(8, 0))
+        self.frm_rules.pack(side=tk.TOP, fill=tk.X, pady=(6, 0))
 
         buttons = self.engine.tools.get_button_column(self.frm_main,
                                                       (("Close", self.on_cancel),),
                                                       window=self)
-        buttons.pack(side=tk.TOP, anchor=tk.E, pady=(8, 0))
+        buttons.pack(side=tk.TOP, anchor=tk.E, pady=(6, 0))
 
         self.frm_main.pack(fill=tk.BOTH, expand=1)
 
@@ -99,31 +122,37 @@ class UI(Window, tk.Toplevel):
         self.set_series(series)
         self.set_performance(lot, series)
         self.set_spread(lot, series)
+        self.set_shape(lot, series)
         self.set_rules(lot, series)
 
     # ----------------------------------------------------------- the blocks
 
     def set_series(self, series):
-        """What the results are, on their own."""
-        mean = self.engine.qc.get_mean(series)
+        """The extremes, which the main window has no room for."""
+        if series:
+            lowest, highest = min(series), max(series)
+        else:
+            lowest, highest = 0, 0
 
         self.set_rows(self.frm_series,
-                      (("Results", len(series)),
-                       ("Mean", mean),
-                       ("SD", self.engine.qc.get_sd(series)),
-                       ("CV%", self.engine.qc.get_cv(series)),
-                       ("Lowest", min(series) if series else 0),
-                       ("Highest", max(series) if series else 0),
+                      (("Lowest", lowest),
+                       ("Highest", highest),
                        ("Range", self.engine.qc.get_range(series))))
 
     def set_performance(self, lot, series):
-        """The results against the lot, and the lot against the analyte."""
+        """Sigma, and the imprecision the analyte allows to compare it with.
+
+        Sigma is how many times the method's own imprecision fits into what
+        the analyte allows, after the bias has taken its share: six is world
+        class, three is the least a method can be run at. It is the one
+        number that puts imprecision and bias together into a verdict, and
+        the main window has no room for it.
+        """
         method = self.engine.db.get_selected("test_methods", "test_method_id",
                                              lot["test_method_id"])
         mean = self.engine.qc.get_mean(series)
         cv = self.engine.qc.get_cv(series)
         bias = self.engine.qc.get_bias(mean, lot["target"])
-        observed = self.engine.qc.get_te(lot["target"], mean, cv)
 
         if method["cvw"]:
             sigma = self.engine.qc.get_sigma(method["cvw"], method["cvb"],
@@ -136,13 +165,9 @@ class UI(Window, tk.Toplevel):
                 sigma = round((method["teap005"] - abs(bias)) / cv, 2)
 
         self.set_rows(self.frm_performance,
-                      (("Target", lot["target"]),
-                       ("SD declared", lot["sd"]),
-                       ("Bias%", bias),
-                       ("TE%", observed),
-                       ("TEa%", method["teap005"]),
-                       ("U%", self.engine.qc.get_uncertainty(cv, bias)),
-                       ("Sigma", sigma)))
+                      (("Sigma", sigma),
+                       ("CV allowed%", method["imp"]),
+                       ("Bias allowed%", method["bias"])))
 
     def set_spread(self, lot, series):
         """How the results fall, against how a normal distribution would."""
@@ -154,10 +179,18 @@ class UI(Window, tk.Toplevel):
             else:
                 share = 0.0
             rows.append(("Within {0} SD".format(deviations),
-                         "{0} of {1}  ({2}%, expected {3}%)".format(
+                         "{0}/{1}  {2}%  (exp. {3}%)".format(
                              inside, len(series), share, expected)))
 
-        self.set_rows(self.frm_spread, rows, width=34)
+        self.set_rows(self.frm_spread, rows, width=22)
+
+    def set_shape(self, lot, series):
+        """The histogram of the series, with the target and the mean on it."""
+        self.histogram.draw_histogram(series,
+                                      target=lot["target"],
+                                      mean=self.engine.qc.get_mean(series),
+                                      x_label="Result",
+                                      y_label="N")
 
     def get_inside(self, lot, series, deviations):
         """How many results fall within so many standard deviations."""
@@ -195,7 +228,7 @@ class UI(Window, tk.Toplevel):
                               text=self.get_verdict(broken, series))
             label.configure(foreground=self.get_colour(broken, series))
             label.pack(fill=tk.X)
-            cell.pack(side=tk.LEFT, padx=4, pady=4)
+            cell.pack(side=tk.LEFT, padx=4, pady=2)
 
     def get_verdict(self, broken, series):
         """What a rule says: held, broken, or not enough results to ask."""
@@ -226,10 +259,10 @@ class UI(Window, tk.Toplevel):
         for number, (label, value) in enumerate(rows):
             ttk.Label(container, style="App.TLabel",
                       text=label).grid(row=number, column=0, sticky=tk.W,
-                                       padx=(8, 0), pady=1)
+                                       padx=(8, 0))
             ttk.Label(container, style="App.TLabel", width=width, anchor=tk.W,
                       text=value).grid(row=number, column=1, sticky=tk.W,
-                                       padx=(12, 8), pady=1)
+                                       padx=(12, 8))
 
     def on_cancel(self, evt=None):
         self.destroy()
