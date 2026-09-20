@@ -39,7 +39,8 @@ class App(tk.Tk):
         self.engine = Engine(log)
 
         self.protocol("WM_DELETE_WINDOW", self.on_exit)
-        self.title(title)
+        name, site = self.engine.get_laboratory()
+        self.title("{0} - {1}".format(title, name))
         self.resizable(0, 0)
         self.engine.tools.set_style()
         self.set_icon()

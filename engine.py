@@ -86,6 +86,15 @@ class Engine:
         """
         return os.path.join(os.path.dirname(__file__), file)
 
+    def get_laboratory(self):
+        """Whose laboratory this is, for the title bar and the exports.
+
+        @return: name and site
+        @rtype: tuple
+        """
+        return (self.config.get("laboratory", "name"),
+                self.config.get("laboratory", "site"))
+
     def get_database(self):
         """The database file, from the settings.
 
