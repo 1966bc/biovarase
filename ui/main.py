@@ -128,9 +128,15 @@ class Main(Window, ttk.Frame):
         bar = tk.Menu(self.parent)
 
         m_file = tk.Menu(bar, tearoff=0)
-        m_file.add_command(label="Backup database", underline=0, command=self.on_backup)
-        m_file.add_command(label="Export database as SQL", underline=0,
-                           command=self.on_dump)
+
+        m_database = tk.Menu(m_file, tearoff=0)
+        m_database.add_command(label="Backup", underline=0, command=self.on_backup)
+        m_database.add_command(label="Dump as SQL", underline=0, command=self.on_dump)
+        m_database.add_separator()
+        m_database.add_command(label="Check", underline=0, command=self.on_check)
+        m_database.add_command(label="Vacuum", underline=0, command=self.on_vacuum)
+        m_file.add_cascade(label="Database", underline=0, menu=m_database)
+
         m_file.add_separator()
         m_file.add_command(label="Log", underline=0, command=self.engine.open_log)
         m_file.add_separator()
@@ -216,6 +222,41 @@ class Main(Window, ttk.Frame):
         messagebox.showinfo(self.engine.app_title,
                             "Database written to\n\n{0}".format(path),
                             parent=self)
+
+    def on_check(self, evt=None):
+        """Ask the database whether it is still sound, and say what it answered."""
+        self.engine.tools.busy(self)
+        answer = self.engine.db.check()
+        self.engine.tools.not_busy(self)
+
+        if answer == "ok":
+            messagebox.showinfo(self.engine.app_title,
+                                "The database is sound.",
+                                parent=self)
+        else:
+            self.engine.log.error("integrity check: {0}".format(answer))
+            messagebox.showerror(self.engine.app_title,
+                                 "The database reports:\n\n{0}\n\n"
+                                 "Restore the most recent backup.".format(answer),
+                                 parent=self)
+
+    def on_vacuum(self, evt=None):
+        """Rebuild the file, and say how much smaller it came out.
+
+        Asked first: it rewrites the whole database, and on a file over a
+        network that is every page across the wire.
+        """
+        if messagebox.askyesno(self.engine.app_title,
+                               "Rebuild the database file, leaving out the space"
+                               " that deleted rows left behind?\n\n"
+                               "It reads and writes the whole file.",
+                               parent=self):
+            self.engine.tools.busy(self)
+            freed = self.engine.db.vacuum()
+            self.engine.tools.not_busy(self)
+            messagebox.showinfo(self.engine.app_title,
+                                "The file is {0} KB smaller.".format(freed // 1024),
+                                parent=self)
 
     def on_change_password(self, evt=None):
         """Change the password of whoever is logged in."""

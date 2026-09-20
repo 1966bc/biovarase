@@ -275,6 +275,46 @@ class DBMS:
 
         return self.get_dict(self.read(False, sql, args))
 
+    def check(self):
+        """Ask SQLite whether the file is still sound, page by page.
+
+        PRAGMA integrity_check reads the whole database and reports what it
+        finds: "ok", or a list of what is wrong with it. On a file kept on a
+        shared folder this is the question worth asking now and then, because
+        corruption there is silent until something reads the damaged page.
+
+        @return: what SQLite answered
+        @rtype: string
+        """
+        rows = self.read(True, "PRAGMA integrity_check")
+
+        return "\n".join(row[0] for row in rows)
+
+    def vacuum(self):
+        """Rebuild the file, leaving out the space deleted rows left behind.
+
+        SQLite does not give pages back when rows go: it keeps them for the
+        next insert. After a cleanup that is a file larger than its contents,
+        and vacuum writes it again from scratch, in order.
+
+        It cannot run inside a transaction, so the connection is committed
+        first; it needs room for a second copy of the database while it works.
+
+        @return: how many bytes the file lost
+        @rtype: integer
+        """
+        before = os.path.getsize(self.database)
+
+        self.con.commit()
+        # isolation_level None for the duration: VACUUM is refused inside the
+        # transaction the driver would otherwise open for it.
+        level = self.con.isolation_level
+        self.con.isolation_level = None
+        self.con.execute("VACUUM")
+        self.con.isolation_level = level
+
+        return before - os.path.getsize(self.database)
+
     def dump(self, folder):
         """Write the whole database as SQL into folder; return the file's path.
 
