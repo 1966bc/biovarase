@@ -12,7 +12,7 @@ Architecture (Mixin Pattern):
     - Controller: SQL builders and domain logic
     - QC: Quality control statistical calculations
     - Westgards: Westgard multirule QC evaluation
-    - Exporter/Importer: Data import/export functionality
+    - Exporter: Data export functionality
     - Tools: Shared utility functions
     - Launcher: External file opening
 
@@ -78,7 +78,6 @@ from controller import Controller
 from qc import QC
 from westgards import Westgards
 from exporter import Exporter
-from importer import Importer
 from launcher import Launcher
 
 APP_TITLE = "Biovarase"
@@ -123,7 +122,7 @@ class _EngineMeta(type):
         return cls._instance
 
 
-class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tools,
+class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
              metaclass=_EngineMeta):
     """
     Main orchestrator for Biovarase - combines all system components via mixin inheritance.
@@ -142,7 +141,6 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tool
         3. QC: Quality control statistical calculations
         4. Westgards: Westgard multirule QC evaluation
         5. Exporter: Data export to various formats
-        6. Importer: Data import from various sources
         7. Launcher: External file/application launching
         8. Tools: Shared utility functions
 

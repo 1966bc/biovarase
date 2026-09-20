@@ -80,7 +80,6 @@ import views.tea
 import views.analytical
 import views.change_password
 import views.organizations
-import views.importer
 import views.zscore
 import views.bland_altman
 import views.bland_altman_alert
@@ -192,7 +191,7 @@ class Main(tk.Toplevel):
         - App Admin (0): All menus, all items
         - Lab Admin (3): Edit, QC, Exports, Documents, Users management
         - Superuser (4): QC (validation), Batches, view-only access
-        - Technician (5): QC (data entry), Imports, limited Edit
+        - Technician (5): QC (data entry), limited Edit
         - Viewer (6): QC (view only), Exports, Documents
         """
         role = self.engine.log_user.get("role", ROLE_VIEWER)
@@ -211,7 +210,6 @@ class Main(tk.Toplevel):
 
         # Conditional menus
         m_edit = tk.Menu(m_main, tearoff=0, bd=1) if can_modify else None
-        m_imports = tk.Menu(m_main, tearoff=0, bd=1) if can_modify else None
         m_adm = tk.Menu(m_main, tearoff=0, bd=1) if is_lab_admin else None
 
         # Build main menu bar
@@ -220,9 +218,6 @@ class Main(tk.Toplevel):
 
         if m_edit:
             m_main.add_cascade(label=_("Edit"), underline=0, menu=m_edit)
-        if m_imports:
-            m_main.add_cascade(label=_("Imports"), underline=1, menu=m_imports)
-
         m_main.add_cascade(label=_("Exports"), underline=1, menu=m_exports)
         m_main.add_cascade(label=_("Documents"), underline=0, menu=m_documents)
 
@@ -317,12 +312,6 @@ class Main(tk.Toplevel):
             for i in sorted(items, key=operator.itemgetter(0)):
                 m_edit.add_command(label=i[0], underline=i[1], command=i[2])
 
-        # === IMPORTS MENU (if can_modify) ===
-        if m_imports:
-            items = ((_("Import"), 0, self.on_import_results),)
-            for i in items:
-                m_imports.add_command(label=i[0], underline=i[1], command=i[2])
-
         # === EXPORTS MENU ===
         items = ((_("Notes"), 0, self.on_export_notes),
                  (_("Analytical Goals"), 0, self.on_analitycal_goals),
@@ -371,8 +360,6 @@ class Main(tk.Toplevel):
         all_menus = [m_main, m_file, m_plots, m_exports, m_documents, m_about]
         if m_edit:
             all_menus.append(m_edit)
-        if m_imports:
-            all_menus.append(m_imports)
         if m_adm:
             all_menus.append(m_adm)
 
@@ -2403,16 +2390,6 @@ class Main(tk.Toplevel):
 
     def on_log(self,):
         self.engine.get_log_file()
-
-    def on_import_results(self) -> None:
-        """Open Import Results window (Admin/Superuser only)."""
-        if not self.engine.can_validate_qc():
-            msg = self.engine.user_not_enable
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        views.importer.UI(self, ).on_open()
-   
 
     def on_change_user(self, _evt=None):
         """
