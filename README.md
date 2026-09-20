@@ -1,5 +1,11 @@
 # Biovarase
 
+[![Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/downloads/)
+[![Tkinter](https://img.shields.io/badge/tkinter-green.svg)](https://docs.python.org/3/library/tk.html)
+[![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg)](https://www.sqlite.org/index.html)
+[![ISO 15189](https://img.shields.io/badge/ISO%2015189-2022-lightgrey.svg)](https://www.iso.org/standard/76677.html)
+[![Licence GPL v3](https://img.shields.io/badge/licence-GPL--3.0-orange.svg)](LICENSE)
+
 **One lab, one chart.**
 
 Internal quality control for a single medical laboratory: the analytes it
