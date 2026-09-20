@@ -29,11 +29,10 @@ dist/
 *~
 .DS_Store
 
-# documents/ holds what this project wrote. What it keeps beside it for
-# reference - certificates, papers, guidelines - belongs to other people and
-# is not republished here.
-documents/*.pdf
-documents/*.xlsx
-documents/*.docx
-documents/*.odt
+# documents/ holds what this project wrote, named one by one. Everything else
+# kept beside it - certificates, papers, guidelines, notes - belongs to other
+# people or to no repository, and stays here.
+documents/*
+!documents/ANALYTICAL_GOALS.md
+!documents/BUILD.md
 log.txt
