@@ -1,257 +1,137 @@
 # Biovarase
 
-**Professional Quality Control Management System for Medical Laboratories**
+**One lab, one chart.**
 
-Biovarase is a comprehensive QC (Quality Control) management application designed for medical laboratories, implementing ISO 15189:2022 standards and Westgard multirule algorithms for analytical quality monitoring.
+Internal quality control for a single medical laboratory: the analytes it
+measures, the lots of control material open on its instruments, the results
+run on them, and the Levey-Jennings chart that says whether the method can
+report today.
 
-[![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-GNU%20GPL%20v3-blue)](./LICENSE)
+![Biovarase: a Levey-Jennings chart with the statistics of the series](docs/biovarase.png)
 
----
+Python 3 with Tkinter and SQLite. Three dependencies, no server, no browser,
+and a database that is one file.
 
-![Biovarase Screenshot](screenshots/biovarase.png)
+## Run it
 
----
-
-## Features
-
-### Core Functionality
-- **Westgard Multirule QC** - Statistical process control (1:3S, 2:2S, R:4S, 4:1S, 10:X)
-- **QC Statistical Analysis** - Mean, SD, CV%, Bias, Total Error, Sigma metrics
-- **Measurement Uncertainty** - ISO/TS 20914:2019 compliant calculations
-- **Levey-Jennings Charts** - Visual QC trending and analysis
-- **Batch Management** - QC material tracking and expiry monitoring
-
-### Security & Compliance
-- **Hardware-Locked Encryption** - AES-256-GCM config encryption tied to machine
-- **Bcrypt Password Hashing** - Cost factor 12 for secure authentication
-- **Role-Based Access Control** - Admin, Superuser, Technician, Viewer roles
-- **Audit Logging** - Complete activity tracking
-- **ISO 15189:2022 Compliance** - Medical laboratory quality standards
-
-### Technical Features
-- **Cross-Platform** - Linux and Windows 10/11 support
-- **MariaDB Backend** - Robust relational database
-- **Tkinter GUI** - Native desktop interface
-- **Automated Testing** - 731 tests with pytest infrastructure
-- **Log Rotation** - Automatic log management (10MB limit, 5 file retention)
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Python**: 3.7 or higher
-- **MariaDB**: 10.3 or higher
-- **OS**: Linux (tested on Debian/Ubuntu) or Windows 10/11
-
-### Installation
-
-1. **Clone Repository**
-   ```bash
-   git clone <repository-url>
-   cd biovarase
-   ```
-
-2. **Create Virtual Environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or
-   venv\Scripts\activate     # Windows
-   ```
-
-3. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Setup Database**
-   ```bash
-   # Import database schema
-   mysql -u root -p < biovarase.sql
-   ```
-
-5. **First Run**
-   ```bash
-   python3 biovarase.py
-   ```
-
-   On first run, the Setup Wizard will guide you through:
-   - Database connection configuration
-   - Admin user creation
-   - Hardware-locked encryption setup
-
-### Default Credentials
-
-After initial setup, use the credentials you created during the wizard.
-
-**Generic Viewer Account** (autologin):
-- Username: `viewer`
-- Password: `viewer`
-- Role: Read-only access
-
----
-
-## Usage
-
-### Launching the Application
-
-```bash
-# Standard launch
+```
 python3 biovarase.py
 ```
 
-### Basic Workflow
-
-1. **Login** - Authenticate with user credentials
-2. **Select Site/Lab/Section** - Choose your working context
-3. **Manage Batches** - Create/edit QC material batches
-4. **Enter Results** - Input QC measurements
-5. **Review QC Charts** - Analyze Levey-Jennings plots
-6. **Validate Results** - Apply Westgard rules for run acceptance
-7. **Generate Reports** - Export QC data and statistics
-
-### User Roles
-
-- **App Admin (role=0)**: Full system access, global master data
-- **Country Admin (role=1)**: Country-level administration
-- **Regional Admin (role=2)**: Region-level administration
-- **Lab Admin (role=3)**: Lab configuration, user management
-- **Superuser (role=4)**: QC validation, batch management
-- **Technician (role=5)**: Data entry only
-- **Viewer (role=6)**: Read-only access
-
----
-
-## 🏗️ Architecture
-
-### Technology Stack
-
-- **Language**: Python 3.7+
-- **GUI Framework**: Tkinter (ttk themed widgets)
-- **Database**: MariaDB 10.3+ (via mariadb connector)
-- **Encryption**: Fernet (AES-128-CBC + HMAC-SHA256)
-- **Password Hashing**: bcrypt (cost factor 12)
-- **Testing**: pytest 6.0+
-
-### Design Pattern
-
-Biovarase uses a **Mixin Architecture** pattern:
-
-```python
-class Engine(DBMS, Controller, QC, Westgards, Exporter, Importer, Launcher, Tools):
-    """Main application engine combining all functionality via mixins."""
-    pass
-```
-
-**Mixin Responsibilities**:
-- `DBMS`: Database connection and query execution
-- `Controller`: SQL builders and domain logic
-- `QC`: Statistical calculations (mean, SD, CV, bias, etc.)
-- `Westgards`: Westgard multirule algorithms
-- `Exporter`: Data export functionality
-- `Importer`: Data import functionality
-- `Launcher`: Window management
-- `Tools`: GUI utilities and helpers
-
-For detailed architecture documentation, see **[CLAUDE.md](./CLAUDE.md)**.
-
----
-
-## 📊 Standards Compliance
-
-Biovarase implements the following international standards:
-
-- **ISO 15189:2022** - Medical laboratories - Requirements for quality and competence
-- **ISO/TS 20914:2019** - Medical laboratories - Practical guidance for estimation of measurement uncertainty
-- **Westgard Multirule QC** - Statistical process control per Westgard JO. Basic QC Practices, 4th Edition. 2016
-
----
-
-## 🔒 Security
-
-### Encryption
-
-- **Hardware-Locked Configuration**: Config files encrypted with hardware-specific key (MAC + machine-id)
-- **Algorithm**: Fernet (AES-128-CBC + HMAC-SHA256)
-- **Key Derivation**: PBKDF2-HMAC-SHA256 (100,000 iterations)
-- **Non-Transferable**: Encrypted config only works on the machine that created it
-
-### Password Security
-
-- **Hashing**: bcrypt with cost factor 12
-- **Salt**: Automatic random salt per password
-- **Timing Attack Protection**: bcrypt's constant-time comparison
-
-### Database Security
-
-- **Parameterized Queries**: All SQL queries use placeholders (SQL injection prevention)
-- **Input Validation**: SQL identifier validation with regex patterns
-- **Connection Timeout**: 5-second timeout for database connections
-
----
-
-## 🛠️ Development
-
-### Project Structure
+It opens on the sample laboratory that ships with it. Log in as `admin` with
+the password `pass`, choose **Antiepileptics**, then **Phenytoin**, then the
+first instrument and the second lot — and you are looking at a calibration
+that has been drifting for three weeks.
 
 ```
-biovarase/
-├── views/            # GUI windows and dialogs
-│   ├── login.py      # Login window
-│   ├── main.py       # Main application window
-│   └── ...
-├── engine.py         # Main Engine class (mixin orchestrator)
-├── dbms.py           # Database connection and queries
-├── controller.py     # SQL builders and domain logic
-├── qc.py             # QC statistical calculations
-├── westgards.py      # Westgard rule algorithms
-├── tools.py          # GUI utilities
-├── biovarase.py      # Application entry point
-└── schema.sql        # Database schema
+python3 biovarase.py --trace     # print what it does, while you use it
+python3 -m unittest discover -s tests -v
 ```
 
-### Building Executable (Windows)
+Python 3.7 or later, Tk 8.6, and `openpyxl`, `bcrypt` and `reportlab`
+(`pip install -r requirements.txt`). To build an executable for a PC that has
+no Python, see [documents/BUILD.md](documents/BUILD.md).
 
-```cmd
-build_biovarase.cmd
+## What it does
+
+**Watches a series.** A lot of control material on one analyte and one
+instrument is a series. The chart draws the last thirty results with the
+target and the limits at one, two and three standard deviations; the
+statistics under it say what the series is doing, and the Westgard multirule
+says whether that is a reason to stop.
+
+**Says what kind of wrong.** A rule is broken and the next question is what
+sort of error it is. The Youden plot puts the two levels of the same control
+against each other — along the diagonal is a calibration, scattered is
+imprecision. The total error chart puts what the method does against what the
+analyte allows. The Bland-Altman plot compares two instruments on the same
+control, which is the question of the morning a new one arrives.
+
+**Keeps the record.** Every result entered, corrected, excluded or moved is
+written to an audit trail by triggers in the database, with the values as
+they were, who did it and when. Nothing is deleted: a wrong value is
+corrected, a result on the wrong lot is moved, a duplicate is excluded with a
+reason, and each of those leaves a trace. The day's controls print as a PDF
+with the laboratory, the operator, the version of the program and the
+statistical settings on it — a record that can say where it came from.
+
+**Knows what it is held to.** Every method carries its analytical goals.
+Where the analyte has a biological variation of its own the goals follow from
+it by the EFLM formulae; where it has none — a drug's concentration is what
+the dose made it — the goal is the state of the art, typed in as an allowable
+total error. See [documents/ANALYTICAL_GOALS.md](documents/ANALYTICAL_GOALS.md).
+
+## The sample data
+
+`sql/biovarase.sl3` is a laboratory that never existed, run by people who are
+no longer here to mind: Francis Aston, Hans Krebs, Maud Menten, Leonor
+Michaelis, Rosalyn Yalow, Archibald Garrod.
+
+What it measures is real, and so are the concentrations: therapeutic drug
+monitoring, immunosuppressants, steroid hormones, vitamins, catecholamines,
+alcohol markers and drugs of abuse, on two mass spectrometers, a
+chromatograph and a gas chromatograph with a headspace sampler — 44 analytes,
+56 methods over seven matrices, 133 lots, 8348 results over six months.
+
+Four series have something wrong with them, because a program for quality
+control whose sample data is all in control teaches nothing: a calibration
+drifting on the phenytoin, a mean that moved and stayed there on the
+tacrolimus, imprecision quietly getting worse on the lamotrigine, one bad
+morning on the valproic acid. They come out as `4:1S`, `10:X` and `1:2S`,
+with the notes that were written about them.
+
+Everybody's password is `pass`.
+
+```
+rm sql/biovarase.sl3
+sqlite3 sql/biovarase.sl3 < sql/biovarase.sql     # build it again
+sqlite3 -init sql/console.sql sql/biovarase.sl3   # look inside it
 ```
 
-Output: `dist/biovarase.dist/biovarase.exe`
+## What is worth reading
 
-### Coding Standards
+**The charts are drawn by hand.** Six canvases, no plotting library:
+Levey-Jennings with the bands and the points beyond four standard deviations
+clipped as triangles, Youden, total error, Bland-Altman, the bias bar, the
+frequency histogram. Each one is a few hundred lines of lines, arcs and text
+on a `tk.Canvas`.
 
-- **Python Version**: 3.7+ (maintain backward compatibility)
-- **Style**: Follow PEP 8
-- **Docstrings**: English, Google-style format
-- **Comments**: English only
-- **Type Hints**: Preferred but not required (Python 3.7 compatible)
-- **Testing**: Pytest with fixtures and markers
+**The audit trail is triggers.** Six of them, in
+[sql/ddl/001_schema.sql](sql/ddl/001_schema.sql). SQLite has no
+`CURRENT_USER`, so the login writes who is working into a one-row `session`
+table and the triggers read it from there — in the open, where it can be
+read.
 
-For detailed coding guidelines, see **[CLAUDE.md](./CLAUDE.md)**.
+**Written by hand where it teaches.** The log, the settings reader, the
+Observer, the register of open windows: each one a short class, where the
+standard library has a module that would do it. `logging`, `configparser` and
+the rest are named in the docstrings, so what they do underneath can be seen
+in forty lines.
 
----
+**Composition, not inheritance.** The engine owns a db, a log, the settings,
+the statistics, the rules, the exporter and the windows, and is none of them:
+`engine.db.read(...)`, `engine.qc.get_mean(...)`. A call says who does the
+work.
 
-## License
+95 tests, `unittest` from the standard library, a database in memory.
 
-This project is licensed under the **GNU General Public License v3.0**.
+## Layout
 
-See [LICENSE](./LICENSE) file for details.
+| | |
+|---|---|
+| `biovarase.py` | the entry point, and nothing else |
+| `ui/` | the windows, one class per file |
+| `engine.py` | what everything reaches |
+| `dbms.py`, `qc.py`, `westgards.py` | the database, the statistics, the rules |
+| `exporter.py`, `report.py` | the sheets, and the form that gets signed |
+| `*_canvas.py`, `ljcanvas.py` | the charts |
+| `sql/` | the schema, the queries, the sample database |
+| `tests/` | 95 of them |
+| `documents/` | the analytical goals, and how to build it |
 
----
+## Licence
 
-## Acknowledgments
+GNU GPL, version 3 or later. See [LICENSE](LICENSE).
 
-- **Westgard QC** - For statistical process control methodologies
-- **ISO/TC 212** - For medical laboratory standards
-- **Python Community** - For excellent tools and libraries
-
----
-
-## Author
-
-**Giuseppe Costanzi (1966bc)**
-- Email: giuseppecostanzi@gmail.com
-- Project: Biovarase Professional Edition v4.2
+Giuseppe Costanzi — biomedical laboratory technician, mass spectrometry
+section, and the person this was written for.
