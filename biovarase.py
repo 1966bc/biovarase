@@ -35,8 +35,8 @@ from app_config import (
     validate_ip_restriction,
     show_fatal_error,
 )
-import views.main as ui
-import views.login as login_view
+import ui.main as ui
+import ui.login as login_view
 from __version__ import (
     __version__,
     __release_date__,
