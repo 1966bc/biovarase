@@ -200,6 +200,11 @@ result**.
 
 **Result** is the value. A comma is accepted for the decimal point.
 
+**Save** saves. It does not ask: pressing it is the answer, and nothing here
+is destroyed by saving - a correction keeps what the value was, in the audit
+trail. The program asks before three things only: leaving it, rebuilding the
+database file, and replacing the target and SD of a lot.
+
 **Received** is the day the control was run. It opens on today. The time is
 the moment the result is entered; a result corrected later keeps the time it
 was run at, because that is when the control was measured and the chart is

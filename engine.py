@@ -76,8 +76,6 @@ class Engine:
         self.batch_data = None
 
         self.no_selected = "Attention!\nNo record selected!"
-        self.ask_to_delete = "Delete data?"
-        self.ask_to_save = "Save data?"
         self.user_not_enable = "You are not allowed to do this."
 
     def __str__(self):

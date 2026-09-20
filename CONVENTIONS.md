@@ -78,8 +78,13 @@ The rules this code is written by.
   `<=`, `>=`, `->`. A letter with an accent on it is a letter, and stays -
   Böhm is spelt Böhm - but a glyph that is there to decorate a comment is
   noise in a diff and a question mark in somebody else's terminal.
-- Confirmations through `messagebox`, with the texts held by the engine
-  (`ask_to_save`, `ask_to_delete`, `abort`, `no_selected`).
+- **A confirmation is for what cannot be taken back**, or is about to cost
+  something: leaving the program, rebuilding the database file, replacing the
+  target and SD of a lot. Not for Save — pressing Save is the answer, and a
+  box that asks it again teaches people to hit Enter without reading, so that
+  the one confirmation that mattered is hit the same way. And nothing is ever
+  told to somebody after they have decided it: there is no "operation
+  aborted".
 
 ## The database
 

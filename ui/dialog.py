@@ -15,7 +15,6 @@ Inheritance where it belongs: a form for a unit *is a* dialog.
 """
 
 import tkinter as tk
-from tkinter import messagebox
 from tkinter import ttk
 
 
@@ -113,18 +112,20 @@ class Dialog(tk.Toplevel):
         return self.engine.db.get_selected(self.TABLE, key, self.row_id)
 
     def on_save(self, evt=None):
-        """Check the fields, ask, and write.
+        """Check the fields and write.
 
-        Nothing is said when the answer is no: the person just said it, and
-        a box telling them what they have this moment decided is a click
-        asked for no reason.
+        Nothing is asked. Save is the answer: a box that wants it confirmed
+        is asking about a decision already taken, and nothing here destroys
+        anything - a correction keeps the old value in the audit trail, and
+        a row saved by mistake is corrected like any other.
+
+        The confirmations this program does ask are for what cannot be taken
+        back or is about to cost something: leaving, rebuilding the database
+        file, and replacing the target and SD of a lot.
         """
         if self.engine.tools.on_fields_control(self.frm_fields,
                                                self.engine.app_title):
-            if messagebox.askyesno(self.engine.app_title,
-                                   self.engine.ask_to_save,
-                                   parent=self):
-                self.save()
+            self.save()
 
     def save(self):
         """Write the row, close, and tell whoever shows this table which row.
