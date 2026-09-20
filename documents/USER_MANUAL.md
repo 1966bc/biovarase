@@ -1,6 +1,6 @@
 ---
-title: "Biovarase - User manual"
-subtitle: "Internal quality control for a single medical laboratory"
+title: "The Biovarase User's Manual"
+subtitle: "One lab, one chart."
 lang: en
 toc: true
 toc-depth: 2
