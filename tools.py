@@ -11,7 +11,6 @@ Version: 4.2 (Professional Edition)
 """
 import tkinter as tk
 from tkinter import messagebox, ttk
-from typing import Callable, Optional, Any, List
 
 
 class Tools:
@@ -19,17 +18,17 @@ class Tools:
 
     BASE_BG_RGB = (240, 240, 237)
 
-    def __init__(self) -> None:
+    def __init__(self):
         """Initialize shared style instance."""
         self._style = ttk.Style()
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"class: {self.__class__.__name__}"
 
     # -------------------------------------------------------------------------
     # Style Configuration
     # -------------------------------------------------------------------------
-    def set_style(self, style: ttk.Style) -> None:
+    def set_style(self, style):
         """Set a unified theme and styles for the application widgets."""
         style.theme_use("clam")
 
@@ -120,15 +119,15 @@ class Tools:
     # -------------------------------------------------------------------------
     # Color Utilities
     # -------------------------------------------------------------------------
-    def get_rgb(self, r: int, g: int, b: int) -> str:
+    def get_rgb(self, r, g, b):
         """Convert RGB integers to a Tkinter-friendly hex color."""
         return "#%02x%02x%02x" % (r, g, b)
 
-    def get_base_bg_color_hex(self) -> str:
+    def get_base_bg_color_hex(self):
         """Returns the application's base background color in Tkinter hex format."""
         return self.get_rgb(*self.BASE_BG_RGB)
 
-    def fixed_map(self, option: str) -> List[tuple]:
+    def fixed_map(self, option):
         """Fix style map for Treeview to support themed widgets in Tk 8.6.9."""
         style = ttk.Style()
         return [elm for elm in style.map('Treeview', query_opt=option)]
@@ -136,7 +135,7 @@ class Tools:
     # -------------------------------------------------------------------------
     # Window Utilities
     # -------------------------------------------------------------------------
-    def center_window(self, window: Any, on_screen: bool = False) -> None:
+    def center_window(self, window, on_screen=False):
         """
         Center a window on its parent or on screen.
 
@@ -166,7 +165,7 @@ class Tools:
         y = ref_y + (ref_height - height) // 2
         window.geometry(f"+{x}+{y}")  # Only set position, keep size
 
-    def safe_close(self, win: Any) -> None:
+    def safe_close(self, win):
         """
         Safely close a Toplevel window.
 
@@ -190,7 +189,7 @@ class Tools:
         except Exception:
             pass
 
-    def close_unregistered_toplevels(self, root: tk.Misc) -> None:
+    def close_unregistered_toplevels(self, root):
         """
         Close all Toplevel windows that are NOT registered in self.dict_instances.
 
@@ -208,7 +207,7 @@ class Tools:
         except Exception:
             pass
 
-    def close_all_windows_except_main(self) -> None:
+    def close_all_windows_except_main(self):
         """
         Close all registered windows except 'main'.
 
@@ -239,8 +238,8 @@ class Tools:
     # -------------------------------------------------------------------------
     # Widget Factories (minimal set)
     # -------------------------------------------------------------------------
-    def create_button(self, parent: Any, text: str, command: Callable,
-                      width: int = 10, underline: int = 0, **kwargs) -> ttk.Button:
+    def create_button(self, parent, text, command,
+                      width=10, underline=0, **kwargs):
         """
         Create a standard application button.
 
@@ -267,13 +266,13 @@ class Tools:
     # -------------------------------------------------------------------------
     # Validation
     # -------------------------------------------------------------------------
-    def get_validate_integer(self, caller: Any) -> tuple:
+    def get_validate_integer(self, caller):
         """Return validation tuple for integer fields."""
         return (caller.register(self.validate_integer), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 
-    def validate_integer(self, action: str, index: str, value_if_allowed: str,
-                         prior_value: str, text: str, validation_type: str,
-                         trigger_type: str, widget_name: str) -> bool:
+    def validate_integer(self, action, index, value_if_allowed,
+                         prior_value, text, validation_type,
+                         trigger_type, widget_name):
         """Validate integer input in real time."""
         if action == '1':
             if text in '0123456789':
@@ -285,13 +284,13 @@ class Tools:
             return False
         return True
 
-    def get_float_vcmd(self, caller: Any) -> tuple:
+    def get_float_vcmd(self, caller):
         """Return validation tuple for float fields."""
         return (caller.register(self.validate_float), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 
-    def validate_float(self, action: str, index: str, value_if_allowed: str,
-                       prior_value: str, text: str, validation_type: str,
-                       trigger_type: str, widget_name: str) -> bool:
+    def validate_float(self, action, index, value_if_allowed,
+                       prior_value, text, validation_type,
+                       trigger_type, widget_name):
         """Validate float input in real time."""
         if action == "1":
             if text in '0123456789.-+':
@@ -303,12 +302,12 @@ class Tools:
             return False
         return True
 
-    def limit_chars(self, c: int, v: tk.StringVar, *args: Any) -> None:
+    def limit_chars(self, c, v, *args):
         """Limit characters in a StringVar to a given length."""
         if len(v.get()) > c:
             v.set(v.get()[:-1])
 
-    def get_user_friendly_db_error(self, error: Exception) -> str:
+    def get_user_friendly_db_error(self, error):
         """
         Convert database error to user-friendly message.
 
@@ -341,7 +340,7 @@ class Tools:
         # Generic fallback
         return msg
 
-    def _iter_widgets(self, container: Any):
+    def _iter_widgets(self, container):
         """Recursively iterate over all descendant widgets."""
         stack = [container]
         while stack:
@@ -350,7 +349,7 @@ class Tools:
             if hasattr(w, "winfo_children"):
                 stack.extend(w.winfo_children())
 
-    def on_fields_control(self, container: Any, title: Optional[str] = None) -> bool:
+    def on_fields_control(self, container, title=None):
         """
         Validate that all required fields are properly filled.
 
@@ -403,7 +402,7 @@ class Tools:
     # Text Utilities
     # -------------------------------------------------------------------------
     @staticmethod
-    def normalize_desc(value: str, compress: bool = True) -> str:
+    def normalize_desc(value, compress=True):
         """
         Normalize a textual description.
 
@@ -424,7 +423,7 @@ class Tools:
     # -------------------------------------------------------------------------
     # Treeview Utilities
     # -------------------------------------------------------------------------
-    def parse_iid(self, iid: str) -> dict:
+    def parse_iid(self, iid):
         """
         Parse a Treeview item identifier like 'lab_7' or 'section_12'.
 
@@ -439,20 +438,20 @@ class Tools:
         except Exception:
             return {}
 
-    def clear_treeview(self, tree: ttk.Treeview) -> None:
+    def clear_treeview(self, tree):
         """Clear all items from a Treeview widget."""
         for iid in tree.get_children():
             tree.delete(iid)
 
-    def clear_listbox(self, listbox: tk.Listbox) -> None:
+    def clear_listbox(self, listbox):
         """Clear all items from a Listbox widget."""
         listbox.delete(0, tk.END)
 
     # -------------------------------------------------------------------------
     # Button Factory with Hotkey
     # -------------------------------------------------------------------------
-    def add_button(self, parent: Any, text: str, command: Callable,
-                   hotkey: Optional[str] = None, window: Any = None) -> ttk.Button:
+    def add_button(self, parent, text, command,
+                   hotkey=None, window=None):
         """
         Create a button and optionally bind a hotkey.
 
@@ -483,8 +482,8 @@ class Tools:
     # -------------------------------------------------------------------------
     # Child Window Management
     # -------------------------------------------------------------------------
-    def open_child(self, parent: Any, child_class: type,
-                   index: Any = None, **kwargs) -> Any:
+    def open_child(self, parent, child_class,
+                   index=None, **kwargs):
         """
         Safely open a child editor window, destroying any previous instance.
 

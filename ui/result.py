@@ -14,7 +14,6 @@ test results. Results include test measurements, received timestamps, and status
 import sys
 import inspect
 from datetime import datetime
-from typing import Optional, Any, List
 import tkinter as tk
 
 from i18n import _
@@ -36,7 +35,7 @@ class UI(ChildView):
     Opens via engine.on_open() for creating new results or editing existing ones.
     """
 
-    def __init__(self, parent: tk.Widget, index: Optional[str] = None) -> None:
+    def __init__(self, parent, index=None):
         """
         Initialize the result editor window.
 
@@ -74,7 +73,7 @@ class UI(ChildView):
         self.engine.dict_instances[self.winfo_name()] = self
         self.show()
 
-    def _build_ui(self) -> None:
+    def _build_ui(self):
         """Build the user interface layout following GNOME/Windows HIG."""
         paddings = {"padx": 5, "pady": 5}
 
@@ -218,7 +217,7 @@ class UI(ChildView):
         self.bind("<Alt-s>", self._on_save)
         btn_save.grid(row=0, column=c)
 
-    def on_open(self) -> None:
+    def on_open(self):
         """
         Entry point called by the parent after creating the dialog.
 
@@ -278,7 +277,7 @@ class UI(ChildView):
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight() + 20)
 
-    def _focus_entry(self) -> None:
+    def _focus_entry(self):
         """Ensure focus goes to result entry field."""
         try:
             self.lift()
@@ -292,7 +291,7 @@ class UI(ChildView):
         except Exception as e:
             pass
 
-    def _set_values(self) -> None:
+    def _set_values(self):
         """Fill widgets from selected_result for update mode."""
         # Received datetime
         try:
@@ -399,7 +398,7 @@ class UI(ChildView):
                 "created_by": created_by,
                 "created_at": created_at}
 
-    def _on_save(self, evt: Optional[tk.Event] = None) -> None:
+    def _on_save(self, evt=None):
         """
         Save the result to the database.
 
@@ -446,7 +445,7 @@ class UI(ChildView):
 
         self.on_cancel()
 
-    def _update_main_results_lists(self) -> None:
+    def _update_main_results_lists(self):
         """
         Ask main window to refresh results list.
 
@@ -465,7 +464,7 @@ class UI(ChildView):
                 sys.modules[__name__],
             )
 
-    def _set_index(self, last_id: int) -> None:
+    def _set_index(self, last_id):
         """
         Ensure the saved/inserted row is selected in parent.lstResults.
 
@@ -486,7 +485,7 @@ class UI(ChildView):
         self.parent.lstResults.selection_set(item_id)
         self.parent.lstResults.see(item_id)
 
-    def _delete(self, evt: Optional[tk.Event] = None) -> None:
+    def _delete(self, evt=None):
         """
         Soft-delete current result (set is_delete = 1).
 
@@ -535,7 +534,7 @@ class UI(ChildView):
 
         self.on_cancel()
 
-    def on_cancel(self, _evt: Optional[tk.Event] = None) -> None:
+    def on_cancel(self, _evt=None):
         """
         Close the window without saving.
 

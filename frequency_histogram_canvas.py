@@ -10,7 +10,6 @@
 # -----------------------------------------------------------------------------
 
 import tkinter as tk
-from typing import Iterable, List, Optional, Tuple, Any
 
 
 class FrequencyHistogramCanvas(tk.Canvas):
@@ -41,7 +40,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
     FONT_LABEL = ("TkDefaultFont", 9)
     FONT_TITLE = ("TkDefaultFont", 8, "bold")
 
-    def __init__(self, parent: tk.Widget, **kwargs: Any) -> None:
+    def __init__(self, parent, **kwargs):
         """
         Create a frequency histogram canvas.
 
@@ -50,13 +49,13 @@ class FrequencyHistogramCanvas(tk.Canvas):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._values: List[float] = []
-        self._target: Optional[float] = None
-        self._mean: Optional[float] = None
-        self._title: Optional[str] = None
-        self._x_label: str = "Result"
-        self._y_label: str = "Frequency"
-        self._bottom_text: str = ""
+        self._values = []
+        self._target = None
+        self._mean = None
+        self._title = None
+        self._x_label = "Result"
+        self._y_label = "Frequency"
+        self._bottom_text = ""
 
         self.bind("<Configure>", self._on_resize)
 
@@ -66,16 +65,16 @@ class FrequencyHistogramCanvas(tk.Canvas):
 
     def draw_histogram(
         self,
-        values: Iterable[float],
-        target: Optional[float] = None,
-        mean: Optional[float] = None,
+        values,
+        target=None,
+        mean=None,
         *,
-        title: Optional[str] = None,
-        x_label: str = "Result",
-        y_label: str = "Frequency",
-        bottom_text: Optional[str] = None,
-        max_bins: int = 10,
-    ) -> None:
+        title=None,
+        x_label = "Result",
+        y_label = "Frequency",
+        bottom_text=None,
+        max_bins=10,
+    ):
         """
         Draw histogram for the given values.
 
@@ -101,7 +100,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
         self._max_bins = max_bins
         self._redraw()
 
-    def clear(self) -> None:
+    def clear(self):
         """Clear the canvas content."""
         self.delete("all")
 
@@ -109,11 +108,11 @@ class FrequencyHistogramCanvas(tk.Canvas):
     # Internal helpers                                                   #
     # ------------------------------------------------------------------ #
 
-    def _on_resize(self, event: tk.Event) -> None:
+    def _on_resize(self, event):
         if self._values:
             self._redraw()
 
-    def _redraw(self) -> None:
+    def _redraw(self):
         self.delete("all")
 
         if not self._values:
@@ -151,7 +150,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
         self._draw_title(width)
         self._draw_bottom_text(x0, x1, y1)
 
-    def _draw_no_data(self) -> None:
+    def _draw_no_data(self):
         w = self.winfo_width()
         h = self.winfo_height()
         self.create_text(
@@ -165,7 +164,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
     # ---------------------------- Histogram ---------------------------- #
 
     @staticmethod
-    def _compute_histogram(values: List[float], max_bins: int) -> Tuple[List[Tuple[float, float]], List[int]]:
+    def _compute_histogram(values, max_bins):
         """
         Compute simple histogram bins and counts.
 
@@ -192,7 +191,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
 
         bin_width = (v_max - v_min) / nb
 
-        bins: List[Tuple[float, float]] = []
+        bins = []
         start = v_min
         for _ in range(nb):
             end = start + bin_width
@@ -214,13 +213,13 @@ class FrequencyHistogramCanvas(tk.Canvas):
 
     # ------------------------------ Axes ------------------------------- #
 
-    def _draw_axes(self, x0: int, y0: int, x1: int, y1: int) -> None:
+    def _draw_axes(self, x0, y0, x1, y1):
         # Y axis
         self.create_line(x0, y0, x0, y1, fill=self.AXIS_COLOR, width=1)
         # X axis
         self.create_line(x0, y1, x1, y1, fill=self.AXIS_COLOR, width=1)
 
-    def _draw_grid_y(self, x0: int, y0: int, x1: int, y1: int, max_count: int) -> None:
+    def _draw_grid_y(self, x0, y0, x1, y1, max_count):
         # Simple grid: 4 horizontal lines
         steps = 4
         for i in range(1, steps + 1):
@@ -232,14 +231,14 @@ class FrequencyHistogramCanvas(tk.Canvas):
 
     def _draw_bars(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        bins: List[Tuple[float, float]],
-        counts: List[int],
-        max_count: int,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        bins,
+        counts,
+        max_count,
+    ):
         n_bins = len(bins)
         if n_bins == 0 or max_count <= 0:
             return
@@ -273,12 +272,12 @@ class FrequencyHistogramCanvas(tk.Canvas):
 
     def _draw_vertical_lines(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        bins: List[Tuple[float, float]],
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        bins,
+    ):
         if not bins:
             return
 
@@ -286,7 +285,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
         v_max = bins[-1][1]
         span = v_max - v_min if v_max != v_min else 1.0
 
-        def value_to_x(value: float) -> float:
+        def value_to_x(value):
             t = (value - v_min) / span
             return x0 + t * (x1 - x0)
 
@@ -326,7 +325,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
 
     # --------------------------- Labels / title ------------------------ #
 
-    def _draw_y_labels(self, x0: int, y0: int, y1: int, max_count: int) -> None:
+    def _draw_y_labels(self, x0, y0, y1, max_count):
         steps = 4
         for i in range(0, steps + 1):
             value = int(round(max_count * i / steps))
@@ -363,7 +362,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
                 fill=self.AXIS_COLOR,
             )
 
-    def _draw_x_labels(self, x0: int, y0: int, x1: int, y1: int, bins: List[Tuple[float, float]]) -> None:
+    def _draw_x_labels(self, x0, y0, x1, y1, bins):
         n_bins = len(bins)
         if n_bins == 0:
             return
@@ -395,7 +394,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
                 fill=self.AXIS_COLOR,
             )
 
-    def _draw_title(self, width: int) -> None:
+    def _draw_title(self, width):
         if not self._title:
             return
         self.create_text(
@@ -407,7 +406,7 @@ class FrequencyHistogramCanvas(tk.Canvas):
             fill=self.AXIS_COLOR,
         )
 
-    def _draw_bottom_text(self, x0: int, x1: int, y1: int) -> None:
+    def _draw_bottom_text(self, x0, x1, y1):
         if not self._bottom_text:
             return
         self.create_text(

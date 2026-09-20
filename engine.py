@@ -70,7 +70,6 @@ import inspect
 import traceback
 import datetime
 import socket
-from typing import Dict, Any
 
 from tools import Tools
 from dbms import DBMS
@@ -233,7 +232,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
     # Observer Pattern: Event System
     # -------------------------------------------------------------------------
 
-    def subscribe(self, event: str, callback) -> None:
+    def subscribe(self, event, callback):
         """
         Register a callback for an event.
 
@@ -253,7 +252,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         if callback not in self._subscribers[event]:
             self._subscribers[event].append(callback)
 
-    def unsubscribe(self, event: str, callback) -> None:
+    def unsubscribe(self, event, callback):
         """
         Remove a callback from an event.
 
@@ -269,7 +268,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
             except ValueError:
                 pass
 
-    def notify(self, event: str, data=None) -> None:
+    def notify(self, event, data=None):
         """
         Notify all subscribers of an event.
 
@@ -295,7 +294,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
     # Permission Helper Methods (Role-Based Access Control)
     # -------------------------------------------------------------------------
 
-    def can_validate_qc(self) -> bool:
+    def can_validate_qc(self):
         """
         Check if user can validate QC results.
 
@@ -308,7 +307,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         role = self.get_user_role()
         return role <= ROLE_SUPERUSER  # Roles 0-4 can validate
 
-    def can_configure_system(self) -> bool:
+    def can_configure_system(self):
         """
         Check if user can access global system configuration (master data).
 
@@ -323,7 +322,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         role = self.get_user_role()
         return role == ROLE_APP_ADMIN
 
-    def can_modify_data(self) -> bool:
+    def can_modify_data(self):
         """
         Check if user can insert/edit data.
 
@@ -338,7 +337,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         role = self.get_user_role()
         return role <= ROLE_TECHNICIAN  # Roles 0-5 can modify
 
-    def is_read_only(self) -> bool:
+    def is_read_only(self):
         """
         Check if user has read-only access.
 
@@ -351,7 +350,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         role = self.get_user_role()
         return role >= ROLE_VIEWER  # Only role 6 is read-only
 
-    def get_data_scope(self) -> tuple:
+    def get_data_scope(self):
         """
         Get appropriate data filtering scope based on user role and org_id.
 
@@ -377,7 +376,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
             lab_id = self.current_ids.get("lab_id")
             return ("lab", lab_id)
 
-    def can_manage_local_config(self) -> bool:
+    def can_manage_local_config(self):
         """
         Check if user can manage local configuration (workstations, test_methods, batches).
 
@@ -389,7 +388,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         role = self.get_user_role()
         return role <= ROLE_LAB_ADMIN  # Roles 0-3 can manage local config
 
-    def is_lab_admin(self) -> bool:
+    def is_lab_admin(self):
         """
         Check if user is Lab Admin (role=3).
 
@@ -400,7 +399,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         """
         return self.get_user_role() == ROLE_LAB_ADMIN
 
-    def get_user_org_id(self) -> int:
+    def get_user_org_id(self):
         """
         Return the org_id of the logged user.
 
@@ -409,7 +408,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         """
         return self.log_user.get("org_id")
 
-    def get_autologin_flag(self) -> bool:
+    def get_autologin_flag(self):
         """
         Return True if 'autologin' file exists and contains '1' (trimmed).
         Return False on missing file, '0', or any error.
@@ -432,7 +431,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
             )
             return False
 
-    def autologin_generic_user(self) -> bool:
+    def autologin_generic_user(self):
         """
         Try to perform autologin as the generic 'viewer' user.
 
@@ -502,7 +501,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
             self.on_log("load_context_ids", e, type(e), sys.modules[__name__])
             self.current_ids = {}
 
-    def init_current_ids_from_user(self, lab_id: int = None) -> bool:
+    def init_current_ids_from_user(self, lab_id=None):
         """
         Initialize current_ids from user's org_id or provided lab org_id.
 
@@ -567,13 +566,13 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
             self.current_ids = {}
             return False
 
-    def _get_org_type(self, org_id: int) -> str:
+    def _get_org_type(self, org_id):
         """Get the org_type for a given org_id."""
         sql = "SELECT org_type FROM organizations WHERE org_id = ?"
         row = self.read(False, sql, (org_id,))
         return row["org_type"] if row else None
 
-    def _get_first_lab_under_org(self, org_id: int) -> int:
+    def _get_first_lab_under_org(self, org_id):
         """
         Find the first active lab under the given organization (recursive).
 
@@ -596,7 +595,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         row = self.read(False, sql, (org_id,))
         return row["org_id"] if row else None
 
-    def get_user_role(self) -> int:
+    def get_user_role(self):
         """
         Return numeric role of logged user (0=admin, 1=superuser, 2=user).
         Returns 99 if role is not available.
@@ -606,7 +605,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         except (KeyError, TypeError, ValueError):
             return 99  # invalid / unknown
 
-    def is_admin(self) -> bool:
+    def is_admin(self):
         """
         Check if user is App Admin (role=0).
 
@@ -617,7 +616,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         """
         return self.get_user_role() == ROLE_APP_ADMIN
 
-    def is_superuser(self) -> bool:
+    def is_superuser(self):
         """
         Check if user is Superuser (role=4).
 
@@ -628,7 +627,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         """
         return self.get_user_role() == ROLE_SUPERUSER
 
-    def is_user(self) -> bool:
+    def is_user(self):
         """
         Check if user is Technician (role=5).
 
@@ -639,7 +638,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         """
         return self.get_user_role() == ROLE_TECHNICIAN
 
-    def can_delete_results(self) -> bool:
+    def can_delete_results(self):
         """
         Check if user can delete QC results.
 
@@ -735,7 +734,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         progress_widget.pack_forget()
         caller.update()
 
-    def set_log_user(self, rs: Dict[str, Any]) -> None:
+    def set_log_user(self, rs):
         """
         Set the logged-in user information.
 
@@ -792,7 +791,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
                         type(e),
                         sys.modules[__name__])
 
-    def get_show_expired_batches(self) -> int:
+    def get_show_expired_batches(self):
         """
         Read show_expired_batches preference from configuration.
 
@@ -807,7 +806,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         except (FileNotFoundError, IOError, ValueError):
             return 0  # default: hide expired batches
 
-    def set_show_expired_batches(self, value: int) -> None:
+    def set_show_expired_batches(self, value):
         """
         Save show_expired_batches preference to configuration file.
 
@@ -824,7 +823,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
                         type(e),
                         sys.modules[__name__])
 
-    def get_show_recent_only(self) -> int:
+    def get_show_recent_only(self):
         """
         Read show_recent_only preference from configuration.
 
@@ -839,7 +838,7 @@ class Engine(DBMS, Controller, QC, Westgards, Exporter, Launcher, Tools,
         except (FileNotFoundError, IOError, ValueError):
             return 1  # default: show recent batches only
 
-    def set_show_recent_only(self, value: int) -> None:
+    def set_show_recent_only(self, value):
         """
         Save show_recent_only preference to configuration file.
 

@@ -10,7 +10,6 @@
 #-----------------------------------------------------------------------------
 
 import tkinter as tk
-from typing import Optional, Any
 
 
 class TotalErrorCanvas(tk.Canvas):
@@ -45,21 +44,21 @@ class TotalErrorCanvas(tk.Canvas):
     FONT_TITLE   = ("TkDefaultFont", 10, "bold")
     FONT_SUMMARY = ("TkDefaultFont", 8)
 
-    def __init__(self, parent: tk.Widget, **kwargs: Any) -> None:
+    def __init__(self, parent, **kwargs):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._title: str = ""
-        self._unit: str = ""
-        self._te: float = 0.0
-        self._tea: float = 0.0
-        self._bias: float = 0.0
-        self._cv: float = 0.0
-        self._z: float = 0.0
-        self._n_series: int = 0
-        self._n_results: int = 0
-        self._date_from: Optional[str] = None
-        self._date_to: Optional[str] = None
+        self._title = ""
+        self._unit = ""
+        self._te = 0.0
+        self._tea = 0.0
+        self._bias = 0.0
+        self._cv = 0.0
+        self._z = 0.0
+        self._n_series = 0
+        self._n_results = 0
+        self._date_from = None
+        self._date_to = None
 
         self.bind("<Configure>", self._on_resize)
 
@@ -69,18 +68,18 @@ class TotalErrorCanvas(tk.Canvas):
     def draw_tea(
         self,
         *,
-        title: str,
-        te: float,
-        tea: float,
-        bias: float,
-        cv: float,
-        z_score: float,
-        n_series: int,
-        n_results: int,
-        unit: str = "",
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> None:
+        title,
+        te,
+        tea,
+        bias,
+        cv,
+        z_score,
+        n_series,
+        n_results,
+        unit = "",
+        date_from=None,
+        date_to=None,
+    ):
         """Draw Total Error dashboard for a single batch."""
         self._title = title
         self._unit = unit or ""
@@ -95,17 +94,17 @@ class TotalErrorCanvas(tk.Canvas):
         self._date_to = date_to
         self._redraw()
 
-    def clear(self) -> None:
+    def clear(self):
         self.delete("all")
 
     # ------------------------------------------------------------------ #
     # Internal helpers                                                   #
     # ------------------------------------------------------------------ #
-    def _on_resize(self, event: tk.Event) -> None:
+    def _on_resize(self, event):
         if self._tea or self._te:
             self._redraw()
 
-    def _redraw(self) -> None:
+    def _redraw(self):
         self.delete("all")
 
         width = self.winfo_width()
@@ -127,7 +126,7 @@ class TotalErrorCanvas(tk.Canvas):
         if max_val <= 0:
             max_val = 5.0
 
-        def value_to_x(v: float) -> float:
+        def value_to_x(v):
             if max_val == 0:
                 return (x0 + x1) / 2.0
             t = max(0.0, min(v / max_val, 1.0))
@@ -268,7 +267,7 @@ class TotalErrorCanvas(tk.Canvas):
             fill="#333333",
         )
 
-    def _draw_no_data(self) -> None:
+    def _draw_no_data(self):
         w = self.winfo_width()
         h = self.winfo_height()
         self.create_text(

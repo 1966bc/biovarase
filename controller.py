@@ -40,7 +40,6 @@ import os
 import sys
 import inspect
 import re
-from typing import Optional, List, Dict, Tuple, Any, Union
 
 import bcrypt
 
@@ -87,11 +86,11 @@ class Controller:
         >>> if user:
         ...     print(f"Logged in as: {user['username']}")
     """
-    def __str__(self) -> str:
+    def __str__(self):
         return "class: %s\nMRO: %s" % (self.__class__.__name__,  [x.__name__ for x in Controller.__mro__])
 
 
-    def get_autologin_user(self) -> Optional[Dict[str, Any]]:
+    def get_autologin_user(self):
         """
         Return the generic 'viewer' user for autologin as a dict,
         or None if not found or disabled.
@@ -107,7 +106,7 @@ class Controller:
         args = ("viewer",)
         return self.read(False, sql, args)
 
-    def close_instance(self, name: str) -> None:
+    def close_instance(self, name):
         """
         Close a registered window instance by name.
 
@@ -131,7 +130,7 @@ class Controller:
             # Ensure cleanup
             registry.pop(name, None)
 
-    def refresh_windows_for_table(self, table_name: str) -> None:
+    def refresh_windows_for_table(self, table_name):
         """
         Central dispatcher for cross-window GUI refreshes after editing lookup tables.
         """
@@ -222,7 +221,7 @@ class Controller:
                 print(e)
 
 
-    def get_primary_key(self, table_name: str) -> str:
+    def get_primary_key(self, table_name):
         # Use cache to avoid re-querying INFORMATION_SCHEMA
         if "_pk_cache" not in self.__dict__:
             self._pk_cache = {}
@@ -254,7 +253,7 @@ class Controller:
 
 
 
-    def on_login(self, args: Tuple[str, bytes]) -> Optional[Dict[str, Any]]:
+    def on_login(self, args):
         """
         Authenticate user by nickname and password.
 
@@ -281,14 +280,14 @@ class Controller:
 
         return None
 
-    def get_new_password(self) -> str:
+    def get_new_password(self):
         """Generate a bcrypt hash for default password 'pass'."""
         new_password = b'pass'
         # Generate a salt and hash the password
         hashed_password = bcrypt.hashpw(new_password, bcrypt.gensalt())
         return hashed_password.decode('utf-8')
 
-    def get_company_data(self) -> Optional[Dict[str, Any]]:
+    def get_company_data(self):
         """
         Retrieve hierarchical organization information for the current lab context.
 
@@ -325,7 +324,7 @@ class Controller:
 
         return result
 
-    def get_selected(self, table: str, field: str, pk: Any) -> Optional[Dict[Union[int, str], Any]]:
+    def get_selected(self, table, field, pk):
         """
         Return a single row from the given table.
 
@@ -375,12 +374,12 @@ class Controller:
 
     def get_series(
         self,
-        batch_id: int,
-        workstation_id: int,
-        limit: Optional[int] = None,
-        result_id: Optional[int] = None,
+        batch_id,
+        workstation_id,
+        limit=None,
+        result_id=None,
         db=None
-    ) -> List[float]:
+    ):
         """
         Retrieve QC results series for a given batch and workstation.
 
@@ -434,11 +433,11 @@ class Controller:
 
         return series
 
-    def get_lab_id(self) -> Optional[int]:
+    def get_lab_id(self):
         """Return the lab_id for the current section loaded in memory."""
         return self.current_ids.get("lab_id")
 
-    def get_idd_by_section_id(self, section_id: int) -> Optional[Dict[str, int]]:
+    def get_idd_by_section_id(self, section_id):
         """
         Return the hierarchical IDs for a given section_id as a dict:
 
@@ -494,7 +493,7 @@ class Controller:
 
         return result
 
-    def get_idd_by_lab_id(self, lab_id: int) -> Optional[Dict[str, int]]:
+    def get_idd_by_lab_id(self, lab_id):
         """
         Return the hierarchical IDs for a given lab_id (org_id) as a dict.
 
@@ -529,7 +528,7 @@ class Controller:
 
         return result
 
-    def get_first_section_by_lab(self, lab_id: int) -> Optional[Dict[str, Any]]:
+    def get_first_section_by_lab(self, lab_id):
         """
         Return the first active section for a given lab_id (org_id).
 
@@ -553,7 +552,7 @@ class Controller:
         """
         return self.read(False, sql, (lab_id,))
 
-    def get_lab_id_by_section_id(self, section_id: int) -> Optional[int]:
+    def get_lab_id_by_section_id(self, section_id):
         """
         Return the lab_id (org_id) associated with the given section_id (org_id).
 
@@ -577,7 +576,7 @@ class Controller:
 
         return row["lab_id"]
 
-    def get_test_name(self, test_id: int) -> Optional[str]:
+    def get_test_name(self, test_id):
         """
         Return test description for given test_id.
 
@@ -591,7 +590,7 @@ class Controller:
         row = self.read(False, sql, (test_id,))
         return row["description"] if row else None
 
-    def get_control_name(self, control_id: int) -> Optional[str]:
+    def get_control_name(self, control_id):
         """
         Return control description for given control_id.
 
@@ -605,7 +604,7 @@ class Controller:
         row = self.read(False, sql, (control_id,))
         return row["description"] if row else None
 
-    def get_um(self, unit_id: int) -> Optional[Dict[str, Any]]:
+    def get_um(self, unit_id):
         """
         Return unit of measurement as a dict like:
             {'description': 'mg/dL'}
@@ -619,7 +618,7 @@ class Controller:
         """
         return self.read(False, sql, (unit_id,))
 
-    def get_mandatory(self) -> List[str]:
+    def get_mandatory(self):
         """
         Return list of mandatory test descriptions for current lab.
 
@@ -646,7 +645,7 @@ class Controller:
 
         return mandatory_tests
 
-    def get_test_method_with_goals(self, test_method_id: int) -> Optional[Dict[str, Any]]:
+    def get_test_method_with_goals(self, test_method_id):
         """
         Return a unified dictionary containing:
           - all fields from test_methods

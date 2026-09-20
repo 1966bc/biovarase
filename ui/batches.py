@@ -36,7 +36,6 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from typing import Optional, List, Tuple, Dict, Any
 
 from i18n import _
 from ui.parent_view import ParentView
@@ -102,7 +101,7 @@ class UI(ParentView):
         child: Reference to open batch editor window
     """
 
-    def __init__(self, parent: tk.Widget) -> None:
+    def __init__(self, parent):
         """
         Initialize the batches window.
 
@@ -114,15 +113,15 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self._loaded: bool = False
+        self._loaded = False
         self.resizable(True, True)
         self.geometry("900x600")
 
         # Selection state
-        self.child: Optional[tk.Toplevel] = None
-        self.selected_workstation: Optional[Dict[str, Any]] = None
-        self.selected_test_method: Optional[Dict[str, Any]] = None
-        self.selected_batch: Optional[Dict[str, Any]] = None
+        self.child = None
+        self.selected_workstation = None
+        self.selected_test_method = None
+        self.selected_batch = None
 
         # Subscribe to events (Observer pattern)
         self.engine.subscribe("batch_changed", self._on_batch_changed)
@@ -140,7 +139,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     # UI Construction
     # ---------------------------------------------------------------------
-    def _build_ui(self) -> None:
+    def _build_ui(self):
         """
         Build the three-pane interface.
 
@@ -157,7 +156,7 @@ class UI(ParentView):
         self.pw.pack(fill=tk.BOTH, expand=1, padx=5, pady=5)
 
         # Remember pane weight ratios for sash placement
-        self._weights: Tuple[float, float, float] = PANE_WEIGHTS
+        self._weights = PANE_WEIGHTS
 
         pane_left = ttk.Frame(self.pw, style="App.TFrame")
         pane_mid = ttk.Frame(self.pw, style="App.TFrame")
@@ -264,7 +263,7 @@ class UI(ParentView):
         # Place sashes after first draw
         self.after_idle(self._place_sashes)
 
-    def _place_sashes(self) -> None:
+    def _place_sashes(self):
         """
         Place PanedWindow sashes based on configured weight ratios.
 
@@ -296,7 +295,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     # Window Lifecycle
     # ---------------------------------------------------------------------
-    def on_open(self) -> None:
+    def on_open(self):
         """
         Called when window is opened or re-opened.
 
@@ -317,7 +316,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     # Tree Loading
     # ---------------------------------------------------------------------
-    def reload(self) -> None:
+    def reload(self):
         """
         Force reload of the entire tree.
 
@@ -329,7 +328,7 @@ class UI(ParentView):
         except (AttributeError, ValueError, KeyError) as e:
             self.engine.on_log("reload", e, type(e), sys.modules[__name__])
 
-    def _load_tree(self, _evt: Optional[tk.Event] = None) -> None:
+    def _load_tree(self, _evt=None):
         """
         Populate the Organizations hierarchy tree from the organizations table.
 
@@ -366,13 +365,13 @@ class UI(ParentView):
         # Auto-expand all nodes for better UX
         self._expand_all(root)
 
-    def _expand_all(self, parent_iid: str) -> None:
+    def _expand_all(self, parent_iid):
         """Recursively expand all tree nodes."""
         for child in self.Sites.get_children(parent_iid):
             self.Sites.item(child, open=True)
             self._expand_all(child)
 
-    def _build_full_tree(self, root: str) -> None:
+    def _build_full_tree(self, root):
         """Build full organization tree (App Admin only)."""
         countries = self._load_orgs_by_type(None, "country")
         for country_id, country_name in countries:
@@ -381,7 +380,7 @@ class UI(ParentView):
                               values=(country_id, NODE_TYPE_COUNTRY))
             self._build_regions(country_iid, country_id)
 
-    def _build_regions(self, parent_iid: str, country_id: int) -> None:
+    def _build_regions(self, parent_iid, country_id):
         """Build regions under a country."""
         regions = self._load_orgs_by_type(country_id, "region")
         for region_id, region_name in regions:
@@ -390,7 +389,7 @@ class UI(ParentView):
                               values=(region_id, NODE_TYPE_REGION))
             self._build_sites(region_iid, region_id)
 
-    def _build_sites(self, parent_iid: str, region_id: int) -> None:
+    def _build_sites(self, parent_iid, region_id):
         """Build sites under a region."""
         sites = self._load_orgs_by_type(region_id, "site")
         for site_id, site_name in sites:
@@ -399,7 +398,7 @@ class UI(ParentView):
                               values=(site_id, NODE_TYPE_SITE))
             self._build_labs(site_iid, site_id)
 
-    def _build_labs(self, parent_iid: str, site_id: int) -> None:
+    def _build_labs(self, parent_iid, site_id):
         """Build labs under a site."""
         labs = self._load_orgs_by_type(site_id, "lab")
         for lab_id, lab_name in labs:
@@ -408,7 +407,7 @@ class UI(ParentView):
                               values=(lab_id, NODE_TYPE_LAB))
             self._build_sections(lab_iid, lab_id)
 
-    def _build_sections(self, parent_iid: str, lab_id: int) -> None:
+    def _build_sections(self, parent_iid, lab_id):
         """Build sections under a lab, including workstations."""
         sections = self._load_orgs_by_type(lab_id, "section")
         for section_id, section_name in sections:
@@ -422,7 +421,7 @@ class UI(ParentView):
                 self.Sites.insert(sec_iid, tk.END, iid=ws_iid, text=ws_descr,
                                   values=(ws_id, NODE_TYPE_WORKSTATION))
 
-    def _build_lab_only_tree(self, root: str, user_org_id: Optional[int]) -> None:
+    def _build_lab_only_tree(self, root, user_org_id):
         """Build tree showing only user's assigned lab (role >= 3)."""
         if user_org_id is None:
             return
@@ -463,7 +462,7 @@ class UI(ParentView):
         # Build sections under this lab (with workstations)
         self._build_sections(lab_iid, lab_id)
 
-    def _build_scoped_tree(self, root: str, user_org_id: Optional[int], role: int) -> None:
+    def _build_scoped_tree(self, root, user_org_id, role):
         """Build tree for Country/Regional Admin (role 1-2)."""
         if user_org_id is None:
             return
@@ -492,7 +491,7 @@ class UI(ParentView):
             # Fallback to lab-only view
             self._build_lab_only_tree(root, user_org_id)
 
-    def _load_orgs_by_type(self, parent_id: Optional[int], org_type: str) -> List[Tuple[int, str]]:
+    def _load_orgs_by_type(self, parent_id, org_type):
         """
         Load organizations of a specific type under a parent.
 
@@ -527,7 +526,7 @@ class UI(ParentView):
             self.engine.on_log("_load_orgs_by_type", e, type(e), sys.modules[__name__])
             return []
 
-    def _load_workstations(self, section_org_id: int) -> List[Tuple[int, str]]:
+    def _load_workstations(self, section_org_id):
         """
         Load active workstations for a given section (by org_id).
 
@@ -551,18 +550,18 @@ class UI(ParentView):
             return []
 
     # Legacy methods for backward compatibility (deprecated)
-    def _load_labs(self, site_id: int) -> List[Tuple[int, str]]:
+    def _load_labs(self, site_id):
         """Deprecated: Use _load_orgs_by_type instead."""
         return self._load_orgs_by_type(site_id, "lab")
 
-    def _load_sections(self, lab_id: int) -> List[Tuple[int, str]]:
+    def _load_sections(self, lab_id):
         """Deprecated: Use _load_orgs_by_type instead."""
         return self._load_orgs_by_type(lab_id, "section")
 
     # ---------------------------------------------------------------------
     # Selection Handlers
     # ---------------------------------------------------------------------
-    def _on_branch_selected(self, _evt: Optional[tk.Event] = None) -> None:
+    def _on_branch_selected(self, _evt=None):
         """
         Handle tree node selection.
 
@@ -608,7 +607,7 @@ class UI(ParentView):
 
         self._set_tests_methods()
 
-    def _set_tests_methods(self) -> None:
+    def _set_tests_methods(self):
         """
         Load test methods assigned to the currently selected workstation.
 
@@ -681,7 +680,7 @@ class UI(ParentView):
 
         self.lblTests["text"] = f"{_('Test Methods')}: {count}"
 
-    def set_batches(self) -> None:
+    def set_batches(self):
         """
         Load batches for the selected test method and workstation.
 
@@ -748,7 +747,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     # Event Handlers
     # ---------------------------------------------------------------------
-    def _on_test_method_selected(self, _evt: Optional[tk.Event] = None) -> None:
+    def _on_test_method_selected(self, _evt=None):
         """
         Handle test method selection in the middle pane.
 
@@ -776,7 +775,7 @@ class UI(ParentView):
         )
         self.set_batches()
 
-    def _on_test_method_activated(self, _evt: Optional[tk.Event] = None) -> None:
+    def _on_test_method_activated(self, _evt=None):
         """
         Handle double-click on test method.
 
@@ -812,7 +811,7 @@ class UI(ParentView):
         self.child = batch.UI(self)
         self.child.on_open(self.selected_test_method, self.selected_workstation)
 
-    def _on_batch_selected(self, _evt: Optional[tk.Event] = None) -> None:
+    def _on_batch_selected(self, _evt=None):
         """
         Handle batch selection in the right pane.
 
@@ -831,7 +830,7 @@ class UI(ParentView):
 
         self.selected_batch = self.engine.get_selected("batches", "batch_id", pk)
 
-    def _on_batch_activated(self, _evt: Optional[tk.Event] = None) -> None:
+    def _on_batch_activated(self, _evt=None):
         """
         Handle double-click on batch.
 
@@ -880,7 +879,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     # Observer Pattern Callbacks
     # ---------------------------------------------------------------------
-    def _on_batch_changed(self, data=None) -> None:
+    def _on_batch_changed(self, data=None):
         """
         Callback when a batch is modified elsewhere.
 
@@ -891,7 +890,7 @@ class UI(ParentView):
         """
         self.set_batches()
 
-    def _on_tests_changed(self, data=None) -> None:
+    def _on_tests_changed(self, data=None):
         """
         Callback when a test is modified (e.g., status changed).
 
@@ -903,7 +902,7 @@ class UI(ParentView):
         if self.selected_workstation:
             self.set_test_methods()
 
-    def on_cancel(self, evt: Optional[tk.Event] = None) -> None:
+    def on_cancel(self, evt=None):
         """
         Close window safely.
 

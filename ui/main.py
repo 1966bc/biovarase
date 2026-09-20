@@ -29,7 +29,6 @@ import operator
 import os
 import random
 import sys
-from typing import List, Dict, Optional, Any
 
 # tkinter
 import tkinter as tk
@@ -86,9 +85,9 @@ import ui.performance_dashboard
 NO_DATA = "No data"
 
 class Main(tk.Toplevel):
-    _instance: Optional['Main'] = None
+    _instance = None
 
-    def __new__(cls, parent: tk.Widget) -> 'Main':
+    def __new__(cls, parent):
         if cls._instance is not None:
             try:
                 if cls._instance.winfo_exists():
@@ -102,7 +101,7 @@ class Main(tk.Toplevel):
         cls._instance = obj
         return obj
 
-    def __init__(self, parent: tk.Widget) -> None:
+    def __init__(self, parent):
         if getattr(self, "_initialized", False):
             return
         super().__init__(name="main")
@@ -179,7 +178,7 @@ class Main(tk.Toplevel):
         #we only position the window because otherwise it doesn't resize well on laptop
         self.geometry('+%d+%d'%(position_right, position_top))
         
-    def init_menu(self) -> None:
+    def init_menu(self):
         """
         Build menu bar with role-based visibility.
 
@@ -367,7 +366,7 @@ class Main(tk.Toplevel):
         if self.engine.log_user["role"] == 0:
             self.bind("<Control-e>", self.on_change_lab)
 
-    def _rebuild_menu(self) -> None:
+    def _rebuild_menu(self):
         """Rebuild menu after user change (menu items depend on user role)."""
         # Destroy existing menu
         current_menu = self["menu"]
@@ -381,7 +380,7 @@ class Main(tk.Toplevel):
         # Rebuild menu with new role
         self.init_menu()
 
-    def _build_ui(self) -> None:
+    def _build_ui(self):
 
         self.frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
 
@@ -584,7 +583,7 @@ class Main(tk.Toplevel):
         # (status bar text, combobox values, etc.)
         self.minsize(MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT)
 
-    def init_status_bar(self) -> None:
+    def init_status_bar(self):
 
         msg = "{0} {1} - {2}".format(
             self.engine.log_user["last_name"],
@@ -674,7 +673,7 @@ class Main(tk.Toplevel):
         frm_status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
 
-    def on_open(self) -> None:
+    def on_open(self):
         #print(self.engine.current_ids)
         company = self.engine.get_company_data()
         if company:
@@ -692,7 +691,7 @@ class Main(tk.Toplevel):
         self.set_categories()
         self.set_zscore()
 
-    def get_status_bar_site_description(self, company: dict) -> str:
+    def get_status_bar_site_description(self, company):
         """
         Build a short label for the status bar using lab name.
 
@@ -774,7 +773,7 @@ class Main(tk.Toplevel):
         self.reset_cal_data()
         self.reset_graph()
 
-    def reset_graph(self) -> None:
+    def reset_graph(self):
         """Reset Levey–Jennings and histogram charts and clear results list."""
 
         # Levey–Jennings
@@ -796,14 +795,14 @@ class Main(tk.Toplevel):
         if getattr(self, "lstResults", None) is not None:
             self.engine.clear_treeview(self.lstResults)
 
-    def reset_batch_data(self) -> None:
+    def reset_batch_data(self):
 
         self.expiration.set('')
         self.target.set(0)
         self.sd.set(0)
         self.engine.clear_treeview(self.lstBatches)
 
-    def reset_cal_data(self) -> None:
+    def reset_cal_data(self):
 
         self.average.set(0)
         self.calculated_sd.set(0)
@@ -814,13 +813,13 @@ class Main(tk.Toplevel):
         self.westgard.set('')
         self.set_westgard_alarm()
 
-    def set_batch_data(self) -> None:
+    def set_batch_data(self):
 
         self.expiration.set(self.selected_batch["expiration"])
         self.target.set(round(self.selected_batch["target"], 3))
         self.sd.set(round(self.selected_batch["sd"], 4))
 
-    def set_calculated_data(self, mean: float, sd: float, cv: float, bias: float) -> None:
+    def set_calculated_data(self, mean, sd, cv, bias):
         """
         Update calculated statistics for the selected batch.
 
@@ -856,7 +855,7 @@ class Main(tk.Toplevel):
         else:
             self.te.set(0)
 
-    def set_westgard(self, series: List[float]) -> None:
+    def set_westgard(self, series):
         """Aggiorna regola Westgard e stile etichetta."""
         # Normalizza la serie
         series = series or []                      # None -> []
@@ -899,7 +898,7 @@ class Main(tk.Toplevel):
         self.lblWestgard.configure(style=style)
 
 
-    def set_categories(self) -> None:
+    def set_categories(self):
 
         self.selected_category = None
         self.dict_categories = {}
@@ -944,7 +943,7 @@ class Main(tk.Toplevel):
         self.cbCategories["values"] = voices
         self.reset_batch_data()
 
-    def set_tests(self) -> None:
+    def set_tests(self):
         """Fill tests combobox for selected category."""
         if self.cbCategories.current() == -1:
             return
@@ -991,7 +990,7 @@ class Main(tk.Toplevel):
         self.cbTests["values"] = voices
         self.reset_batch_data()
 
-    def set_workstations(self) -> None:
+    def set_workstations(self):
         """Fill workstations treeview for selected test method."""
         self.engine.clear_treeview(self.lstWorkstations)
         self.selected_workstation = None
@@ -1048,7 +1047,7 @@ class Main(tk.Toplevel):
                 self.lstWorkstations.selection_set(first_item)
                 self.lstWorkstations.event_generate("<<TreeviewSelect>>")
 
-    def _on_batch_changed(self, data=None) -> None:
+    def _on_batch_changed(self, data=None):
         """Observer callback for batch changes - refresh batch list.
 
         Bypasses GUI selection checks and preserves current batch selection.
@@ -1080,7 +1079,7 @@ class Main(tk.Toplevel):
             self.lstBatches.selection_set(children[0])
             self.lstBatches.event_generate("<<TreeviewSelect>>")
 
-    def _on_tests_changed(self, data=None) -> None:
+    def _on_tests_changed(self, data=None):
         """Observer callback for test changes - refresh tests combobox."""
         # Save current selection
         current_index = self.cbTests.current()
@@ -1102,7 +1101,7 @@ class Main(tk.Toplevel):
         if current_index >= 0 and current_index < len(self.cbTests["values"]):
             self.cbTests.current(current_index)
 
-    def _on_categories_changed(self, data=None) -> None:
+    def _on_categories_changed(self, data=None):
         """Observer callback for category changes - refresh categories combobox."""
         # Save current selection
         current_index = self.cbCategories.current()
@@ -1126,7 +1125,7 @@ class Main(tk.Toplevel):
             self.cbCategories.current(current_index)
             self.cbCategories.event_generate("<<ComboboxSelected>>")
 
-    def _on_test_method_changed(self, data=None) -> None:
+    def _on_test_method_changed(self, data=None):
         """Observer callback for test_method changes - refresh tests combobox.
 
         When a test_method status changes, the tests combobox must be refreshed
@@ -1156,7 +1155,7 @@ class Main(tk.Toplevel):
             self.cbTests.current(current_index)
             self.cbTests.event_generate("<<ComboboxSelected>>")
 
-    def _populate_batches(self) -> None:
+    def _populate_batches(self):
         """Core logic to populate batch treeview (no early-return checks)."""
         self.engine.clear_treeview(self.lstBatches)
         self.dict_batches = {}
@@ -1234,7 +1233,7 @@ class Main(tk.Toplevel):
         count = len(self.lstBatches.get_children())
         self.frmBatches.config(text=f"{_('Batches')} ({count})")
 
-    def set_batches(self) -> None:
+    def set_batches(self):
         """Fill batches treeview for selected test method and workstation."""
         if self.cbTests.current() == -1 or not self.lstWorkstations.selection():
             self.engine.clear_treeview(self.lstBatches)
@@ -1262,7 +1261,7 @@ class Main(tk.Toplevel):
             self.reset_cal_data()
             self.reset_graph()
 
-    def set_results(self) -> None:
+    def set_results(self):
         """Fill results treeview for selected batch and workstation."""
         self.engine.clear_treeview(self.lstResults)
         self.dict_results = {}
@@ -1357,7 +1356,7 @@ class Main(tk.Toplevel):
         self.get_values(rs)
 
 
-    def get_values(self, rs: List[Dict[str, Any]]) -> None:
+    def get_values(self, rs):
         """
         Compute statistics and update plots.
         `rs` is a list of dict rows from `set_results`.
@@ -1453,7 +1452,7 @@ class Main(tk.Toplevel):
 
 
     # EVENT HANDLERS (SELECTION)
-    def on_selected_category(self, evt: Optional[tk.Event]) -> None:
+    def on_selected_category(self, evt):
         """Handle category selection change."""
         if self.cbCategories.current() == -1:
             return
@@ -1472,7 +1471,7 @@ class Main(tk.Toplevel):
         self.reset_graph()
         self.set_tests()
 
-    def on_selected_test(self, event: Optional[tk.Event]) -> None:
+    def on_selected_test(self, event):
         """Handle test selection change."""
         if self.cbCategories.current() == -1:
             return
@@ -1507,7 +1506,7 @@ class Main(tk.Toplevel):
         self.reset_graph()
         self.set_workstations()
 
-    def on_selected_workstation(self, evt: Optional[tk.Event]) -> None:
+    def on_selected_workstation(self, evt):
         """Handle workstation selection change."""
         if not self.lstWorkstations.selection():
             self.selected_workstation = None
@@ -1527,7 +1526,7 @@ class Main(tk.Toplevel):
         self.reset_batch_data()
         self.set_batches()
 
-    def on_selected_batch(self, evt: Optional[tk.Event] = None) -> None:
+    def on_selected_batch(self, evt=None):
         """Handle batch selection change."""
         if not self.lstBatches.selection():
             self.selected_batch = None
@@ -1547,7 +1546,7 @@ class Main(tk.Toplevel):
         self.set_batch_data()
         self.set_results()
 
-    def on_selected_result(self, event: Optional[tk.Event]) -> None:
+    def on_selected_result(self, event):
         """Handle result selection change and load selected_result dict."""
         selection = self.lstResults.selection()
         if not selection:
@@ -1562,7 +1561,7 @@ class Main(tk.Toplevel):
 
         self.selected_result = self.engine.get_selected("results", "result_id", pk)
 
-    def _open_result_editor_for_item(self, item_id: str) -> None:
+    def _open_result_editor_for_item(self, item_id):
         """Open result editor in update mode for the given treeview item_id."""
         try:
             # --- Build dictionaries required by result.py ---------------------
@@ -1630,7 +1629,7 @@ class Main(tk.Toplevel):
                 sys.modules[__name__],
             )
 
-    def on_lj_point_double_click(self, info: dict) -> None:
+    def on_lj_point_double_click(self, info):
         """
         Handle double–click on a Levey–Jennings point.
 
@@ -1683,28 +1682,28 @@ class Main(tk.Toplevel):
 
 
 
-    def get_x_labels(self, rs: List[Dict[str, Any]]) -> List[str]:
+    def get_x_labels(self, rs):
         """Return list of date labels for enabled results."""
         enabled = [row for row in rs if row.get("status", 0) != 0]
         return [row.get("received_str", "") for row in reversed(enabled)]
 
-    def get_x_labels_all(self, rs: List[Dict[str, Any]]) -> List[str]:
+    def get_x_labels_all(self, rs):
         """Return list of date labels for ALL results (including disabled)."""
         return [row.get("received_str", "") for row in reversed(rs)]
 
     def set_levey_jennings_ax(
         self,
-        count_rs: int,
-        target: float,
-        sd: float,
-        series: List[float],
-        status_list: List[int],
-        count_series: int,
-        compute_average: float,
-        compute_cv: float,
-        x_labels: List[str],
-        dates: List[str],
-    ) -> None:
+        count_rs,
+        target,
+        sd,
+        series,
+        status_list,
+        count_series,
+        compute_average,
+        compute_cv,
+        x_labels,
+        dates,
+    ):
         """
         Draw Levey–Jennings chart using LeveyJenningsCanvas.
 
@@ -1830,7 +1829,7 @@ class Main(tk.Toplevel):
             unit=unit,
         )
 
-    def on_tests(self) -> None:
+    def on_tests(self):
         if not self.engine.is_admin():
             msg = self.engine.user_not_enable
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
@@ -1838,7 +1837,7 @@ class Main(tk.Toplevel):
         
         ui.tests.UI(self).on_open()
 
-    def on_test_methods(self) -> None:
+    def on_test_methods(self):
         """Open Test Methods window (Admin/Superuser only)."""
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
@@ -1925,7 +1924,7 @@ class Main(tk.Toplevel):
     def on_set_zscore(self,):
         ui.set_zscore.UI(self).on_open()
 
-    def on_batches(self) -> None:
+    def on_batches(self):
         """Open Batches window (Admin/Superuser only)."""
         if not self.engine.can_validate_qc():
             msg = self.engine.user_not_enable
@@ -2060,7 +2059,7 @@ class Main(tk.Toplevel):
         """Open Performance Dashboard window."""
         ui.performance_dashboard.UI(self).on_open()
 
-    def on_export_notes(self) -> None:
+    def on_export_notes(self):
         ui.export_notes.UI(self).on_open()
 
     # Quick Data Analysis removed - functionality integrated into Daily Validation
@@ -2070,7 +2069,7 @@ class Main(tk.Toplevel):
     def on_analitycal_goals(self,):
         ui.analitycal_goals.UI(self).on_open()
 
-    def on_export_counts(self) -> None:
+    def on_export_counts(self):
         ui.counts.UI(self).on_open()
 
     def on_ddof(self,):
@@ -2118,7 +2117,7 @@ class Main(tk.Toplevel):
         except AttributeError:
             pass  # No test method/workstation selected
 
-    def on_insert_demo_result(self, evt: Optional[tk.Event] = None) -> None:
+    def on_insert_demo_result(self, evt=None):
 
         if not self.engine.is_admin():
             msg = self.engine.user_not_enable
@@ -2194,7 +2193,7 @@ class Main(tk.Toplevel):
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
 
-    def on_batch_double_button(self, evt: Optional[tk.Event] = None) -> None:
+    def on_batch_double_button(self, evt=None):
 
         if self.lstBatches.selection():
             self.on_add_result()
@@ -2253,7 +2252,7 @@ class Main(tk.Toplevel):
         ui.result.UI(self).on_open()
 
 
-    def on_update_result(self, evt: Optional[tk.Event] = None) -> None:
+    def on_update_result(self, evt=None):
         """Default double–click on results list: open notes editor."""
         try:
             # Check read-only mode (block autologin users)
@@ -2284,7 +2283,7 @@ class Main(tk.Toplevel):
                 sys.modules[__name__],
             )
 
-    def _open_document(self, key: str, error_msg: str) -> None:
+    def _open_document(self, key, error_msg):
         """Helper to open documents from documents.json."""
         engine = self.engine
         engine.busy(self)
@@ -2301,47 +2300,47 @@ class Main(tk.Toplevel):
                 parent=self
             )
 
-    def on_bvv(self) -> None:
+    def on_bvv(self):
         self._open_document(
             "biological_values",
             _("The file Biological Variation Values does not exist or cannot be opened.")
         )
 
-    def on_user_manual(self) -> None:
+    def on_user_manual(self):
         self._open_document(
             "user_manual",
             _("The Biovarase User Manual does not exist or cannot be opened.")
         )
 
-    def on_qc_thecnical_manual(self) -> None:
+    def on_qc_thecnical_manual(self):
         self._open_document(
             "qc_technical",
             _("The QC Technical Manual does not exist or cannot be opened.")
         )
 
-    def on_get_guidelines(self) -> None:
+    def on_get_guidelines(self):
         self._open_document(
             "guidelines",
             _("The Biovarase Guidelines file does not exist or cannot be opened.")
         )
 
-    def on_license(self) -> None:
+    def on_license(self):
         ui.license.UI(self).on_open()
 
-    def on_python_version(self) -> None:
+    def on_python_version(self):
         s = self.engine.get_python_version()
         messagebox.showinfo(self.engine.app_title, s, parent=self)
 
-    def on_tkinter_version(self) -> None:
+    def on_tkinter_version(self):
         s = "Tkinter patchlevel\n{0}".format(self.nametowidget(".").tk.call("info", "patchlevel"))
         messagebox.showinfo(self.engine.app_title, s, parent=self)
 
-    def on_about(self) -> None:
+    def on_about(self):
         messagebox.showinfo(self.engine.app_title,
                             self.nametowidget(".").info,
                             parent=self)
 
-    def _on_language_change(self) -> None:
+    def _on_language_change(self):
         """Handle language change from menu."""
         lang = self.lang_var.get()
         self.engine.set_language(lang)
@@ -2352,7 +2351,7 @@ class Main(tk.Toplevel):
             parent=self
         )
 
-    def on_change_password(self) -> None:
+    def on_change_password(self):
         ui.change_password.UI(self, ).on_open()
 
     def on_log(self,):
@@ -2637,7 +2636,7 @@ class Main(tk.Toplevel):
             )
             messagebox.showerror(_("Error"), f"{_('Failed to change section:')} {exc}", parent=self)
 
-    def on_close(self) -> None:
+    def on_close(self):
         # Unsubscribe from events (Observer pattern)
         self.engine.unsubscribe("batch_changed", self._on_batch_changed)
         self.engine.unsubscribe("tests_changed", self._on_tests_changed)

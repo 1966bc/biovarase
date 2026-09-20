@@ -11,7 +11,6 @@
 
 import tkinter as tk
 import datetime as _dt
-from typing import Iterable, List, Optional, Sequence, Tuple, Any
 
 
 class LeveyJenningsCanvas(tk.Canvas):
@@ -58,7 +57,7 @@ class LeveyJenningsCanvas(tk.Canvas):
     FONT_LABEL    = ("TkDefaultFont", 6)
     FONT_TITLE    = ("TkDefaultFont", 10, "bold")
 
-    def __init__(self, parent: tk.Widget, **kwargs: Any) -> None:
+    def __init__(self, parent, **kwargs):
         """
         Create a Levey–Jennings canvas.
 
@@ -69,21 +68,21 @@ class LeveyJenningsCanvas(tk.Canvas):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._series: List[float] = []
-        self._target: float = 0.0
-        self._sd: float = 0.0
-        self._title: Optional[str] = None
+        self._series = []
+        self._target = 0.0
+        self._sd = 0.0
+        self._title = None
         # Stored as label strings (already formatted)
-        self._x_labels: Optional[List[str]] = None
+        self._x_labels = None
         # Status list: 1 = enabled, 0 = disabled (same length as series)
-        self._status: Optional[List[int]] = None
+        self._status = None
 
         # Optional axis captions
-        self._x_axis_caption: str = "Observation"
-        self._y_axis_caption: str = "Value"
+        self._x_axis_caption = "Observation"
+        self._y_axis_caption = "Value"
 
         # Hit–test data for points
-        self._points_info: List[dict] = []
+        self._points_info = []
         self._on_point_click = None  # callback esterna
 
         # Redraw on resize
@@ -94,7 +93,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
         self._show_values = True
         self.FONT_VALUES = ("TkDefaultFont", 8)
-        self._bottom_text: str = ""
+        self._bottom_text = ""
 
     # ------------------------------------------------------------------
     # Public API
@@ -102,19 +101,19 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def draw_chart(
         self,
-        series: Iterable[float],
-        target: float,
-        sd: float,
+        series,
+        target,
+        sd,
         *,
-        title: Optional[str] = None,
-        dates: Optional[Sequence[Any]] = None,
-        status: Optional[Sequence[int]] = None,
-        x_axis_caption: Optional[str] = None,
-        y_axis_caption: Optional[str] = None,
-        date_format: str = "%d-%m",
-        show_values: bool = True,
-        bottom_text: Optional[str] = None,
-    ) -> None:
+        title=None,
+        dates=None,
+        status=None,
+        x_axis_caption=None,
+        y_axis_caption=None,
+        date_format = "%d-%m",
+        show_values=True,
+        bottom_text=None,
+    ):
         """
         Draw a Levey–Jennings chart.
 
@@ -156,7 +155,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
         # Prepare X labels
         if dates is not None:
-            labels: List[str] = []
+            labels = []
             for d in dates:
                 if isinstance(d, (_dt.date, _dt.datetime)):
                     labels.append(d.strftime(date_format))
@@ -174,7 +173,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         self._bottom_text = bottom_text or ""
         self._redraw()
 
-    def clear(self) -> None:
+    def clear(self):
         """
         Clear the canvas and reset internal data.
         """
@@ -192,7 +191,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         # Draw placeholder grid
         self._draw_no_data()
 
-    def set_point_click_callback(self, callback) -> None:
+    def set_point_click_callback(self, callback):
         """
         Register a callback called when the user double–clicks on a point.
 
@@ -212,12 +211,12 @@ class LeveyJenningsCanvas(tk.Canvas):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _on_resize(self, event: tk.Event) -> None:
+    def _on_resize(self, event):
         """Redraw chart (or placeholder) when the widget is resized."""
         self._redraw()
 
 
-    def _redraw(self) -> None:
+    def _redraw(self):
         """Clear the canvas and draw the full chart."""
         self.delete("all")
 
@@ -267,7 +266,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         self._draw_bottom_text(x0, x1, y1)
 
 
-    def _draw_bottom_text(self, x0: int, x1: int, y1: int) -> None:
+    def _draw_bottom_text(self, x0, x1, y1):
         """
         Draw a small information string in the bottom-right area
         (e.g. 'Computed 28 on 30 results').
@@ -284,7 +283,7 @@ class LeveyJenningsCanvas(tk.Canvas):
             fill="#444444",
         )
 
-    def _draw_no_data(self) -> None:
+    def _draw_no_data(self):
         """
         Show a faint grid placeholder when no data or invalid SD.
         """
@@ -305,7 +304,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     # --------------------------- Y / scaling ---------------------------
 
-    def _compute_y_limits(self) -> Tuple[float, float]:
+    def _compute_y_limits(self):
         """
         Compute Y-axis limits using target ± 4SD (Westgard recommendation).
 
@@ -326,8 +325,8 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     @staticmethod
     def _value_to_y(
-        value: float, y0: int, y1: int, y_min: float, y_max: float
-    ) -> float:
+        value, y0, y1, y_min, y_max
+    ):
         """
         Map a data value to canvas Y coordinate (inverted axis).
         """
@@ -338,7 +337,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         return y1 - t * (y1 - y0)
 
     @staticmethod
-    def _index_to_x(idx: int, n: int, x0: int, x1: int) -> float:
+    def _index_to_x(idx, n, x0, x1):
         """
         Map series index (0..n-1) to canvas X coordinate.
         """
@@ -351,13 +350,13 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def _draw_y_bands(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        y_min: float,
-        y_max: float,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        y_min,
+        y_max,
+    ):
         """
         Draw shaded bands for ±1SD and ±2SD and the horizontal SD/target lines.
         """
@@ -459,7 +458,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     # ------------------------------ Axes -------------------------------
 
-    def _draw_axes(self, x0: int, y0: int, x1: int, y1: int) -> None:
+    def _draw_axes(self, x0, y0, x1, y1):
         """Draw X and Y axes."""
         # Y axis
         self.create_line(
@@ -485,7 +484,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
         # ----------------------------- Grid -------------------------------
 
-    def _draw_grid(self, x0: int, y0: int, x1: int, y1: int) -> None:
+    def _draw_grid(self, x0, y0, x1, y1):
         """
         Draw a faint dotted grid behind the Levey–Jennings chart.
         """
@@ -527,13 +526,13 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def _draw_series(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        y_min: float,
-        y_max: float,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        y_min,
+        y_max,
+    ):
         """Draw series as line + colored points (respecting enabled/disabled status).
 
         Points beyond ±4SD are clipped to the chart edge and displayed
@@ -553,7 +552,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         # Build points with status and clipping info
         # (x, y, value, status, is_clipped, clip_direction)
         # clip_direction: 1 = above, -1 = below, 0 = not clipped
-        points: List[Tuple[float, float, float, int, bool, int]] = []
+        points = []
         for idx, value in enumerate(self._series):
             v = float(value)
             x = self._index_to_x(idx, n, x0, x1)
@@ -598,7 +597,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
         # Connecting lines ONLY between consecutive enabled points
         if n > 1:
-            line_coords: List[float] = []
+            line_coords = []
             for idx, (x, y, _, status, _, _) in enumerate(points):
                 if status == 1:  # Enabled point
                     line_coords.extend((x, y))
@@ -695,7 +694,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
 
 
-    def _get_point_color(self, value: float) -> str:
+    def _get_point_color(self, value):
         """
         Return color based on SD distance:
 
@@ -718,8 +717,8 @@ class LeveyJenningsCanvas(tk.Canvas):
     # --------------------------- Labels / title ------------------------
 
     def _draw_y_labels(
-        self, x0: int, y0: int, y1: int, y_min: float, y_max: float
-    ) -> None:
+        self, x0, y0, y1, y_min, y_max
+    ):
         """
         Draw Y axis tick labels (5 ticks: min..max).
         """
@@ -767,7 +766,7 @@ class LeveyJenningsCanvas(tk.Canvas):
                 fill=self.AXIS_COLOR,
             )
 
-    def _draw_x_labels(self, x0: int, y0: int, x1: int, y1: int) -> None:
+    def _draw_x_labels(self, x0, y0, x1, y1):
         """
         Draw X axis tick labels.
 
@@ -782,12 +781,12 @@ class LeveyJenningsCanvas(tk.Canvas):
 
         # Decide labels
         if self._x_labels is not None and len(self._x_labels) == n:
-            labels: List[str] = list(self._x_labels)
+            labels = list(self._x_labels)
         else:
             labels = [str(i + 1) for i in range(n)]
 
         # Keep labels compact (defensive: truncate very long strings)
-        truncated: List[str] = []
+        truncated = []
         for text in labels:
             s = str(text)
             if len(s) > 8:
@@ -823,7 +822,7 @@ class LeveyJenningsCanvas(tk.Canvas):
                 fill=self.AXIS_COLOR,
             )
 
-    def _draw_title(self, width: int) -> None:
+    def _draw_title(self, width):
         """Draw chart title, if any."""
         if not self._title:
             return
@@ -836,7 +835,7 @@ class LeveyJenningsCanvas(tk.Canvas):
             fill=self.AXIS_COLOR,
         )
 
-    def _on_double_click(self, event: tk.Event) -> None:
+    def _on_double_click(self, event):
         """
         Handle double–clicks on the canvas.
 

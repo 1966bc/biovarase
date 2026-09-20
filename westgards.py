@@ -11,7 +11,6 @@ References:
     - Westgard JO. Basic QC Practices, 4th Edition. 2016.
     - ISO 15189:2022 - Medical laboratories - Requirements for quality and competence
 """
-from typing import Dict, List, Optional, Tuple
 
 
 # Westgard rule window sizes (number of consecutive measurements)
@@ -46,7 +45,7 @@ class Westgards:
         - ✅ Complies with PROJECT_RULES mixin architecture guidelines
     """
 
-    def __str__(self) -> str:
+    def __str__(self):
         return "class: {0}\nMRO: {1}".format(
             self.__class__.__name__,
             [x.__name__ for x in Westgards.__mro__],
@@ -54,12 +53,12 @@ class Westgards:
 
     def get_westgard_violation_rule(
         self,
-        target: float,
-        sd: float,
-        series: List[float],
-        selected_batch: Optional[int] = None,
-        selected_test: Optional[int] = None,
-    ) -> str:
+        target,
+        sd,
+        series,
+        selected_batch=None,
+        selected_test=None,
+    ):
         """
         Evaluate QC series against Westgard multirule algorithm.
 
@@ -125,7 +124,7 @@ class Westgards:
             else:
                 return WESTGARD_ACCEPT  # In control
 
-    def _calculate_control_limits(self, target: float, sd: float) -> Dict[str, float]:
+    def _calculate_control_limits(self, target, sd):
         """
         Calculate control limit boundaries for Westgard rules.
 
@@ -157,7 +156,7 @@ class Westgards:
     # Individual Westgard Rules
     # ========================================================================
 
-    def get_rule_12S(self, series: List[float], limits: Dict[str, float]) -> bool:
+    def get_rule_12S(self, series, limits):
         """
         1:2s Warning Rule (Screening).
 
@@ -178,7 +177,7 @@ class Westgards:
         """
         return series[-1] > limits['sd2'] or series[-1] < limits['sd_2']
 
-    def get_rule_13S(self, series: List[float], limits: Dict[str, float]) -> bool:
+    def get_rule_13S(self, series, limits):
         """
         1:3s Rejection Rule.
 
@@ -199,7 +198,7 @@ class Westgards:
         """
         return series[-1] > limits['sd3'] or series[-1] < limits['sd_3']
 
-    def get_rule_22S(self, series: List[float], limits: Dict[str, float]) -> bool:
+    def get_rule_22S(self, series, limits):
         """
         2:2s Rejection Rule (Systematic Error).
 
@@ -229,7 +228,7 @@ class Westgards:
         both_low = all(i <= limits['sd_2'] for i in last_two_values)
         return both_high or both_low
 
-    def get_rule_R4S(self, series: List[float], limits: Dict[str, float]) -> bool:
+    def get_rule_R4S(self, series, limits):
         """
         R:4s Rejection Rule (Random Error).
 
@@ -261,7 +260,7 @@ class Westgards:
         value_range = max(last_two_values) - min(last_two_values)
         return value_range >= limits['sd4']
 
-    def get_rule_41S(self, series: List[float], target: float, limits: Dict[str, float]) -> bool:
+    def get_rule_41S(self, series, target, limits):
         """
         4:1s Rejection Rule (Trending).
 
@@ -292,7 +291,7 @@ class Westgards:
         all_low = all(i < limits['sd_1'] for i in last_four_values)
         return all_high or all_low
 
-    def get_rule_10X(self, series: List[float], target: float) -> bool:
+    def get_rule_10X(self, series, target):
         """
         10:x Rejection Rule (Persistent Bias).
 

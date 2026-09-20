@@ -16,7 +16,6 @@ import statistics
 import math
 import sys
 import inspect
-from typing import List, Optional, Tuple
 
 
 class QC:
@@ -48,12 +47,12 @@ class QC:
         - ISO/TS 20914:2019 - Measurement uncertainty guidance
     """
 
-    def __str__(self) -> str:
+    def __str__(self):
         return "class: {0}\nMRO: {1}".format(
             self.__class__.__name__, [x.__name__ for x in QC.__mro__]
         )
 
-    def get_ddof(self) -> int:
+    def get_ddof(self):
         """
         Read Delta Degrees of Freedom from configuration.
 
@@ -77,7 +76,7 @@ class QC:
             )
             return 1  # default: sample standard deviation
 
-    def get_zscore(self) -> float:
+    def get_zscore(self):
         """
         Read z-score (coverage factor) from configuration.
 
@@ -105,7 +104,7 @@ class QC:
             )
             return 1.96  # default: 95% confidence interval
 
-    def get_sd(self, values: List[float], ddof: Optional[int] = None) -> float:
+    def get_sd(self, values, ddof=None):
         """
         Calculate standard deviation.
 
@@ -143,7 +142,7 @@ class QC:
             )
             return 0.0
 
-    def get_cv(self, values: List[float], ddof: Optional[int] = None) -> float:
+    def get_cv(self, values, ddof=None):
         """
         Calculate Coefficient of Variation (CV).
 
@@ -167,7 +166,7 @@ class QC:
             return 0.0
         return round((sd / mean) * 100, 2)
 
-    def get_mean(self, values: List[float]) -> float:
+    def get_mean(self, values):
         """
         Calculate arithmetic mean.
 
@@ -193,7 +192,7 @@ class QC:
             )
             return 0.0
 
-    def get_range(self, values: List[float]) -> float:
+    def get_range(self, values):
         """
         Calculate range (peak-to-peak).
 
@@ -219,7 +218,7 @@ class QC:
             )
             return 0.0
 
-    def get_bias(self, avg: float, target: float) -> float:
+    def get_bias(self, avg, target):
         """
         Calculate relative bias (systematic error).
 
@@ -268,7 +267,7 @@ class QC:
             )
             return 0.0
 
-    def get_cvt(self, cvw: float, cva: float) -> float:
+    def get_cvt(self, cvw, cva):
         """
         Calculate total CV combining within-subject and analytical variation.
 
@@ -293,7 +292,7 @@ class QC:
             )
             return 0.0
 
-    def get_allowable_bias(self, cvw: float, cvb: float) -> float:
+    def get_allowable_bias(self, cvw, cvb):
         """
         Calculate allowable bias from biological variation.
 
@@ -324,7 +323,7 @@ class QC:
             )
             return 0.0
 
-    def get_te(self, target: float, avg: float, cv: float) -> float:
+    def get_te(self, target, avg, cv):
         """
         Calculate observed Total Error.
 
@@ -355,7 +354,7 @@ class QC:
             )
             return 0.0
 
-    def get_tea(self, cvw: float, cvb: float) -> float:
+    def get_tea(self, cvw, cvb):
         """
         Calculate Total Error Allowable from biological variation.
 
@@ -390,7 +389,7 @@ class QC:
             )
             return 0.0
 
-    def get_sigma(self, cvw: float, cvb: float, target: float, series: List[float]) -> float:
+    def get_sigma(self, cvw, cvb, target, series):
         """
         Calculate Six Sigma quality metric.
 
@@ -438,13 +437,13 @@ class QC:
 
     def get_tea_tes_comparison(
         self,
-        avg: float,
-        target: float,
-        cvw: float,
-        cvb: float,
-        sd: float,
-        cva: float
-    ) -> Tuple[Optional[float], Optional[str]]:
+        avg,
+        target,
+        cvw,
+        cvb,
+        sd,
+        cva
+    ):
         """
         Compare allowable vs observed total error.
 
@@ -492,7 +491,7 @@ class QC:
             )
             return None, None
 
-    def get_imp(self, cvw: float) -> float:
+    def get_imp(self, cvw):
         """
         Calculate maximum allowable imprecision from biological variation.
 
@@ -520,7 +519,7 @@ class QC:
             )
             return 0.0
 
-    def percentage(self, percent: float, whole: float) -> float:
+    def percentage(self, percent, whole):
         """
         Calculate percentage of a whole.
 
@@ -547,10 +546,10 @@ class QC:
 
     def get_uncertainty(
         self,
-        cva: Optional[float],
-        bias: Optional[float],
-        k: Optional[float] = None
-    ) -> Optional[float]:
+        cva,
+        bias,
+        k=None
+    ):
         """
         Calculate expanded measurement uncertainty (relative).
 

@@ -10,7 +10,6 @@
 # -----------------------------------------------------------------------------
 
 import tkinter as tk
-from typing import Iterable, Optional, Any
 
 
 class BiasCanvas(tk.Canvas):
@@ -40,16 +39,16 @@ class BiasCanvas(tk.Canvas):
     FONT_TITLE   = ("TkDefaultFont", 10, "bold")
     FONT_SUMMARY = ("TkDefaultFont", 8)
 
-    def __init__(self, parent: tk.Widget, **kwargs: Any) -> None:
+    def __init__(self, parent, **kwargs):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._title: Optional[str] = None
-        self._unit: str = ""
-        self._target: float = 0.0
-        self._mean: float = 0.0
-        self._bias_pct: float = 0.0
-        self._bias_abs: float = 0.0
+        self._title = None
+        self._unit = ""
+        self._target = 0.0
+        self._mean = 0.0
+        self._bias_pct = 0.0
+        self._bias_abs = 0.0
 
         self.bind("<Configure>", self._on_resize)
 
@@ -58,12 +57,12 @@ class BiasCanvas(tk.Canvas):
     # ------------------------------------------------------------------ #
     def draw_bias(
         self,
-        series: Iterable[float],
-        target: float,
+        series,
+        target,
         *,
-        title: Optional[str] = None,
-        unit: str = "",
-    ) -> None:
+        title=None,
+        unit = "",
+    ):
         """
         Draw bias chart for the given series and target.
 
@@ -93,7 +92,7 @@ class BiasCanvas(tk.Canvas):
         self._values = values
         self._redraw()
 
-    def clear(self) -> None:
+    def clear(self):
         """Clear the canvas and reset stored data."""
         self.delete("all")
         self._title = None
@@ -107,11 +106,11 @@ class BiasCanvas(tk.Canvas):
     # ------------------------------------------------------------------ #
     # Internal helpers                                                   #
     # ------------------------------------------------------------------ #
-    def _on_resize(self, event: tk.Event) -> None:
+    def _on_resize(self, event):
         if getattr(self, "_values", None):
             self._redraw()
 
-    def _redraw(self) -> None:
+    def _redraw(self):
         self.delete("all")
 
         if not getattr(self, "_values", None):
@@ -136,7 +135,7 @@ class BiasCanvas(tk.Canvas):
         v_min -= margin
         v_max += margin
 
-        def value_to_x(v: float) -> float:
+        def value_to_x(v):
             t = (v - v_min) / (v_max - v_min) if v_max != v_min else 0.5
             t = max(0.0, min(1.0, t))
             return x0 + t * (x1 - x0)
@@ -214,7 +213,7 @@ class BiasCanvas(tk.Canvas):
             fill="#333333",
         )
 
-    def _draw_no_data(self) -> None:
+    def _draw_no_data(self):
         """Draw a faint grid placeholder when no data is available."""
         w = self.winfo_width()
         h = self.winfo_height()

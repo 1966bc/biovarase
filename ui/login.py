@@ -12,7 +12,6 @@ Version: 4.2 (Professional Edition)
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from typing import Tuple, Optional
 
 from app_config import MAX_LOGIN_ATTEMPTS
 from i18n import _, set_language
@@ -39,7 +38,7 @@ class Login(ttk.Frame):
         get_values: Retrieve entered username and password
     """
 
-    def __init__(self, parent: tk.Widget) -> None:
+    def __init__(self, parent):
         """
         Initialize the login frame.
 
@@ -56,25 +55,25 @@ class Login(ttk.Frame):
         set_language(lang)
 
         self.engine.dict_instances[self.winfo_name()] = self
-        self.parent: tk.Widget = parent
+        self.parent = parent
         self.parent.protocol("WM_DELETE_WINDOW",
                              self.nametowidget(".").on_exit)
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=2)
-        self.nick: tk.StringVar = tk.StringVar()
-        self.password: tk.StringVar = tk.StringVar()
-        self.attempts: int = 0
+        self.nick = tk.StringVar()
+        self.password = tk.StringVar()
+        self.attempts = 0
         self.engine.thread = None
         self.center_me()
         self._build_ui()
 
-    def center_me(self) -> None:
+    def center_me(self):
         """Center window on the screen."""
         x = (self.parent.winfo_screenwidth() - self.parent.winfo_reqwidth()) / 2
         y = (self.parent.winfo_screenheight() - self.parent.winfo_reqheight()) / 2
         self.parent.geometry("+%d+%d" % (x, y))
 
-    def _build_ui(self) -> None:
+    def _build_ui(self):
         """
         Create and layout login form widgets.
 
@@ -121,15 +120,15 @@ class Login(ttk.Frame):
         self.parent.bind("<Alt-c>", self.parent.on_exit)
         btn_exit.grid(row=r, column=c, sticky=tk.W, **paddings)
 
-    def on_open(self) -> None:
+    def on_open(self):
         """Set focus to username field when login window opens."""
         self.txtNick.focus()
 
-    def hide(self) -> None:
+    def hide(self):
         """Hide login window after successful authentication."""
         self.parent.withdraw()
 
-    def get_values(self) -> Tuple[str, bytes]:
+    def get_values(self):
         """
         Retrieve entered credentials.
 
@@ -143,7 +142,7 @@ class Login(ttk.Frame):
         password = self.password.get().encode('utf-8').strip()
         return (nick, password)
 
-    def on_login(self, event: Optional[tk.Event] = None) -> None:
+    def on_login(self, event=None):
         """
         Authenticate user and open main window on success.
 
@@ -193,13 +192,13 @@ class Login(ttk.Frame):
             else:
                 self.txtNick.focus()
 
-    def on_about(self) -> None:
+    def on_about(self):
         """Display application information dialog."""
         messagebox.showinfo(self.engine.app_title,
                             self.nametowidget(".").info,
                             parent=self)
 
-    def on_quit(self, evt: Optional[tk.Event] = None) -> None:
+    def on_quit(self, evt=None):
         """
         Close database connection and quit application.
 

@@ -10,7 +10,6 @@
 # -----------------------------------------------------------------------------
 
 import tkinter as tk
-from typing import Iterable, List, Optional, Sequence, Tuple, Any
 
 
 class YoudenPlotCanvas(tk.Canvas):
@@ -47,22 +46,22 @@ class YoudenPlotCanvas(tk.Canvas):
     FONT_TITLE = ("TkDefaultFont", 10, "bold")
     FONT_VALUES = ("TkDefaultFont", 8)
 
-    def __init__(self, parent: tk.Widget, **kwargs: Any) -> None:
+    def __init__(self, parent, **kwargs):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._points: List[Tuple[float, float]] = []
-        self._target_x: float = 0.0
-        self._target_y: float = 0.0
-        self._sd_x: float = 0.0
-        self._sd_y: float = 0.0
+        self._points = []
+        self._target_x = 0.0
+        self._target_y = 0.0
+        self._sd_x = 0.0
+        self._sd_y = 0.0
 
-        self._title: Optional[str] = None
-        self._x_label: str = "Level 1"
-        self._y_label: str = "Level 2"
-        self._bottom_text: str = ""
+        self._title = None
+        self._x_label = "Level 1"
+        self._y_label = "Level 2"
+        self._bottom_text = ""
 
-        self._show_indices: bool = False
+        self._show_indices = False
 
         self.bind("<Configure>", self._on_resize)
 
@@ -72,19 +71,19 @@ class YoudenPlotCanvas(tk.Canvas):
 
     def draw_youden(
         self,
-        level1: Iterable[float],
-        level2: Iterable[float],
-        target_x: float,
-        target_y: float,
-        sd_x: float,
-        sd_y: float,
+        level1,
+        level2,
+        target_x,
+        target_y,
+        sd_x,
+        sd_y,
         *,
-        title: Optional[str] = None,
-        x_label: str = "Level 1",
-        y_label: str = "Level 2",
-        bottom_text: Optional[str] = None,
-        show_indices: bool = False,
-    ) -> None:
+        title=None,
+        x_label = "Level 1",
+        y_label = "Level 2",
+        bottom_text=None,
+        show_indices=False,
+    ):
         """
         Draw a Youden plot.
 
@@ -122,7 +121,7 @@ class YoudenPlotCanvas(tk.Canvas):
 
         self._redraw()
 
-    def clear(self) -> None:
+    def clear(self):
         """Clear the canvas."""
         self.delete("all")
         self._points = []
@@ -131,11 +130,11 @@ class YoudenPlotCanvas(tk.Canvas):
     # Internal helpers                                                   #
     # ------------------------------------------------------------------ #
 
-    def _on_resize(self, event: tk.Event) -> None:
+    def _on_resize(self, event):
         if self._points:
             self._redraw()
 
-    def _redraw(self) -> None:
+    def _redraw(self):
         self.delete("all")
 
         if not self._points or self._sd_x == 0 or self._sd_y == 0:
@@ -170,7 +169,7 @@ class YoudenPlotCanvas(tk.Canvas):
         self._draw_title(width)
         self._draw_bottom_text(x0, x1, y1)
 
-    def _draw_no_data(self) -> None:
+    def _draw_no_data(self):
         w = self.winfo_width()
         h = self.winfo_height()
         self.create_text(
@@ -183,7 +182,7 @@ class YoudenPlotCanvas(tk.Canvas):
 
     # ---------------------------- Scaling ------------------------------ #
 
-    def _compute_limits(self) -> Tuple[float, float, float, float]:
+    def _compute_limits(self):
         xs = [p[0] for p in self._points]
         ys = [p[1] for p in self._points]
 
@@ -203,8 +202,8 @@ class YoudenPlotCanvas(tk.Canvas):
 
     @staticmethod
     def _value_to_x(
-        value: float, x0: int, x1: int, x_min: float, x_max: float
-    ) -> float:
+        value, x0, x1, x_min, x_max
+    ):
         if x_max == x_min:
             return (x0 + x1) / 2.0
         t = (value - x_min) / (x_max - x_min)
@@ -212,8 +211,8 @@ class YoudenPlotCanvas(tk.Canvas):
 
     @staticmethod
     def _value_to_y(
-        value: float, y0: int, y1: int, y_min: float, y_max: float
-    ) -> float:
+        value, y0, y1, y_min, y_max
+    ):
         if y_max == y_min:
             return (y0 + y1) / 2.0
         t = (value - y_min) / (y_max - y_min)
@@ -221,21 +220,21 @@ class YoudenPlotCanvas(tk.Canvas):
 
     # ------------------------------ Axes ------------------------------- #
 
-    def _draw_axes(self, x0: int, y0: int, x1: int, y1: int) -> None:
+    def _draw_axes(self, x0, y0, x1, y1):
         self.create_line(x0, y0, x0, y1, fill=self.AXIS_COLOR, width=1)
         self.create_line(x0, y1, x1, y1, fill=self.AXIS_COLOR, width=1)
 
     def _draw_grid(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        x_min: float,
-        x_max: float,
-        y_min: float,
-        y_max: float,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        x_min,
+        x_max,
+        y_min,
+        y_max,
+    ):
         # Simple 4x4 grid
         steps = 4
         for i in range(1, steps + 1):
@@ -251,15 +250,15 @@ class YoudenPlotCanvas(tk.Canvas):
 
     def _draw_sd_lines(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        x_min: float,
-        x_max: float,
-        y_min: float,
-        y_max: float,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        x_min,
+        x_max,
+        y_min,
+        y_max,
+    ):
         # Target crosshair
         tx = self._value_to_x(self._target_x, x0, x1, x_min, x_max)
         ty = self._value_to_y(self._target_y, y0, y1, y_min, y_max)
@@ -293,15 +292,15 @@ class YoudenPlotCanvas(tk.Canvas):
 
     def _draw_points(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        x_min: float,
-        x_max: float,
-        y_min: float,
-        y_max: float,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        x_min,
+        x_max,
+        y_min,
+        y_max,
+    ):
         for idx, (vx, vy) in enumerate(self._points):
             x = self._value_to_x(vx, x0, x1, x_min, x_max)
             y = self._value_to_y(vy, y0, y1, y_min, y_max)
@@ -338,15 +337,15 @@ class YoudenPlotCanvas(tk.Canvas):
 
     def _draw_labels(
         self,
-        x0: int,
-        y0: int,
-        x1: int,
-        y1: int,
-        x_min: float,
-        x_max: float,
-        y_min: float,
-        y_max: float,
-    ) -> None:
+        x0,
+        y0,
+        x1,
+        y1,
+        x_min,
+        x_max,
+        y_min,
+        y_max,
+    ):
         # X ticks (min, target, max)
         x_ticks = [x_min, self._target_x, x_max]
         for value in x_ticks:
@@ -397,7 +396,7 @@ class YoudenPlotCanvas(tk.Canvas):
                 fill=self.AXIS_COLOR,
             )
 
-    def _draw_title(self, width: int) -> None:
+    def _draw_title(self, width):
         if not self._title:
             return
         self.create_text(
@@ -409,7 +408,7 @@ class YoudenPlotCanvas(tk.Canvas):
             fill=self.AXIS_COLOR,
         )
 
-    def _draw_bottom_text(self, x0: int, x1: int, y1: int) -> None:
+    def _draw_bottom_text(self, x0, x1, y1):
         if not self._bottom_text:
             return
         self.create_text(
