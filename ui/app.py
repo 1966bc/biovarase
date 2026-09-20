@@ -42,6 +42,10 @@ class App(tk.Tk):
         self.engine = Engine(log)
 
         self.protocol("WM_DELETE_WINDOW", self.on_exit)
+        # The name of the program, kept apart from the title of the window:
+        # the title also carries whose laboratory this is, and the About
+        # window wants the name alone.
+        self.name = title
         site, lab, section = self.engine.get_laboratory()
         self.title("{0} - {1} - {2}".format(title, site, lab))
         self.resizable(0, 0)
@@ -78,7 +82,7 @@ class App(tk.Tk):
 
     def set_info(self):
         """The facts the About window shows, from the metadata above."""
-        self.info = {"name": self.title(),
+        self.info = {"name": self.name,
                      "version": __version__,
                      "date": __date__,
                      "author": __author__,

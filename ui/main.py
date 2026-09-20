@@ -20,7 +20,9 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 
+import ui.about
 import ui.actions
+import ui.licence
 import ui.batches
 import ui.categories
 import ui.controls
@@ -149,7 +151,21 @@ class Main(Window, ttk.Frame):
                                    command=lambda m=module: self.on_master_data(m))
             bar.add_cascade(label="Edit", underline=0, menu=m_edit)
 
+        m_about = tk.Menu(bar, tearoff=0)
+        m_about.add_command(label="About", underline=0, command=self.on_about)
+        m_about.add_command(label="Licence", underline=0, command=self.on_licence)
+        bar.add_cascade(label="?", menu=m_about)
+
         self.parent.config(menu=bar)
+
+    def on_about(self, evt=None):
+        """What this is, who wrote it, and what it is running on."""
+        self.engine.windows.replace(
+            "about", lambda: ui.about.UI(self, self.parent.info))
+
+    def on_licence(self, evt=None):
+        """The licence, as the file in the repository says it."""
+        self.engine.windows.replace("licence", lambda: ui.licence.UI(self))
 
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
