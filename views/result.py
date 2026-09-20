@@ -351,109 +351,53 @@ class UI(ChildView):
                 sys.modules[__name__],
             )
 
-    def _get_values(self) -> List[Any]:
+    def _get_values(self):
+        """The row as a dictionary keyed by column name.
+
+        The columns are the ones results has: nothing here knows in which
+        order they were declared, and nothing has to be kept in step with
+        the table by counting commas.
+
+        @return: values
+        @rtype: dictionary
         """
-        Build the argument list for INSERT/UPDATE on 'results'.
-
-        Table structure (without PK result_id):
-            batch_id, org_id, run_number, workstation_id, reagent_lot,
-            result, received, status,
-            validated, validated_by, validated_at,
-            tech_validated, tech_validated_by, tech_validated_at, operator_code,
-            is_delete, log_time, log_id, log_ip
-
-        Returns:
-            List of values matching the table structure
-        """
-        if self.index is not None:
-            # Update mode - preserve existing values
-            run_number = self.selected_result["run_number"]
-            is_delete = self.selected_result["is_delete"]
-            validated = self.selected_result["validated"]
-            validated_by = self.selected_result.get("validated_by")
-            validated_at = self.selected_result.get("validated_at")
-            # Technical validation - preserve existing values
-            tech_validated = self.selected_result.get("tech_validated", 0)
-            tech_validated_by = self.selected_result.get("tech_validated_by")
-            tech_validated_at = self.selected_result.get("tech_validated_at")
-            operator_code = self.selected_result.get("operator_code")
-        else:
-            # Insert mode - new result defaults
-            run_number = 0
-            is_delete = 0
-            validated = 0
-            validated_by = None
-            validated_at = None
-            # Technical validation - manual entry by logged user
-            tech_validated = 1
-            tech_validated_by = self.engine.log_user["user_id"]
-            tech_validated_at = None  # Will be set to received timestamp below
-            operator_code = None  # Manual entry, no machine code
-
-        # Result → safe float
         try:
-            val = float(self.result.get())
-        except (ValueError, TypeError) as e:
+            val = round(float(self.result.get()), 3)
+        except (ValueError, TypeError):
             val = 0.0
-        val = round(val, 3)
 
-        # Received → get from Calendarium if in INSERT mode, else use stored datetime
         if self.index is None:
-            # INSERT mode: read from Calendarium widget
             ts = self.calendarium_received.get_timestamp()
             if ts is None:
-                # Validation failed - use current datetime as fallback
                 ts = datetime.now()
         else:
-            # UPDATE mode: preserve existing datetime (not user-editable)
             ts = self.received_datetime
             if ts is None or isinstance(ts, str):
                 ts = datetime.now()
 
-        # Status → int
-        status = 1 if self.status.get() else 0
+        reagent_lot = self.reagent_lot.get().strip()
+        if not reagent_lot:
+            reagent_lot = DEFAULT_REAGENT_LOT
 
-        # FK batch_id
-        batch_id = self.selected_batch["batch_id"]
+        if self.index is None:
+            created_by = self.engine.log_user["user_id"]
+            created_at = ts
+        else:
+            created_by = self.selected_result["created_by"]
+            created_at = self.selected_result["created_at"]
 
-        # org_id from batch (organizations table)
-        org_id = self.selected_batch.get("org_id")
+        if self.status.get():
+            status = 1
+        else:
+            status = 0
 
-        # FK workstation_id
-        workstation_id = self.selected_workstation["workstation_id"]
-
-        # Reagent lot (use default if empty to pass validation)
-        reagent_lot_value = self.reagent_lot.get().strip()
-        if not reagent_lot_value:
-            reagent_lot_value = DEFAULT_REAGENT_LOT
-
-        # Set tech_validated_at to received timestamp for insert mode
-        if self.index is None and tech_validated_at is None:
-            tech_validated_at = ts
-
-        args = [
-            batch_id,         # batch_id
-            org_id,           # org_id (organizations FK)
-            run_number,       # run_number
-            workstation_id,   # workstation_id
-            reagent_lot_value,  # reagent_lot
-            val,              # result
-            ts,               # received
-            status,           # status
-            validated,        # validated
-            validated_by,     # validated_by
-            validated_at,     # validated_at
-            tech_validated,   # tech_validated
-            tech_validated_by,  # tech_validated_by
-            tech_validated_at,  # tech_validated_at
-            operator_code,    # operator_code
-            is_delete,        # is_delete
-            self.engine.get_log_time(),
-            self.engine.get_log_id(),
-            self.engine.get_log_ip()
-        ]
-
-        return args
+        return {"batch_id": self.selected_batch["batch_id"],
+                "result": val,
+                "received": ts,
+                "reagent_lot": reagent_lot,
+                "status": status,
+                "created_by": created_by,
+                "created_at": created_at}
 
     def _on_save(self, evt: Optional[tk.Event] = None) -> None:
         """
@@ -484,30 +428,20 @@ class UI(ChildView):
         ):
             return
 
-        args = self._get_values()
+        values = self._get_values()
 
         if self.index is not None:
-            sql = self.engine.build_sql(self.table, op="update")
-            # WHERE result_id = ?
             pk = self.selected_result["result_id"]
-            args.append(pk)
+            sql, args = self.engine.db.get_update(self.table, pk, values)
         else:
-            sql = self.engine.build_sql(self.table, op="insert")
+            sql, args = self.engine.db.get_insert(self.table, values)
 
-        last_id = self.engine.write(sql, tuple(args))
-        if last_id is None:
-            err = self.engine.last_write_error
-            if err:
-                msg = self.engine.get_user_friendly_db_error(err)
-            else:
-                msg = _("Save failed.")
-            messagebox.showerror(self.engine.app_title, msg, parent=self)
-            return
+        last_id = self.engine.db.write(sql, args)
 
         self._update_main_results_lists()
         self._set_index(last_id)
 
-        # Notify observers (e.g., daily_validation)
+        # Notify observers
         self.engine.notify("result_changed", last_id)
 
         self.on_cancel()
@@ -596,7 +530,7 @@ class UI(ChildView):
 
         self._update_main_results_lists()
 
-        # Notify observers (e.g., daily_validation)
+        # Notify observers
         self.engine.notify("result_changed", pk)
 
         self.on_cancel()

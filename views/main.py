@@ -14,10 +14,9 @@ management system, including:
 - Multi-site test and batch selection (categories, tests, workstations, batches)
 - Real-time Levey-Jennings chart visualization with Westgard rules
 - QC statistics calculation (mean, SD, CV, bias, uncertainty)
-- Result management (add, edit, validate, disable/enable)
+- Result management (add, edit, disable/enable)
 - Bias chart for target vs actual performance
 - Data import/export and reporting
-- Daily validation workflows
 - Integration with analytical goals and TEa
 
 This is a singleton master window (per PROJECT_RULES.md section 7.1) that coordinates
@@ -83,7 +82,6 @@ import views.change_password
 import views.organizations
 import views.importer
 import views.zscore
-import views.daily_validation
 import views.bland_altman
 import views.bland_altman_alert
 import views.qc_report
@@ -289,9 +287,6 @@ class Main(tk.Toplevel):
         m_file.add_command(label=_("Exit"), underline=0, command=self.on_close)
 
         # === QC MENU ===
-        m_plots.add_command(label=_("Daily Validation"), underline=0, command=self.on_daily_validation)
-        m_plots.add_separator()
-
         items = ((_("Levey-Jennings"), 0, self.on_plots),
                  (_("Youden"), 0, self.on_youden),
                  (_("Tea"), 0, self.on_tea),
@@ -1855,17 +1850,6 @@ class Main(tk.Toplevel):
             title=title,
             unit=unit,
         )
-
-    def on_daily_validation(self, evt=None):
-        """Open Daily QC Validation window."""
-        if not self.engine.can_validate_qc():
-            messagebox.showwarning(
-                _("Access Denied"),
-                self.engine.user_not_enable
-            )
-            return
-        
-        views.daily_validation.UI(self).on_open()
 
     def on_tests(self) -> None:
         if not self.engine.is_admin():
