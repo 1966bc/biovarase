@@ -94,9 +94,22 @@ class Main(Window, ttk.Frame):
 
         self.init_menu()
         self.init_ui()
+        # A window that is told about changes after it is gone raises from
+        # inside the callback of whoever saved. <Destroy> arrives however
+        # this window ends - a change of user, the application closing - so
+        # the register of listeners cannot be left holding a dead window.
+        self.bind("<Destroy>", self.on_destroy, add="+")
+        # The master data this window shows can be changed while it is open,
+        # from the Edit menu: an analyte disabled, a category renamed, an
+        # instrument taken out of service. The lists are read again when it
+        # happens, or they keep offering a choice that no longer exists.
         self.engine.events.subscribe("results", self.on_results_changed)
         self.engine.events.subscribe("notes", self.on_results_changed)
         self.engine.events.subscribe("batches", self.on_batches_changed)
+        self.engine.events.subscribe("categories", self.on_master_data_changed)
+        self.engine.events.subscribe("tests", self.on_master_data_changed)
+        self.engine.events.subscribe("test_methods", self.on_master_data_changed)
+        self.engine.events.subscribe("workstations", self.on_master_data_changed)
 
     # ------------------------------------------------------------- the menu
 
@@ -649,6 +662,52 @@ class Main(Window, ttk.Frame):
         """A lot was saved: read the lots of the instrument again."""
         if self.workstation is not None:
             self.set_batches()
+
+    def on_destroy(self, evt=None):
+        """Stop being told about changes when this window goes.
+
+        A Toplevel receives <Destroy> for every widget inside it as well:
+        only its own counts.
+        """
+        if str(evt.widget) == str(self):
+            for event, callback in (("results", self.on_results_changed),
+                                    ("notes", self.on_results_changed),
+                                    ("batches", self.on_batches_changed),
+                                    ("categories", self.on_master_data_changed),
+                                    ("tests", self.on_master_data_changed),
+                                    ("test_methods", self.on_master_data_changed),
+                                    ("workstations", self.on_master_data_changed)):
+                self.engine.events.unsubscribe(event, callback)
+
+    def on_master_data_changed(self, row_id=None):
+        """Master data changed: read the choices again, keeping what still exists.
+
+        An analyte disabled while it is the one being looked at leaves the
+        window on a series that is no longer offered anywhere: the charts are
+        emptied and the choice is given back, rather than left showing
+        numbers that cannot be reached again.
+        """
+        category = self.cb_categories.get()
+        test = self.cb_tests.get()
+
+        self.set_categories()
+
+        if category in self.cb_categories.cget("values"):
+            self.cb_categories.set(category)
+            self.set_tests()
+            if test in self.cb_tests.cget("values"):
+                self.cb_tests.set(test)
+                self.on_selected_test()
+            else:
+                self.cb_tests.set("")
+                self.test_method = None
+                self.on_reset()
+        else:
+            self.cb_categories.set("")
+            self.cb_tests.set("")
+            self.engine.tools.set_combo(self.cb_tests, ())
+            self.test_method = None
+            self.on_reset()
 
     def on_point(self, info):
         """A point of the chart double clicked: open the result behind it."""
