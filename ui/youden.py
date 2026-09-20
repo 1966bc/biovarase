@@ -98,7 +98,7 @@ class UI(Window, tk.Toplevel):
                                                                         MINIMUM))
                 self.chart.clear()
             else:
-                self.summary.set("{0} days with both levels run.".format(len(low)))
+                self.summary.set(self.get_summary(low, high))
                 self.chart.draw_youden(low, high,
                                        lot["target"], other["target"],
                                        lot["sd"], other["sd"],
@@ -108,6 +108,28 @@ class UI(Window, tk.Toplevel):
                                            other["lot_number"]),
                                        x_label=lot["description"],
                                        y_label=other["description"])
+
+    def get_summary(self, low, high):
+        """The line above the plot: how many days, and what r says about them.
+
+        The picture answers by its shape and this answers by a number, and
+        they are the same answer. What the number adds is a threshold: the
+        laboratory sets in the settings how much agreement it calls
+        agreement, rather than each person reading the cloud their own way.
+
+        @param name: low, high
+        @return: the line
+        @rtype: string
+        """
+        r = self.engine.qc.get_correlation(low, high)
+
+        if r >= self.engine.get_correlation_coefficient():
+            verdict = "the two levels moved together: systematic"
+        else:
+            verdict = "the two levels moved apart: random"
+
+        return "{0} days with both levels run.   r = {1} - {2}.".format(
+            len(low), r, verdict)
 
     def get_other_level(self, lot):
         """The other level of the same control, on the same instrument.

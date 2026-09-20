@@ -10,19 +10,19 @@ import datetime as _dt
 
 class LeveyJenningsCanvas(tk.Canvas):
     """
-    Simple Levey–Jennings chart using pure Tkinter Canvas.
+    Simple Levey-Jennings chart using pure Tkinter Canvas.
 
     Features:
         - X axis: observation index or dates
         - Y axis: numeric values
-        - Horizontal lines: target, ±1SD, ±2SD, ±3SD
+        - Horizontal lines: target, +/-1SD, +/-2SD, +/-3SD
         - Points colored by SD distance:
-            green  → |value - target| < 2SD
-            yellow → 2SD ≤ |value - target| < 3SD
-            red    → |value - target| ≥ 3SD
+            green  -> |value - target| < 2SD
+            yellow -> 2SD <= |value - target| < 3SD
+            red    -> |value - target| >= 3SD
 
     This widget is *not* a generic plotting library.
-    It is intentionally focused on QC / Levey–Jennings style charts.
+    It is intentionally focused on QC / Levey-Jennings style charts.
     """
 
     # Layout margins (pixels)
@@ -37,13 +37,13 @@ class LeveyJenningsCanvas(tk.Canvas):
     AXIS_COLOR    = "#000000"
 
     TARGET_COLOR  = "#00008b"   # deep blue
-    SD1_COLOR     = "#006400"   # dark green (±1 SD)
-    SD2_COLOR     = "#ff9800"   # saturated orange (±2 SD)
-    SD3_COLOR     = "#e74c3c"   # technical red (±3 SD)
+    SD1_COLOR     = "#006400"   # dark green (+/-1 SD)
+    SD2_COLOR     = "#ff9800"   # saturated orange (+/-2 SD)
+    SD3_COLOR     = "#e74c3c"   # technical red (+/-3 SD)
 
     # Shaded bands between SD lines
-    BAND_1_FILL   = "#e6f4e6"   # very light green  (Target ±1SD)
-    BAND_2_FILL   = "#fff6cc"   # very light yellow (Target ±2SD)
+    BAND_1_FILL   = "#e6f4e6"   # very light green  (Target +/-1SD)
+    BAND_2_FILL   = "#fff6cc"   # very light yellow (Target +/-2SD)
 
 
 
@@ -54,7 +54,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def __init__(self, parent, **kwargs):
         """
-        Create a Levey–Jennings canvas.
+        Create a Levey-Jennings canvas.
 
         Typical usage:
             self.chart = LeveyJenningsCanvas(parent, bg="white", height=300)
@@ -76,14 +76,14 @@ class LeveyJenningsCanvas(tk.Canvas):
         self._x_axis_caption = "Observation"
         self._y_axis_caption = "Value"
 
-        # Hit–test data for points
+        # Hit-test data for points
         self._points_info = []
         self._on_point_click = None  # callback esterna
 
         # Redraw on resize
         self.bind("<Configure>", self._on_resize)
 
-        # Double–click on point
+        # Double-click on point
         self.bind("<Double-Button-1>", self._on_double_click)
 
         self._show_values = True
@@ -110,13 +110,13 @@ class LeveyJenningsCanvas(tk.Canvas):
         bottom_text=None,
     ):
         """
-        Draw a Levey–Jennings chart.
+        Draw a Levey-Jennings chart.
 
         Args:
             series: iterable of numeric QC results (chronological order).
             target: target value of the control.
             sd:     standard deviation used for SD bands.
-            title:  optional chart title (e.g. "QC – Control L1").
+            title:  optional chart title (e.g. "QC - Control L1").
             dates:  optional sequence (same length as series) used for X labels.
                     Elements can be:
                         - datetime.date / datetime.datetime
@@ -160,7 +160,7 @@ class LeveyJenningsCanvas(tk.Canvas):
             # If no explicit caption is given, use "Date"
             self._x_axis_caption = x_axis_caption or "Date"
         else:
-            # No dates → we will show index (1..N)
+            # No dates -> we will show index (1..N)
             self._x_labels = None
             self._x_axis_caption = x_axis_caption or "Observation"
 
@@ -188,7 +188,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def set_point_click_callback(self, callback):
         """
-        Register a callback called when the user double–clicks on a point.
+        Register a callback called when the user double-clicks on a point.
 
         callback signature:
             callback(info: dict)
@@ -301,15 +301,15 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def _compute_y_limits(self):
         """
-        Compute Y-axis limits using target ± 4SD (Westgard recommendation).
+        Compute Y-axis limits using target +/- 4SD (Westgard recommendation).
 
-        Values beyond ±4SD will be clipped to the edge of the chart
+        Values beyond +/-4SD will be clipped to the edge of the chart
         and displayed with a triangle marker to indicate "out of range".
         """
         target = self._target
         sd = self._sd
 
-        # Fixed scale at ±4SD per Westgard best practices
+        # Fixed scale at +/-4SD per Westgard best practices
         y_min = target - 4 * sd
         y_max = target + 4 * sd
 
@@ -353,7 +353,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         y_max,
     ):
         """
-        Draw shaded bands for ±1SD and ±2SD and the horizontal SD/target lines.
+        Draw shaded bands for +/-1SD and +/-2SD and the horizontal SD/target lines.
         """
         target = self._target
         sd = self._sd
@@ -380,7 +380,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         # ------------------------------------------------------------------
         # Shaded bands (drawn first)
         # ------------------------------------------------------------------
-        # Target ±2SD (background band)
+        # Target +/-2SD (background band)
         y_top_2 = y_pos["+2sd"]
         y_bot_2 = y_pos["-2sd"]
         if y_top_2 > y_bot_2:
@@ -395,7 +395,7 @@ class LeveyJenningsCanvas(tk.Canvas):
             outline="",
         )
 
-        # Target ±1SD (inner band, overrides colour inside)
+        # Target +/-1SD (inner band, overrides colour inside)
         y_top_1 = y_pos["+1sd"]
         y_bot_1 = y_pos["-1sd"]
         if y_top_1 > y_bot_1:
@@ -411,7 +411,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         )
 
         # ------------------------------------------------------------------
-        # Horizontal lines (target, ±1/2/3 SD)
+        # Horizontal lines (target, +/-1/2/3 SD)
         # ------------------------------------------------------------------
         level_styles = {
             "target": ("Target", self.TARGET_COLOR),
@@ -481,7 +481,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def _draw_grid(self, x0, y0, x1, y1):
         """
-        Draw a faint dotted grid behind the Levey–Jennings chart.
+        Draw a faint dotted grid behind the Levey-Jennings chart.
         """
         grid_color = self.GRID_COLOR
         rows = 6
@@ -530,7 +530,7 @@ class LeveyJenningsCanvas(tk.Canvas):
     ):
         """Draw series as line + colored points (respecting enabled/disabled status).
 
-        Points beyond ±4SD are clipped to the chart edge and displayed
+        Points beyond +/-4SD are clipped to the chart edge and displayed
         as triangles pointing in the direction of the actual value.
         """
         n = len(self._series)
@@ -540,7 +540,7 @@ class LeveyJenningsCanvas(tk.Canvas):
         target = self._target
         sd = self._sd
 
-        # Clip threshold at ±4SD
+        # Clip threshold at +/-4SD
         clip_high = target + 4 * sd
         clip_low = target - 4 * sd
 
@@ -693,9 +693,9 @@ class LeveyJenningsCanvas(tk.Canvas):
         """
         Return color based on SD distance:
 
-            |z| < 2  → green
-            2 ≤ |z| < 3 → yellow
-            |z| ≥ 3 → red
+            |z| < 2  -> green
+            2 <= |z| < 3 -> yellow
+            |z| >= 3 -> red
         """
         if self._sd == 0:
             return "#00aa00"
@@ -832,7 +832,7 @@ class LeveyJenningsCanvas(tk.Canvas):
 
     def _on_double_click(self, event):
         """
-        Handle double–clicks on the canvas.
+        Handle double-clicks on the canvas.
 
         If the click is close to a point, call the registered callback
         with the point info.
@@ -848,7 +848,7 @@ class LeveyJenningsCanvas(tk.Canvas):
             dx = x_click - info["x"]
             dy = y_click - info["y"]
             if dx * dx + dy * dy <= hit_radius * hit_radius:
-                # Punto trovato → chiama callback
+                # The point was found: call back
                 self._on_point_click(info)
                 break
 

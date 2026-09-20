@@ -13,9 +13,9 @@ class YoudenPlotCanvas(tk.Canvas):
 
     Designed for two control levels measured on the same series of runs:
 
-        - X axis  → Level 1 results
-        - Y axis  → Level 2 results
-        - Vertical/horizontal lines: target ±1SD, ±2SD
+        - X axis  -> Level 1 results
+        - Y axis  -> Level 2 results
+        - Vertical/horizontal lines: target +/-1SD, +/-2SD
         - Points: paired results (x_i, y_i)
 
     This widget is intentionally focused on QC / Youden charts and is not
@@ -91,7 +91,7 @@ class YoudenPlotCanvas(tk.Canvas):
             sd_x: standard deviation for level 1.
             sd_y: standard deviation for level 2.
             title: optional chart title.
-            x_label: X axis label (e.g. 'L1 (µg/mL)').
+            x_label: X axis label (e.g. 'L1 (ug/mL)').
             y_label: Y axis label.
             bottom_text: small string shown under the plot
                          (e.g. 'Computed 30 paired results').
@@ -146,7 +146,7 @@ class YoudenPlotCanvas(tk.Canvas):
         x1 = width - self.RIGHT_MARGIN
         y1 = height - self.BOTTOM_MARGIN
 
-        # Determine ranges (use target ±2SD plus data min/max)
+        # Determine ranges (use target +/-2SD plus data min/max)
         x_min, x_max, y_min, y_max = self._compute_limits()
 
         # Axes and grid
@@ -261,7 +261,7 @@ class YoudenPlotCanvas(tk.Canvas):
         self.create_line(x0, ty, x1, ty, fill=self.TARGET_COLOR, width=2)
         self.create_line(tx, y0, tx, y1, fill=self.TARGET_COLOR, width=2)
 
-        # ±1SD and ±2SD bands
+        # +/-1SD and +/-2SD bands
         x_levels = [
             (self._target_x - self._sd_x, self.SD1_COLOR, (2, 4)),
             (self._target_x + self._sd_x, self.SD1_COLOR, (2, 4)),
@@ -300,7 +300,7 @@ class YoudenPlotCanvas(tk.Canvas):
             x = self._value_to_x(vx, x0, x1, x_min, x_max)
             y = self._value_to_y(vy, y0, y1, y_min, y_max)
 
-            # Simple rule: if point is beyond ±2SD in either axis → red
+            # Simple rule: if point is beyond +/-2SD in either axis -> red
             out = (
                 abs(vx - self._target_x) > 2 * self._sd_x
                 or abs(vy - self._target_y) > 2 * self._sd_y

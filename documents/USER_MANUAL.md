@@ -390,6 +390,12 @@ reagent lot, the instrument. Points scattered in a cloud with no direction is
 Green is a day where both levels were inside 2 SD, red a day where at least
 one was not.
 
+The line above the plot gives the same answer as a number: Pearson's **r**
+between the two levels, and whether it is above the threshold in the
+settings. Near 1 the two moved together and the error is systematic; near 0
+they moved independently and it is imprecision. The picture and the number
+say the same thing, and the number is the one that can be written down.
+
 ### Bland-Altman
 
 **QC > Bland-Altman** compares two instruments on the same control material:
@@ -582,6 +588,7 @@ are stored as bcrypt hashes; nothing in the database ever holds a password.
 | **Degrees of freedom** | 0 treats the series as the population, 1 as a sample. It changes every SD, CV and bias in the program |
 | **Coverage factor** | z: 1.65 for one-sided 95%, 1.96 for two-sided 95%, 2 for k=2. It changes the total error and the uncertainty |
 | **Observations** | how many results a series needs before the rules are read at all. Below it, `NED` |
+| **Correlation** | above this r, the Youden plot calls the two levels agreed |
 | **Points on the chart** | how many results the Levey-Jennings draws |
 | **Results in the list** | how many the main window loads at once |
 

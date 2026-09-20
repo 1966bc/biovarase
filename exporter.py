@@ -121,9 +121,8 @@ class Exporter:
         if len(series) < self.engine.get_observations():
             found = "NED"
         else:
-            found = self.engine.westgards.get_westgard_violation_rule(row["target"],
-                                                                      row["sd"],
-                                                                      series)
+            found = self.engine.westgards.get_rule(row["target"], row["sd"],
+                                                   series)
         return found
 
     def get_z(self, result, target, sd):

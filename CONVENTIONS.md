@@ -69,6 +69,11 @@ The rules this code is written by.
 - ttk styles (`App.*`, `StatusBar.TLabel`, …) are all defined in
   `Tools.set_style()`.
 - `.format()` strings, not f-strings.
+- **Plain text in the source.** A file of code is text, not a drawing: no
+  check marks, no crosses, no boxes drawn with lines, no arrows. `+/-`,
+  `<=`, `>=`, `->`. A letter with an accent on it is a letter, and stays -
+  Böhm is spelt Böhm - but a glyph that is there to decorate a comment is
+  noise in a diff and a question mark in somebody else's terminal.
 - Confirmations through `messagebox`, with the texts held by the engine
   (`ask_to_save`, `ask_to_delete`, `abort`, `no_selected`).
 

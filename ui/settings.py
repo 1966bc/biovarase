@@ -30,6 +30,8 @@ FIELDS = (("statistics", "ddof", "Degrees of freedom",
            "1.65 one-sided 95%, 1.96 two-sided, 2 for k = 2"),
           ("statistics", "observations", "Observations",
            "how many results a series needs before the rules are read"),
+          ("statistics", "correlation_coefficient", "Correlation",
+           "above this the Youden plot says the two levels moved together"),
           ("display", "elements", "Points on the chart",
            "how many results the Levey-Jennings draws"),
           ("display", "records", "Results in the list",
@@ -37,7 +39,7 @@ FIELDS = (("statistics", "ddof", "Degrees of freedom",
 
 
 class UI(Window, tk.Toplevel):
-    """Five numbers, and what each of them does."""
+    """Six numbers, and what each of them does."""
 
     def __init__(self, parent):
         super().__init__(name="settings")

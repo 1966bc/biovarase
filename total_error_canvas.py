@@ -245,7 +245,7 @@ class TotalErrorCanvas(tk.Canvas):
         if self._date_from and self._date_to:
             summary_parts.append(f"{self._date_from} \u2192 {self._date_to}")
 
-        summary = "   ·   ".join(summary_parts)
+        summary = "   -   ".join(summary_parts)
 
         self.create_text(
             (x0 + x1) / 2.0,

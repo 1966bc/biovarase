@@ -885,9 +885,8 @@ class Main(Window, ttk.Frame):
         if len(series) < self.engine.get_observations():
             rule = "NED"
         else:
-            rule = self.engine.westgards.get_westgard_violation_rule(lot["target"],
-                                                                     lot["sd"],
-                                                                     series)
+            rule = self.engine.westgards.get_rule(lot["target"], lot["sd"],
+                                                  series)
         self.values["westgard"].set(rule)
         self.set_westgard_alarm(rule)
 

@@ -36,11 +36,10 @@ class WestgardTestCase(unittest.TestCase):
 
     def setUp(self):
         self.westgards = Westgards()
-        self.limits = self.westgards._calculate_control_limits(TARGET, SD)
 
     def get_rule(self, series):
         """What stops the run, or Accept."""
-        return self.westgards.get_westgard_violation_rule(TARGET, SD, series)
+        return self.westgards.get_rule(TARGET, SD, series)
 
 
 class TestTheRules(WestgardTestCase):
@@ -107,18 +106,48 @@ class TestWhatIsNotEnough(WestgardTestCase):
         self.assertEqual(self.get_rule([131.0]), "1:3S")
 
 
-class TestTheLimits(WestgardTestCase):
-    """The limits the rules are read against, computed once."""
+    def test_no_results_is_not_a_series(self):
+        """Nothing to read a rule on, and it says so rather than accepting."""
+        with self.assertRaises(ValueError):
+            self.get_rule([])
 
-    def test_the_limits_are_the_target_plus_so_many_deviations(self):
-        self.assertEqual(self.limits["sd1"], 110.0)
-        self.assertEqual(self.limits["sd2"], 120.0)
-        self.assertEqual(self.limits["sd3"], 130.0)
 
-    def test_and_the_same_below(self):
-        self.assertEqual(self.limits["sd_1"], 90.0)
-        self.assertEqual(self.limits["sd_2"], 80.0)
-        self.assertEqual(self.limits["sd_3"], 70.0)
+class TestOneRuleAtATime(WestgardTestCase):
+    """Each rule on its own, as the Statistics window asks them.
+
+    The multirule reports one answer; that window shows all six, so each has
+    to be callable by itself and to answer only about its own shape.
+    """
+
+    def test_12S_looks_at_the_last_result_only(self):
+        self.assertTrue(self.westgards.get_rule_12S([100.0, 121.0], TARGET, SD))
+        self.assertFalse(self.westgards.get_rule_12S([121.0, 100.0], TARGET, SD))
+
+    def test_13S_is_the_same_reading_one_deviation_further(self):
+        self.assertTrue(self.westgards.get_rule_13S([100.0, 131.0], TARGET, SD))
+        self.assertFalse(self.westgards.get_rule_13S([100.0, 121.0], TARGET, SD))
+
+    def test_22S_wants_them_on_the_same_side(self):
+        self.assertTrue(self.westgards.get_rule_22S([121.0, 122.0], TARGET, SD))
+        self.assertFalse(self.westgards.get_rule_22S([121.0, 79.0], TARGET, SD))
+
+    def test_R4S_wants_them_on_opposite_sides(self):
+        self.assertTrue(self.westgards.get_rule_R4S([121.0, 79.0], TARGET, SD))
+        self.assertFalse(self.westgards.get_rule_R4S([121.0, 122.0], TARGET, SD))
+
+    def test_41S_needs_four_of_them(self):
+        walking = [111.0, 112.0, 113.0, 114.0]
+        self.assertTrue(self.westgards.get_rule_41S(walking, TARGET, SD))
+        self.assertFalse(self.westgards.get_rule_41S(walking[1:], TARGET, SD))
+
+    def test_10X_needs_ten_and_does_not_need_them_out(self):
+        drifting = [101.0] * 10
+        self.assertTrue(self.westgards.get_rule_10X(drifting, TARGET, SD))
+        self.assertFalse(self.westgards.get_rule_10X(drifting[1:], TARGET, SD))
+
+    def test_a_result_on_the_target_is_on_neither_side(self):
+        """10:X reads strictly: exactly on target breaks no run."""
+        self.assertFalse(self.westgards.get_rule_10X([100.0] * 10, TARGET, SD))
 
 
 if __name__ == "__main__":

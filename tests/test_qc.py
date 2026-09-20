@@ -117,6 +117,43 @@ class TestTheGoals(QCTestCase):
         self.assertEqual(qc.get_tea(self.CVI, self.CVG), 33.44)
 
 
+class TestTheCorrelation(QCTestCase):
+    """What the two levels of a control did on the same days."""
+
+    def test_two_series_that_rise_together_are_one(self):
+        """The same movement on both levels: r = 1."""
+        self.assertEqual(self.qc.get_correlation([1.0, 2.0, 3.0, 4.0],
+                                                 [10.0, 20.0, 30.0, 40.0]), 1.0)
+
+    def test_one_that_rises_while_the_other_falls_is_minus_one(self):
+        self.assertEqual(self.qc.get_correlation([1.0, 2.0, 3.0, 4.0],
+                                                 [40.0, 30.0, 20.0, 10.0]), -1.0)
+
+    def test_a_calibration_drifting_on_both_levels_shows_it(self):
+        """Both levels walking up together, with a little noise on each."""
+        low = [7.9, 8.0, 8.2, 8.3, 8.5, 8.6, 8.8]
+        high = [17.8, 18.1, 18.4, 18.6, 19.0, 19.2, 19.5]
+        self.assertGreater(self.qc.get_correlation(low, high), 0.975)
+
+    def test_imprecision_does_not_correlate(self):
+        """Each level scattered on its own: nothing to see along the diagonal."""
+        low = [8.0, 8.4, 7.6, 8.3, 7.7, 8.2, 7.8]
+        high = [18.2, 17.7, 18.1, 18.3, 17.6, 17.9, 18.4]
+        self.assertLess(abs(self.qc.get_correlation(low, high)), 0.975)
+
+    def test_a_level_that_never_moved_has_no_correlation(self):
+        """No spread on one axis: the fraction has a zero under it."""
+        self.assertEqual(self.qc.get_correlation([8.0, 8.0, 8.0],
+                                                 [18.0, 18.2, 17.9]), 0.0)
+
+    def test_one_pair_is_not_a_correlation(self):
+        self.assertEqual(self.qc.get_correlation([8.0], [18.0]), 0.0)
+
+    def test_series_of_different_lengths_are_not_pairs(self):
+        with self.assertRaises(ValueError):
+            self.qc.get_correlation([8.0, 8.1], [18.0])
+
+
 class TestTheVerdict(QCTestCase):
     """What the series does, against what the analyte allows."""
 

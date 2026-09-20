@@ -157,6 +157,43 @@ class QC:
 
         return found
 
+    def get_correlation(self, xs, ys):
+        """Pearson's r between two series measured in pairs.
+
+        On a Youden plot this is the number the picture is already showing:
+        how much of what happened to one level happened to the other on the
+        same day. Near 1 the two moved together, which is the signature of a
+        systematic error - a calibration, a reagent lot, the instrument - and
+        near 0 they moved independently, which is imprecision.
+
+        Written out rather than taken from statistics.correlation, which
+        arrived in Python 3.10 and would cost this program the versions
+        before it.
+
+        Two series of different lengths are not pairs and raise. Fewer than
+        two pairs, or a series with no spread at all - every day the same
+        value - has no correlation to compute, and is 0.
+
+        @param name: xs, ys
+        @return: r, between -1 and 1
+        @rtype: float
+        """
+        if len(xs) != len(ys):
+            raise ValueError("{0} and {1} are not pairs".format(len(xs), len(ys)))
+
+        found = 0.0
+        if len(xs) >= 2:
+            mean_x = statistics.mean(xs)
+            mean_y = statistics.mean(ys)
+            dxs = [x - mean_x for x in xs]
+            dys = [y - mean_y for y in ys]
+            spread = math.sqrt(sum(dx * dx for dx in dxs)
+                               * sum(dy * dy for dy in dys))
+            if spread != 0:
+                found = round(sum(dx * dy for dx, dy in zip(dxs, dys)) / spread, 3)
+
+        return found
+
     def get_imp(self, cvw):
         """The imprecision the analyte allows: half its within-subject variation.
 

@@ -202,20 +202,20 @@ class UI(Window, tk.Toplevel):
     def set_rules(self, lot, series):
         """Each rule, said one by one instead of only the first that fires.
 
-        get_westgard_violation_rule answers with the rule that stops the run,
+        get_rule answers with the rule that stops the run,
         which is what the chart needs. Here every rule is asked separately,
         because when a run is rejected the next question is always which of
         them held and which did not.
         """
         westgards = self.engine.westgards
-        limits = westgards._calculate_control_limits(lot["target"], lot["sd"])
+        target, sd = lot["target"], lot["sd"]
 
-        rows = (("1:2S", westgards.get_rule_12S(series, limits)),
-                ("1:3S", westgards.get_rule_13S(series, limits)),
-                ("2:2S", westgards.get_rule_22S(series, limits)),
-                ("R:4S", westgards.get_rule_R4S(series, limits)),
-                ("4:1S", westgards.get_rule_41S(series, lot["target"], limits)),
-                ("10:X", westgards.get_rule_10X(series, lot["target"])))
+        rows = (("1:2S", westgards.get_rule_12S(series, target, sd)),
+                ("1:3S", westgards.get_rule_13S(series, target, sd)),
+                ("2:2S", westgards.get_rule_22S(series, target, sd)),
+                ("R:4S", westgards.get_rule_R4S(series, target, sd)),
+                ("4:1S", westgards.get_rule_41S(series, target, sd)),
+                ("10:X", westgards.get_rule_10X(series, target, sd)))
 
         for column, (name, broken) in enumerate(rows):
             cell = ttk.Frame(self.frm_rules, style="App.TFrame")

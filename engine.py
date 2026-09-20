@@ -343,6 +343,10 @@ class Engine:
         """How many results a series needs before the rules are read on it."""
         return self.config.get_int("statistics", "observations")
 
+    def get_correlation_coefficient(self):
+        """Above this, the two levels of a control are said to agree."""
+        return self.config.get_float("statistics", "correlation_coefficient")
+
     # -------------------------------------------------------------- the dates
 
     #: How a date is written, and what strftime makes of it.
