@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# project:  biovarase
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 """
 Login Frame for Biovarase Laboratory QC Management System.
 

@@ -1,10 +1,9 @@
-#-----------------------------------------------------------------------------
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   autumn MMXXV
-#-----------------------------------------------------------------------------
-
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 import sys
 import tkinter as tk
 from tkinter import ttk

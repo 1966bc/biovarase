@@ -2,13 +2,9 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # project:  biovarase
-# module:   ljcanvas
-# purpose:  Levey–Jennings chart using pure Tkinter Canvas
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   ver MMXXV
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-
 import tkinter as tk
 import datetime as _dt
 

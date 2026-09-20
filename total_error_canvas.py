@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # project:  biovarase
-# module:   total_error_canvas
-# purpose:  Total error dashboard using pure Tkinter Canvas
-# authors:  1966bc
-# mailto:   giuseppecostanzi@gmail.com
-# modify:   ver MMXXV
-#-----------------------------------------------------------------------------
-
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 import tkinter as tk
 
 

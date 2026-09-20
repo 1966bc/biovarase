@@ -10,9 +10,9 @@ Composition, each part is an attribute, a call says who does the work -
 engine.db.read(...), engine.qc.get_mean(...) - and each part can be built and
 tested on its own, as the tests do with a database in memory.
 
-What is left here is what belongs to nobody else: who is logged in, where the
-files are, and the few questions about this laboratory that are asked from
-more than one window.
+What is here is what belongs to nobody else: who is logged in, where the files
+are, and the few questions about this laboratory that are asked from more than
+one window.
 """
 
 import os

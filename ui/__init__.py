@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# Biovarase
-# GNU GENERAL PUBLIC LICENSE
-# Version 3, 29 June 2007
-
-
+# -----------------------------------------------------------------------------
+# project:  biovarase
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 """
 Biovarase
 ==========

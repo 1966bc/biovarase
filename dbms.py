@@ -6,15 +6,12 @@
 # -----------------------------------------------------------------------------
 """The database, and what can be asked of it.
 
-One SQLite file beside the program. There is no host, no port, no user and
-no password: the laboratory is the file, and whoever can open the file is
-in. What used to be here - reconnection, pings, idle timeouts, a second
-class for background connections - belonged to a client talking to a server
-over a network, and went with the server.
+One SQLite file beside the program. There is no host, no port, no user and no
+password: the laboratory is the file, and whoever can open the file is in.
 
-A failed statement is written to the log and raised again. It never comes
-back as an empty result: a read that fails must not look like a table with
-no rows in it.
+A failed statement is written to the log and raised again. It never comes back
+as an empty result: a read that fails must not look like a table with no rows
+in it.
 """
 import datetime
 import os
@@ -58,9 +55,9 @@ class DBMS:
     def get_background_connection(self):
         """A second connection to the same file, for a worker thread.
 
-        SQLite hands out one connection per thread: a long export opens its
-        own and closes it when it is done. It is a DBMS like this one - there
-        is no second class for it.
+        SQLite hands out one connection per thread: a long export opens its own
+        and closes it when it is done. It is a DBMS like this one, on the same
+        file.
 
         @return: a new DBMS on the same database
         @rtype: DBMS
@@ -217,8 +214,8 @@ class DBMS:
 
         values is a dictionary keyed by column name, so no window has to know
         the order of the columns. A missing column and an unknown one are both
-        refused, naming the table: a value that slid into the next column is
-        the oldest bug in this program's history.
+        refused, naming the table: a value written one column further along is
+        the kind of error that is found months later, in the data.
 
         @param name: table, values
         @return: args

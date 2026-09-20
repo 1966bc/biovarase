@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   ver MMXXV
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
 """
 Main Application Window for Biovarase QC System.

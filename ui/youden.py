@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   ver MMXXV  (rewritten to use YoudenPlotCanvas)
-#-----------------------------------------------------------------------------
-
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 """Youden module of Biovarase — rewritten to use pure Tkinter Canvas."""
 
 import tkinter as tk

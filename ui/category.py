@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   January 2026
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
 """
 Category editor - categories are always created in the current lab context.

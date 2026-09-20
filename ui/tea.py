@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   giuseppecostanzi@gmail.com
-# modify:   ver MMXXV (TEA window rewritten to use Tkinter Canvas dashboard)
-#-----------------------------------------------------------------------------
-
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 """
 TEA (Total Error Analysis) module of Biovarase.
 

@@ -23,10 +23,10 @@ build is a function that makes the window, not a window: when the answer is
 "it is already open", nothing is built at all.
 
 Python offers another way to write a Singleton: override __new__, which runs
-before __init__, and return the instance already made. It is what the views
-used to do, and it has a catch - Python then calls __init__ again on the old
-instance, so every window had to begin by asking whether it was being reused
-and returning early. A register does the same in plain sight.
+before __init__, and return the instance already made. It works, and it has a
+catch: Python then calls __init__ again on the instance it just handed back,
+so every window has to begin by asking whether it is being reused. A register
+does the same thing in plain sight.
 """
 
 

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   January 2026
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-
 """
 Youden Selector Dialog - Select two batches for Youden plot.
 

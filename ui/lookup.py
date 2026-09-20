@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   autumn MMXXV
-#-----------------------------------------------------------------------------
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 """
 Generic lookup list UI for simple tables with:
     - primary key (auto-detected via Engine)

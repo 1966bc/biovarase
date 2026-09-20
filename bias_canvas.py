@@ -2,13 +2,9 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # project:  biovarase
-# module:   bias_canvas
-# purpose:  Simple bias chart (target vs mean) using Tkinter Canvas
-# authors:  1966bc
-# mailto:   giuseppecostanzi@gmail.com
-# modify:   ver MMXXV
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-
 import tkinter as tk
 
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
-# Generic single-field + status editor for simple lookup tables
-# (e.g. units, actions, categories, ...)
+# project:  biovarase
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 

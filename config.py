@@ -16,11 +16,11 @@ through it line by line and decide, for each line, what it is.
     ddof = 0
     zscore = 1.65
 
-What it has that Tkinterlite's has not is set() and save(): the program writes
-some of these back - the coverage factor, the degrees of freedom, the language
-- from its own windows. The file is kept as it was read, line by line, and
-only the line that changed is rewritten: the comments that say what a setting
-means are still there afterwards, which is the reason they were written.
+set() and save() write a setting back, because the program changes some of
+them from its own windows: the coverage factor, the degrees of freedom. The
+file is held line by line and only the line that changes is rewritten, so the
+comments that say what a setting means survive being changed - which is the
+reason they are worth writing.
 """
 
 import os

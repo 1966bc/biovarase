@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:    [giuseppecostanzi@gmail.com]
-# modify:   ver MMXXV
-# This script has been significantly enhanced through collaboration with a programming assistant aka Gemini.
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
 """ This is the exporter module of Biovarase."""
 

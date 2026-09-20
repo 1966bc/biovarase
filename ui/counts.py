@@ -1,9 +1,9 @@
-#-----------------------------------------------------------------------------
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
 # project:  biovarase
-# authors:  1966bc
-# mailto:   [giuseppecostanzi@gmail.com]
-# modify:   autumn MMXXIII  (refactor 2025-11: Calendarium v2.2, singleton polish)
-#-----------------------------------------------------------------------------
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
 import tkinter as tk
 
 from ui.parent_view import ParentView
