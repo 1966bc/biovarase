@@ -36,6 +36,7 @@ import ui.workstations
 
 from bias_canvas import BiasCanvas
 from ljcanvas import LeveyJenningsCanvas
+from ui.lookup import Lookup
 from ui.window import Window
 
 #: The columns of each list, as Tools.get_tree wants them:
@@ -76,9 +77,14 @@ class Main(Window, ttk.Frame):
         self.method = None
         self.lot = None
         self.analyte = ""
+        #: which result each point of the chart stands for, by position
+        self.chart_results = []
         self.unit = ""
         #: the search box, and the statistics under the chart
         self.search = tk.StringVar()
+        self.status = tk.StringVar()
+        #: The panels, filled when the window opens.
+        self.panels = None
         self.laboratory = tk.StringVar()
         self.values = {name: tk.StringVar() for name in
                        ("n", "target", "sd", "mean", "cv", "bias", "te", "u",
@@ -160,11 +166,48 @@ class Main(Window, ttk.Frame):
         across.add(left, weight=1)
         across.add(right, weight=3)
         across.pack(fill=tk.BOTH, expand=1)
+
+        # The status bar is packed before the frame that expands: pack gives
+        # the space away in the order it is asked for, and a frame with
+        # expand=1 asked first leaves nothing for what comes after.
+        self.init_status_bar()
         frm_main.pack(fill=tk.BOTH, expand=1)
 
+    def init_status_bar(self):
+        """Who is working, on which laboratory, on which file, with which numbers.
+
+        The last part matters more than it looks: a mean read with ddof 0 and
+        one read with ddof 1 are different numbers, and so is a total error
+        computed with z 1.65 or 1.96. Whoever reads the statistics should be
+        able to see which ones were used without opening a file.
+        """
+        name, site = self.engine.get_laboratory()
+
+        self.status.set("{0} - {1}   |   {2}   |   ddof {3}, z {4}, observations {5}"
+                        .format(name,
+                                site,
+                                self.engine.log_user["nickname"],
+                                self.engine.qc.get_ddof(),
+                                self.engine.qc.get_zscore(),
+                                self.engine.get_observations()))
+
+        bar = ttk.Label(self, style="StatusBar.TLabel", anchor=tk.W,
+                        textvariable=self.status)
+        bar.pack(side=tk.BOTTOM, fill=tk.X)
+
     def init_methods(self, container):
-        """The analytes, with the matrix each one is measured in."""
+        """The analytes, with the matrix each one is measured in.
+
+        Two ways to get to one, because two are used: the panel it belongs
+        to - antiepileptics, steroids, drugs of abuse - and its name typed
+        into the box. The panel is how a laboratory thinks of its work; the
+        name is how somebody looks for one thing.
+        """
         frm = ttk.LabelFrame(container, text="Analytes")
+
+        self.cb_panel = self.engine.tools.get_combo(frm)
+        self.cb_panel.bind("<<ComboboxSelected>>", self.on_panel)
+        self.cb_panel.pack(fill=tk.X, padx=4, pady=(4, 0))
 
         ttk.Entry(frm, textvariable=self.search).pack(fill=tk.X, padx=4, pady=4)
 
@@ -193,6 +236,7 @@ class Main(Window, ttk.Frame):
         frm = ttk.LabelFrame(container, text="Levey-Jennings")
 
         self.chart = LeveyJenningsCanvas(frm, height=280)
+        self.chart.set_point_click_callback(self.on_point)
         self.chart.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
 
         self.bias_chart = BiasCanvas(frm, height=70)
@@ -200,26 +244,39 @@ class Main(Window, ttk.Frame):
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
+    #: The statistics, in the three groups they answer: what the lot says it
+    #: is, what the series turned out to be, and how the two compare.
+    STATISTICS = (("Lot", (("target", "Target"), ("sd", "SD"))),
+                  ("Series", (("n", "N"), ("mean", "Mean"), ("cv", "CV%"))),
+                  ("Performance", (("bias", "Bias%"), ("te", "TE%"),
+                                   ("u", "U%"), ("westgard", "Westgard"))))
+
     def init_statistics(self, container):
-        """What the series says about itself, in one line."""
+        """What the lot says, what the series says, and how they compare.
+
+        Three groups and not one row of numbers: the target and the SD come
+        printed on the box of control material, the mean and the CV are what
+        this laboratory got, and the bias and the total error are the two put
+        against each other. Reading them side by side without saying which is
+        which is how a target gets compared with a target.
+        """
         frm = ttk.Frame(container, style="App.TFrame")
 
-        for name, caption in (("n", "N"),
-                              ("target", "Target"),
-                              ("sd", "SD"),
-                              ("mean", "Mean"),
-                              ("cv", "CV%"),
-                              ("bias", "Bias%"),
-                              ("te", "TE%"),
-                              ("u", "U%"),
-                              ("westgard", "Westgard")):
-            cell = ttk.Frame(frm, style="App.TFrame")
-            ttk.Label(cell, style="App.TLabel", text=caption).pack()
-            ttk.Label(cell, style="App.TLabel", width=10, anchor=tk.CENTER,
-                      textvariable=self.values[name]).pack()
-            cell.pack(side=tk.LEFT, padx=4, pady=4)
+        for caption, cells in self.STATISTICS:
+            group = ttk.LabelFrame(frm, text=caption, labelanchor="n")
+            for name, label in cells:
+                cell = ttk.Frame(group, style="App.TFrame")
+                ttk.Label(cell, style="App.TLabel", text=label,
+                          anchor=tk.CENTER).pack(fill=tk.X)
+                value = ttk.Label(cell, style="App.TLabel", width=9,
+                                  anchor=tk.CENTER, textvariable=self.values[name])
+                value.pack(fill=tk.X)
+                cell.pack(side=tk.LEFT, padx=3, pady=2)
+                if name == "westgard":
+                    self.lbl_westgard = value
+            group.pack(side=tk.LEFT, padx=(0, 6))
 
-        frm.pack(side=tk.TOP, fill=tk.X)
+        frm.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
 
     def init_results(self, container):
         """The results of the lot, newest first, and the buttons."""
@@ -242,11 +299,29 @@ class Main(Window, ttk.Frame):
     # ------------------------------------------------------------- the data
 
     def on_open(self):
-        """Read the analytes: the rest follows from what is chosen."""
+        """Read the panels and the analytes: the rest follows from the choice."""
+        self.set_panels()
         self.set_methods()
 
+    def set_panels(self):
+        """The categories, with every one of them first in the list."""
+        self.panels = Lookup(self.engine, self.cb_panel, "categories")
+        # Position 0 is every panel: a filter has to be undoable without
+        # closing the window.
+        captions = ["All panels"] + [self.panels.combo.cget("values")[index]
+                                     for index in range(len(self.panels.ids))]
+        shifted = {index + 1: key for index, key in self.panels.ids.items()}
+        self.panels.ids = shifted
+        self.engine.tools.set_combo(self.cb_panel, captions)
+        self.cb_panel.current(0)
+
     def set_methods(self):
-        """The methods in use, filtered by what is typed in the search box."""
+        """The methods in use, by panel and by what is typed in the box.
+
+        A category of NULL means the method belongs to no panel, and it is
+        shown under "All panels" rather than nowhere: a row that no filter
+        can reach is a row nobody will ever correct.
+        """
         sql = """SELECT tm.test_method_id, t.description AS analyte,
                         s.description AS matrix, u.description AS unit
                    FROM test_methods tm
@@ -255,8 +330,11 @@ class Main(Window, ttk.Frame):
                    JOIN units u ON u.unit_id = tm.unit_id
                   WHERE tm.status = 1 AND t.status = 1
                     AND t.description LIKE ?
+                    AND (? IS NULL OR tm.category_id = ?)
                ORDER BY t.description, s.description"""
-        rows = self.engine.db.read(True, sql, ("%{0}%".format(self.search.get()),))
+        panel = self.panels.get_id()
+        rows = self.engine.db.read(True, sql, ("%{0}%".format(self.search.get()),
+                                                panel, panel))
 
         self.engine.tools.clear_treeview(self.lst_methods)
         self.dict_methods.clear()
@@ -360,13 +438,15 @@ class Main(Window, ttk.Frame):
         is read to answer when something started going wrong, and a series
         numbered 1 to 30 cannot answer it.
         """
-        sql = """SELECT ROUND(r.result, 2) AS result, r.received
+        sql = """SELECT r.result_id, ROUND(r.result, 2) AS result, r.received
                    FROM results r
                   WHERE r.batch_id = ? AND r.status = 1
                ORDER BY r.received DESC
                   LIMIT ?"""
         rows = self.engine.db.read(True, sql, (self.lot, self.engine.get_elements()))
         rows = list(reversed(rows))
+        #: which result each point of the chart stands for, by position
+        self.chart_results = [row["result_id"] for row in rows]
 
         title = "{0} - {1} - lot {2}".format(self.analyte,
                                              lot["description"],
@@ -382,6 +462,20 @@ class Main(Window, ttk.Frame):
         self.bias_chart.draw_bias([row["result"] for row in rows],
                                   lot["target"],
                                   unit=self.unit)
+
+    def on_point(self, info):
+        """A point of the chart double clicked: open the result behind it.
+
+        The chart knows a position, this window knows which result was drawn
+        there. Reading a chart and wanting to see what that point was is the
+        first thing anybody does with it.
+        """
+        index = info.get("index")
+
+        if index is not None and 0 <= index < len(self.chart_results):
+            result_id = self.chart_results[index]
+            self.engine.windows.replace(
+                "result", lambda: ui.result.UI(self, self.lot, result_id))
 
     def get_bottom_text(self, drawn):
         """How many results the chart is drawn on, and how many were left out.
@@ -418,15 +512,34 @@ class Main(Window, ttk.Frame):
         self.values["bias"].set(bias)
         self.values["te"].set(self.engine.qc.get_te(lot["target"], mean, cv))
         self.values["u"].set(self.engine.qc.get_uncertainty(cv, bias))
-        self.values["westgard"].set(
-            self.engine.westgards.get_westgard_violation_rule(lot["target"],
-                                                              lot["sd"],
-                                                              series))
+        rule = self.engine.westgards.get_westgard_violation_rule(lot["target"],
+                                                                 lot["sd"],
+                                                                 series)
+        self.values["westgard"].set(rule)
+        self.set_westgard_alarm(rule)
+
+    def set_westgard_alarm(self, rule):
+        """Colour the rule: it is the one cell that asks for something to be done.
+
+        Accept is green and everything else is red - a warning rule and a
+        rejection rule both mean the run is looked at before the results go
+        out, and a colour that says "maybe" would be read as "carry on".
+        """
+        if rule in ("Accept", "NED", ""):
+            colour = "#1e8449"
+        else:
+            colour = "#c0392b"
+
+        self.lbl_westgard.configure(foreground=colour)
 
     # ------------------------------------------------------------ the doing
 
     def on_search(self, *args):
         """The analytes again, filtered by what has just been typed."""
+        self.set_methods()
+
+    def on_panel(self, evt=None):
+        """The analytes of the panel chosen, or all of them."""
         self.set_methods()
 
     def on_selected_method(self, evt=None):
