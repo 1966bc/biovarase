@@ -83,8 +83,9 @@ class Main(Window, ttk.Frame):
         #: the search box, and the statistics under the chart
         self.search = tk.StringVar()
         self.status = tk.StringVar()
-        #: The panels, filled when the window opens.
+        #: The panels and the instruments, filled when the window opens.
         self.panels = None
+        self.benches = None
         self.laboratory = tk.StringVar()
         self.values = {name: tk.StringVar() for name in
                        ("n", "target", "sd", "mean", "cv", "bias", "te", "u",
@@ -217,8 +218,19 @@ class Main(Window, ttk.Frame):
         container.add(frm, weight=3)
 
     def init_lots(self, container):
-        """The lots of control material open on the analyte chosen."""
+        """The lots open on the analyte chosen, on one bench or on all of them.
+
+        The bench is a column and not a step: choosing an analyte shows its
+        lots on every instrument at once - level 1 and 2 on MS-1 and MS-2 -
+        because when something does not add up the question is whether the
+        other bench agrees. The filter is there for the other question,
+        "can MS-2 work this morning", which is asked of one instrument.
+        """
         frm = ttk.LabelFrame(container, text="Lots")
+
+        self.cb_bench = self.engine.tools.get_combo(frm)
+        self.cb_bench.bind("<<ComboboxSelected>>", self.on_bench)
+        self.cb_bench.pack(fill=tk.X, padx=4, pady=(4, 0))
 
         self.lst_lots = self.engine.tools.get_tree(frm, LOTS)
         self.lst_lots.tag_configure("expired", foreground="#c0392b")
@@ -301,7 +313,16 @@ class Main(Window, ttk.Frame):
     def on_open(self):
         """Read the panels and the analytes: the rest follows from the choice."""
         self.set_panels()
+        self.set_benches()
         self.set_methods()
+
+    def set_benches(self):
+        """The instruments, with every one of them first in the list."""
+        self.benches = Lookup(self.engine, self.cb_bench, "workstations")
+        captions = ["All benches"] + list(self.cb_bench.cget("values"))
+        self.benches.ids = {index + 1: key for index, key in self.benches.ids.items()}
+        self.engine.tools.set_combo(self.cb_bench, captions)
+        self.cb_bench.current(0)
 
     def set_panels(self):
         """The categories, with every one of them first in the list."""
@@ -355,8 +376,10 @@ class Main(Window, ttk.Frame):
                    FROM batches b
                    JOIN workstations w ON w.workstation_id = b.workstation_id
                   WHERE b.status = 1 AND b.test_method_id = ?
+                    AND (? IS NULL OR b.workstation_id = ?)
                ORDER BY b.rank, w.description"""
-        rows = self.engine.db.read(True, sql, (self.method,))
+        bench = self.benches.get_id()
+        rows = self.engine.db.read(True, sql, (self.method, bench, bench))
 
         self.engine.tools.clear_treeview(self.lst_lots)
         self.dict_lots.clear()
@@ -541,6 +564,13 @@ class Main(Window, ttk.Frame):
     def on_panel(self, evt=None):
         """The analytes of the panel chosen, or all of them."""
         self.set_methods()
+
+    def on_bench(self, evt=None):
+        """The lots on the instrument chosen, or on all of them."""
+        if self.method is not None:
+            self.set_lots()
+            self.lot = None
+            self.on_reset()
 
     def on_selected_method(self, evt=None):
         """An analyte chosen: read its lots, and clear what was shown."""
