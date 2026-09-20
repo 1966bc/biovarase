@@ -1,103 +1,34 @@
-# Credentials and local config
-config.enc
-secrets.txt
-.secrets
-.env
-.env.*
+# What is written while the program runs
+biovarase.log
+biovarase.log.*
+sql/bks/
 
-# User settings (machine-specific)
-ddof
-zscore
-language
-observations
-date_format
-remember_batch
-autologin
-correlation_coefficient
-show_expired_batches
+# The bench: notes, drafts and the tools that shape the thing rather than run
+# it - the icon and the sample database are built here and committed as files.
+forge/
+CLAUDE.md
+.claude/
 
-# Logs
-log.txt
-log_*.txt
+# Written for the assistant, or by it
+*.md.bak
 
-# Generated reports
-QC_Report_*.txt
-
-# Backup files
-*.bak
-*.bak.*
-*.bak_*
-backup_*.sql
-
-# Data files
-*.xlsx
-qc/
-
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-
-# Virtual environment
-venv/
-env/
-.venv/
-
-# pytest
+*.py[cod]
 .pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
 
-# IDE
+# Editors and desktops
 .idea/
 .vscode/
 *.swp
-*.swo
 *~
-
-# Claude Code
-.claude/
-
-# Local folders (not for production)
-imgs/
-inventarium/
-sql/*
-!sql/migrations/
-scripts/
-stuff/
-batches/
-documents/*
-!documents/*.md
-imports/
-quarantine/
-services/
-dist/
-
-# OS files
 .DS_Store
-Thumbs.db
 
-# Build artifacts
-*.exe
-*.dist/
-
-# Local documentation (not for repository)
-BEST_PRACTICES.md
-CONTRIBUTING.md
-DATABASE_CREDENTIALS_SECURITY.md
-LOG_ROTATION.md
-MULTI_SITE_ARCHITECTURE.md
-PRESENTAZIONE_INGEGNERIA_CLINICA.*
-PROJECT_FILE_INVENTORY.md
-PROJECT_FILE_TO_CONTROL.md
-SESSION_CONTEXT.md
-TESTING.md
-docs/*
-!docs/MANUALE_PROGRAMMAZIONE.md
-pics/
-quarantine/
-
-# Working material, not part of the program
-CLAUDE.md
-forge/
-.coverage
+# Reference material kept beside the program: certificates, papers, guidelines.
+# Other people own most of it.
+documents/

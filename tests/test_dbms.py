@@ -22,7 +22,7 @@ import unittest
 from dbms import DBMS
 
 SCHEMA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                      "schema.sql")
+                      "sql", "ddl", "001_schema.sql")
 
 # The smallest laboratory that can hold one result.
 LABORATORY = """

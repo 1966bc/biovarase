@@ -23,7 +23,7 @@ import unittest
 from engine import Engine
 
 SCHEMA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                      "schema.sql")
+                      "sql", "ddl", "001_schema.sql")
 
 # The smallest laboratory that can hold one result: a supplier, an instrument,
 # a control material, an analyte, a lot of control on that analyte.
