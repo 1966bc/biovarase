@@ -273,9 +273,11 @@ class Main(Window, ttk.Frame):
         self.bias_chart = BiasCanvas(container, height=70)
         self.bias_chart.pack(side=tk.TOP, fill=tk.X, pady=(4, 0))
 
-    #: The colour of the dot, by role: it says at a glance who is at the
-    #: keyboard, which matters on a shared terminal.
-    ROLE_COLOURS = {0: "#c0392b", 1: "#666666"}
+    #: How often the database is asked whether it is still there, in
+    #: milliseconds. Half a minute: often enough to notice before a result is
+    #: typed into a window that can no longer save it, rare enough to cost
+    #: nothing on a file over the network.
+    HEARTBEAT = 30000
 
     def init_status_bar(self):
         """Who is working, on which laboratory, with which numbers.
@@ -287,14 +289,11 @@ class Main(Window, ttk.Frame):
         """
         bar = ttk.Frame(self, style="StatusBar.TFrame")
 
-        role = self.engine.log_user.get("role")
-        tk.Label(bar, text="\u25cf", font=("TkDefaultFont", 12),
-                 fg=self.ROLE_COLOURS.get(role, "#666666"),
-                 bg=self.engine.tools.get_rgb(240, 240, 237)).pack(side=tk.LEFT,
-                                                                   padx=(4, 0))
+        self.lamp = tk.Label(bar, text="\u25cf", font=("TkDefaultFont", 12),
+                             bg=self.engine.tools.get_rgb(240, 240, 237))
+        self.lamp.pack(side=tk.LEFT, padx=(4, 0))
 
-        self.status.set("{0} {1}".format(self.engine.log_user["last_name"],
-                                         self.engine.log_user["first_name"] or ""))
+        self.status.set(self.get_who())
         ttk.Label(bar, style="StatusBar.TLabel", anchor=tk.W,
                   textvariable=self.status).pack(side=tk.LEFT)
 
@@ -311,6 +310,45 @@ class Main(Window, ttk.Frame):
                       text=caption).pack(side=tk.RIGHT)
 
         bar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.on_heartbeat()
+
+    def on_heartbeat(self):
+        """Ask the database whether it is still there, and colour the lamp.
+
+        The file can live on a shared folder, and a network folder goes away
+        without telling anybody: the window would look exactly the same and
+        the first save of the morning would be the one to find out. Green
+        means a statement was answered a moment ago.
+
+        The question is the cheapest one there is, and it is asked on the
+        connection the program already holds, so it tests what the program
+        will actually use - not whether the file exists, which an unmounted
+        path can answer wrongly either way.
+        """
+        try:
+            self.engine.db.read(False, "SELECT 1")
+            reachable = True
+        except Exception:
+            reachable = False
+
+        if reachable:
+            self.lamp.configure(fg="#1e8449")
+            self.status.set(self.get_who())
+        else:
+            self.lamp.configure(fg="#c0392b")
+            self.status.set("{0} - database unreachable".format(self.get_who()))
+
+        self.after(self.HEARTBEAT, self.on_heartbeat)
+
+    def get_who(self):
+        """The person at the keyboard, as the status bar names them.
+
+        Ready Player: the line an arcade cabinet showed before the game
+        began, and the one this status bar has always opened with.
+        """
+        return "Ready Player {0} {1}".format(
+            self.engine.log_user["last_name"],
+            self.engine.log_user["first_name"] or "").strip()
 
     # ------------------------------------------------------------- the data
 
