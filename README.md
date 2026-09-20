@@ -115,6 +115,12 @@ work.
 
 95 tests, `unittest` from the standard library, a database in memory.
 
+Three documents go with the code:
+[ARCHITECTURE.md](ARCHITECTURE.md), how it is built and why;
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md), the program followed while it runs — the
+start, a login, a chart, a result entered, an error;
+[CONVENTIONS.md](CONVENTIONS.md), the rules it is written by.
+
 ## Layout
 
 | | |
