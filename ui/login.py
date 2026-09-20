@@ -14,7 +14,6 @@ from tkinter import ttk
 from tkinter import messagebox
 
 from app_config import MAX_LOGIN_ATTEMPTS
-from i18n import _, set_language
 import ui.main as ui
 
 
@@ -93,12 +92,12 @@ class Login(ttk.Frame):
 
         r = 0
         c = 1
-        ttk.Label(w, text=_("Username:")).grid(row=r, sticky=tk.W, **paddings)
+        ttk.Label(w, text="Username:").grid(row=r, sticky=tk.W, **paddings)
         self.txtNick = ttk.Entry(w, textvariable=self.nick)
         self.txtNick.grid(row=r, column=c, **paddings)
 
         r += 1
-        ttk.Label(w, text=_("Password:")).grid(row=r, sticky=tk.W, **paddings)
+        ttk.Label(w, text="Password:").grid(row=r, sticky=tk.W, **paddings)
         ent_password = ttk.Entry(w, show="*", textvariable=self.password)
         ent_password.grid(row=r, column=c, **paddings)
         ent_password.bind("<Return>", self.on_login)
@@ -106,7 +105,7 @@ class Login(ttk.Frame):
 
         r += 1
         c = 0
-        btn_login = ttk.Button(w, style="App.TButton", text=_("Login"), underline=0)
+        btn_login = ttk.Button(w, style="App.TButton", text="Login", underline=0)
         btn_login.bind("<Return>", self.on_login)
         btn_login.bind("<Button-1>", self.on_login)
         btn_login.bind("<Alt-l>", self.on_login)
@@ -114,7 +113,7 @@ class Login(ttk.Frame):
         btn_login.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         c += 1
-        btn_exit = ttk.Button(w, style="App.TButton", text=_("Cancel"), underline=0)
+        btn_exit = ttk.Button(w, style="App.TButton", text="Cancel", underline=0)
         btn_exit.bind("<Button-1>", self.parent.on_exit)
         btn_exit.bind("<Alt-c>", self.parent.on_exit)
         self.parent.bind("<Alt-c>", self.parent.on_exit)
@@ -180,13 +179,13 @@ class Login(ttk.Frame):
             ui.Main(self).on_open()
 
         else:
-            msg = _("Login failed.")
+            msg = "Login failed."
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
 
             self.attempts += 1
 
             if self.attempts >= MAX_LOGIN_ATTEMPTS:
-                msg = _("Maximum login attempts exceeded.")
+                msg = "Maximum login attempts exceeded."
                 messagebox.showwarning(self.engine.app_title, msg, parent=self)
                 self.on_quit()
             else:

@@ -10,7 +10,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from i18n import _
 import ui.test_method as test_method_editor
 import ui.goal as goal_editor
 from ui.parent_view import ParentView
@@ -118,29 +117,29 @@ class UI(ParentView):
         frm_methods = ttk.Frame(pane_mid, style="Panel.TFrame")
         frm_methods.pack(fill=tk.BOTH, expand=1)
 
-        lf_methods = ttk.Labelframe(frm_methods, text=_("Methods"))
+        lf_methods = ttk.Labelframe(frm_methods, text="Methods")
         lf_methods.pack(fill=tk.BOTH, expand=1)
 
         cols_methods = ("code", "sample", "method", "unit", "section", "category")
         self.lstMethods = ttk.Treeview(lf_methods, columns=cols_methods, show="headings")
 
         self.lstMethods.column("code", width=80, minwidth=80, anchor=tk.W, stretch=True)
-        self.lstMethods.heading("code", text=_("Code:").rstrip(":"), anchor=tk.W)
+        self.lstMethods.heading("code", text="Code:".rstrip(":"), anchor=tk.W)
 
         self.lstMethods.column("sample", width=140, minwidth=140, anchor=tk.W, stretch=True)
-        self.lstMethods.heading("sample", text=_("Sample:").rstrip(":"), anchor=tk.W)
+        self.lstMethods.heading("sample", text="Sample:".rstrip(":"), anchor=tk.W)
 
         self.lstMethods.column("method", width=180, minwidth=180, anchor=tk.W, stretch=True)
-        self.lstMethods.heading("method", text=_("Method:").rstrip(":"), anchor=tk.W)
+        self.lstMethods.heading("method", text="Method:".rstrip(":"), anchor=tk.W)
 
         self.lstMethods.column("unit", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstMethods.heading("unit", text=_("Unit:").rstrip(":"), anchor=tk.W)
+        self.lstMethods.heading("unit", text="Unit:".rstrip(":"), anchor=tk.W)
 
         self.lstMethods.column("section", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstMethods.heading("section", text=_("Section:").rstrip(":"), anchor=tk.W)
+        self.lstMethods.heading("section", text="Section:".rstrip(":"), anchor=tk.W)
 
         self.lstMethods.column("category", width=120, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstMethods.heading("category", text=_("Category"), anchor=tk.W)
+        self.lstMethods.heading("category", text="Category", anchor=tk.W)
 
         sb_methods = ttk.Scrollbar(lf_methods, orient=tk.VERTICAL, command=self.lstMethods.yview)
         self.lstMethods.configure(yscrollcommand=sb_methods.set)
@@ -163,7 +162,7 @@ class UI(ParentView):
         frm_search = ttk.Frame(frm_actions, style="App.TFrame")
         frm_search.pack(fill=tk.X, pady=(0, 8))
 
-        ttk.Label(frm_search, text=_("Search:"), style="App.TLabel").pack(anchor=tk.W)
+        ttk.Label(frm_search, text="Search:", style="App.TLabel").pack(anchor=tk.W)
         self.entry_search = ttk.Entry(frm_search, textvariable=self.search_var, width=15)
         self.entry_search.pack(fill=tk.X)
 
@@ -171,8 +170,8 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_actions, style="Panel.TFrame", relief=tk.GROOVE, padding=8)
         frm_buttons.pack(fill=tk.X)
 
-        self.engine.add_button(frm_buttons, _("Goals"), self.on_analytical_goal, "<Alt-g>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Goals", self.on_analytical_goal, "<Alt-g>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         # Place sashes after first layout
         self.after_idle(self._place_sashes)
@@ -208,7 +207,7 @@ class UI(ParentView):
         lab_id = self.engine.current_ids.get("lab_id")
         lab_row = self.engine.read(False, SQL_LAB_DESCRIPTION, (lab_id,))
         lab_name = lab_row["description"] if lab_row else "?"
-        self.title(f"{_('Test Methods')} – {_('Lab')}: {lab_name}")
+        self.title(f"Test Methods – Lab: {lab_name}")
 
     def _load_tests(self):
         """Load active tests into the listbox."""
@@ -241,9 +240,9 @@ class UI(ParentView):
         total = len(self.all_tests)
         shown = self.lstTests.size()
         if search_text:
-            self.items.set(f"{_('Tests')}: {shown}/{total}")
+            self.items.set(f"Tests: {shown}/{total}")
         else:
-            self.items.set(f"{_('Tests')}: {total}")
+            self.items.set(f"Tests: {total}")
 
     def _on_search_changed(self, *args):
         """Handle search text change."""
@@ -339,7 +338,7 @@ class UI(ParentView):
         
         sel = self.lstMethods.selection()
         if not sel:
-            messagebox.showwarning(self.engine.app_title, _("Select a Test Method."), parent=self)
+            messagebox.showwarning(self.engine.app_title, "Select a Test Method.", parent=self)
             return
         pk = int(sel[0])
         selected_tm = self.engine.get_selected("test_methods", "test_method_id", pk)

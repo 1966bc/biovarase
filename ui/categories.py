@@ -12,7 +12,6 @@ Categories management with lab_id filtering for multi-tenant.
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 from ui.parent_view import ParentView
 import ui.category as category
 
@@ -70,15 +69,15 @@ class UI(ParentView):
 
         # Right panel: buttons
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
-        self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
         self.bind("<Return>", self.on_item_activated)
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
     def on_open(self):
         """Load categories."""
-        self.title(_("Categories Management"))
+        self.title("Categories Management")
         self._set_values()
 
     def _set_values(self):
@@ -127,7 +126,7 @@ class UI(ParentView):
             if lab_name:
                 display = f"{lab_name} — {desc}"
             else:
-                display = f"({_('Unassigned')}) — {desc}"
+                display = f"(Unassigned) — {desc}"
 
             self.lstItems.insert(tk.END, display)
 
@@ -139,7 +138,7 @@ class UI(ParentView):
 
             self.dict_items[index] = row["pk"]
 
-        self.items.set(f"{_('Items')}: {self.lstItems.size()}")
+        self.items.set(f"Items: {self.lstItems.size()}")
 
     def on_item_selected(self, _evt=None):
         """Update selected_item."""

@@ -9,7 +9,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from i18n import _
 import ui.sample as ui
 from ui.parent_view import ParentView
 
@@ -68,15 +67,15 @@ class UI(ParentView):
         # Right: buttons
         frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
 
-        self.engine.add_button(frm_buttons, _("Add"), self._on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self._on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
     def on_open(self):
         """Initial setup: set title and populate list."""
-        self.title(_("Samples Management"))
+        self.title("Samples Management")
         self.set_values()
         
     def set_values(self):
@@ -104,7 +103,7 @@ class UI(ParentView):
             # Mappa index → PK (sample_id)
             self.dict_items[index] = sample_id
 
-        self.items.set(f"{_('Samples')}: {self.lstItems.size()}")
+        self.items.set(f"Samples: {self.lstItems.size()}")
 
 
     def on_item_selected(self, _evt=None):

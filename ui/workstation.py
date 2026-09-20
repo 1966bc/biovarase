@@ -11,7 +11,6 @@ from tkinter import ttk
 from tkinter import messagebox
 import uuid
 
-from i18n import _
 from ui.child_view import ChildView
 
 
@@ -63,32 +62,32 @@ class UI(ChildView):
         r = 0
         c = 1
 
-        ttk.Label(frm_left, text=_("Equipment:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Equipment:").grid(row=r, column=0, sticky=tk.W)
         self.cbEquipments = ttk.Combobox(frm_left, state="readonly")
         self.cbEquipments.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Device ID:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Device ID:").grid(row=r, column=0, sticky=tk.W)
         ent_device = ttk.Entry(frm_left, textvariable=self.device_id)
         ent_device.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Description:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Description:").grid(row=r, column=0, sticky=tk.W)
         ent_description = ttk.Entry(frm_left, textvariable=self.description)
         ent_description.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Serial:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Serial:").grid(row=r, column=0, sticky=tk.W)
         ent_serial = ttk.Entry(frm_left, textvariable=self.serial)
         ent_serial.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Section:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Section:").grid(row=r, column=0, sticky=tk.W)
         self.cbSections = ttk.Combobox(frm_left, state="readonly")
         self.cbSections.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Rank:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Rank:").grid(row=r, column=0, sticky=tk.W)
         ent_rank = ttk.Entry(
             frm_left,
             width=8,
@@ -100,7 +99,7 @@ class UI(ChildView):
         ent_rank.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
         chk_status = ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -118,7 +117,7 @@ class UI(ChildView):
         btn_save = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Save"),
+            text="Save",
             underline=0,
             command=self._on_save,
         )
@@ -128,7 +127,7 @@ class UI(ChildView):
         btn_uuid = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("UUID"),
+            text="UUID",
             underline=0,
             command=self._generate_uuid,
         )
@@ -138,7 +137,7 @@ class UI(ChildView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Cancel"),
+            text="Cancel",
             underline=0,
             command=self.on_cancel,
         )
@@ -159,10 +158,10 @@ class UI(ChildView):
 
         if self.selected_workstation is not None:
             self._set_values()
-            self.title(_("Update Workstation"))
+            self.title("Update Workstation")
         else:
             self.status.set(1)
-            self.title(_("Add Workstation"))
+            self.title("Add Workstation")
 
         try:
             self.cbEquipments.focus()
@@ -328,7 +327,7 @@ class UI(ChildView):
             if err:
                 msg = self.engine.get_user_friendly_db_error(err)
             else:
-                msg = _("Save failed.")
+                msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 
@@ -377,14 +376,14 @@ class UI(ChildView):
                 if existing_id is not None and existing_id != current_id:
                     messagebox.showwarning(
                         self.engine.app_title,
-                        _("This Device ID is already in use."),
+                        "This Device ID is already in use.",
                         parent=self,
                     )
                     return 0
             else:
                 messagebox.showwarning(
                     self.engine.app_title,
-                    _("This Device ID is already in use."),
+                    "This Device ID is already in use.",
                     parent=self,
                 )
                 return 0

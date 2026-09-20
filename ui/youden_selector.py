@@ -16,7 +16,6 @@ levels for generating a Youden plot, without requiring pre-selection.
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 from ui.child_view import ChildView
 
 
@@ -61,7 +60,7 @@ class UI(ChildView):
         self.level1_var = tk.StringVar()
         self.level2_var = tk.StringVar()
 
-        self.title(_("Select Batches for Youden Plot"))
+        self.title("Select Batches for Youden Plot")
 
         self._build_ui()
         self._load_workstations()
@@ -79,7 +78,7 @@ class UI(ChildView):
         row = 0
 
         # Workstation
-        ttk.Label(frm, text=_("Workstation:")).grid(
+        ttk.Label(frm, text="Workstation:").grid(
             row=row, column=0, sticky="w", pady=(0, 8)
         )
         self.cb_workstation = ttk.Combobox(
@@ -92,7 +91,7 @@ class UI(ChildView):
         row += 1
 
         # Test
-        ttk.Label(frm, text=_("Test:")).grid(
+        ttk.Label(frm, text="Test:").grid(
             row=row, column=0, sticky="w", pady=(0, 8)
         )
         self.cb_test = ttk.Combobox(
@@ -112,7 +111,7 @@ class UI(ChildView):
         row += 1
 
         # Level 1
-        ttk.Label(frm, text=_("Level 1:")).grid(
+        ttk.Label(frm, text="Level 1:").grid(
             row=row, column=0, sticky="w", pady=(0, 8)
         )
         self.cb_level1 = ttk.Combobox(
@@ -125,7 +124,7 @@ class UI(ChildView):
         row += 1
 
         # Level 2
-        ttk.Label(frm, text=_("Level 2:")).grid(
+        ttk.Label(frm, text="Level 2:").grid(
             row=row, column=0, sticky="w", pady=(0, 8)
         )
         self.cb_level2 = ttk.Combobox(
@@ -141,11 +140,11 @@ class UI(ChildView):
         btn_frame.grid(row=row, column=0, columnspan=2, pady=(16, 0))
 
         ttk.Button(
-            btn_frame, text=_("Plot"), command=self._on_plot
+            btn_frame, text="Plot", command=self._on_plot
         ).pack(side=tk.LEFT, padx=(0, 8))
 
         ttk.Button(
-            btn_frame, text=_("Cancel"), command=self.on_cancel
+            btn_frame, text="Cancel", command=self.on_cancel
         ).pack(side=tk.LEFT)
 
     def _load_workstations(self):
@@ -309,7 +308,7 @@ class UI(ChildView):
         if ws_idx < 0:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Please select a workstation."),
+                "Please select a workstation.",
                 parent=self
             )
             return
@@ -317,7 +316,7 @@ class UI(ChildView):
         if test_idx < 0:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Please select a test."),
+                "Please select a test.",
                 parent=self
             )
             return
@@ -325,7 +324,7 @@ class UI(ChildView):
         if level1_idx < 0 or level2_idx < 0:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Please select both Level 1 and Level 2 batches."),
+                "Please select both Level 1 and Level 2 batches.",
                 parent=self
             )
             return
@@ -372,8 +371,8 @@ class UI(ChildView):
         if not series1 or not series2:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Not enough data to plot a Youden chart.\n"
-                  "Both selected batches must have at least one result."),
+                "Not enough data to plot a Youden chart.\n"
+                  "Both selected batches must have at least one result.",
                 parent=self
             )
             return

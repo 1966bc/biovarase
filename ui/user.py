@@ -11,7 +11,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from i18n import _
 from ui.child_view import ChildView
 
 # Role constants
@@ -66,24 +65,24 @@ class UI(ChildView):
         frm_left.grid(row=0, column=0, sticky="ns", **paddings)
 
         r, c = 0, 1
-        ttk.Label(frm_left, text=_("Surname:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Surname:").grid(row=r, column=0, sticky=tk.W)
         self.txLastName = ttk.Entry(frm_left, textvariable=self.last_name)
         self.txLastName.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("First Name:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="First Name:").grid(row=r, column=0, sticky=tk.W)
         ttk.Entry(frm_left, textvariable=self.first_name).grid(
             row=r, column=c, sticky=tk.EW, **paddings
         )
 
         r += 1
-        ttk.Label(frm_left, text=_("Nick:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Nick:").grid(row=r, column=0, sticky=tk.W)
         ttk.Entry(frm_left, textvariable=self.nickname).grid(
             row=r, column=c, sticky=tk.EW, **paddings
         )
 
         r += 1
-        ttk.Label(frm_left, text=_("Level:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Level:").grid(row=r, column=0, sticky=tk.W)
         self.spnRole = tk.Spinbox(
             frm_left,
             from_=0,
@@ -104,12 +103,12 @@ class UI(ChildView):
         )
 
         r += 1
-        ttk.Label(frm_left, text=_("Organization:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Organization:").grid(row=r, column=0, sticky=tk.W)
         self.cbOrg = ttk.Combobox(frm_left, state="readonly", width=50)
         self.cbOrg.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Logout time (min):")).grid(
+        ttk.Label(frm_left, text="Logout time (min):").grid(
             row=r, column=0, sticky=tk.W
         )
         tk.Spinbox(
@@ -123,7 +122,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Enable logout:")).grid(
+        ttk.Label(frm_left, text="Enable logout:").grid(
             row=r, column=0, sticky=tk.W
         )
         ttk.Checkbutton(
@@ -134,7 +133,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
         ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -153,7 +152,7 @@ class UI(ChildView):
         ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Save"),
+            text="Save",
             underline=0,
             command=self._on_save,
         ).grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -162,7 +161,7 @@ class UI(ChildView):
             ttk.Button(
                 frm_buttons,
                 style="App.TButton",
-                text=_("Reset"),
+                text="Reset",
                 underline=0,
                 command=self._on_reset,
             ).grid(row=1, column=0, sticky="ew", padx=5, pady=5)
@@ -170,7 +169,7 @@ class UI(ChildView):
         ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Cancel"),
+            text="Cancel",
             underline=0,
             command=self.on_cancel,
         ).grid(row=2, column=0, sticky="ew", padx=5, pady=5)
@@ -197,12 +196,12 @@ class UI(ChildView):
 
         if self.index is not None:
             # UPDATE mode - load data first, then orgs based on role
-            self.title(_("Update User"))
+            self.title("Update User")
             self.selected_item = self.parent.selected_item
             self._set_values()
         else:
             # INSERT mode - default to appropriate role based on logged user
-            self.title(_("Add User"))
+            self.title("Add User")
             # Lab Admin creates Superusers by default
             default_role = max(4, min_role)  # Superuser or higher
             self.role.set(default_role)
@@ -221,13 +220,13 @@ class UI(ChildView):
         """Update the role hint label based on current role."""
         role = self.role.get()
         hints = {
-            0: _("App Admin - Global access"),
-            1: _("Country Admin - Assign to country"),
-            2: _("Regional Admin - Assign to region/site"),
-            3: _("Lab Admin - Assign to lab"),
-            4: _("Superuser - Assign to lab"),
-            5: _("Technician - Assign to lab"),
-            6: _("Viewer - Assign to lab"),
+            0: "App Admin - Global access",
+            1: "Country Admin - Assign to country",
+            2: "Regional Admin - Assign to region/site",
+            3: "Lab Admin - Assign to lab",
+            4: "Superuser - Assign to lab",
+            5: "Technician - Assign to lab",
+            6: "Viewer - Assign to lab",
         }
         self.role_hint.set(hints.get(role, ""))
 
@@ -257,7 +256,7 @@ class UI(ChildView):
 
         # For App Admin (role 0), only show Global option
         if role == 0:
-            values.append(_("(Global - App Admin)"))
+            values.append("(Global - App Admin)")
             self.dict_orgs[0] = None
             self.cbOrg["values"] = values
             self.cbOrg.current(0)
@@ -512,7 +511,7 @@ class UI(ChildView):
             if err:
                 msg = self.engine.get_user_friendly_db_error(err)
             else:
-                msg = _("Save failed.")
+                msg = "Save failed."
             messagebox.showerror(title, msg, parent=self)
             return
 
@@ -559,7 +558,7 @@ class UI(ChildView):
         if self.index is None or not self.selected_item:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("No user selected."),
+                "No user selected.",
                 parent=self,
             )
             return
@@ -572,7 +571,7 @@ class UI(ChildView):
                 int(self.selected_item.get("user_id")),   # <-- FIX: use child copy
             )
             self.engine.write(sql, args)
-            messagebox.showinfo(self.engine.app_title, _("Password reset."), parent=self)
+            messagebox.showinfo(self.engine.app_title, "Password reset.", parent=self)
         except Exception as e:
             self.engine.on_log("_on_reset", e, type(e), sys.modules[__name__])
 
@@ -609,7 +608,7 @@ class UI(ChildView):
                 return 1
 
         # Otherwise nickname is taken
-        msg = _("This nickname is already in use.")
+        msg = "This nickname is already in use."
         messagebox.showwarning(self.engine.app_title, msg, parent=self)
         return 0
 

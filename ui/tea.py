@@ -17,7 +17,6 @@ z-score, limits) while presenting them in a compact, readable layout.
 
 import tkinter as tk
 
-from i18n import _
 from ui.parent_view import ParentView
 from tkinter import ttk
 
@@ -52,7 +51,7 @@ class UI(ParentView):
     # UI LAYOUT
     # ---------------------------------------------------------------------
     def _build_ui(self):
-        self.title(_("Total Error"))
+        self.title("Total Error")
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -105,9 +104,9 @@ class UI(ParentView):
         ws_name = selected_workstation[3]
         ws_serial = selected_workstation[4]
 
-        self.title(f"{test_name} — {_('Total Error')}")
+        self.title(f"{test_name} — Total Error")
         self._header_var.set(
-            f"{_('Test')}: {test_name}   ·   {_('Workstation')}: {ws_name}   ·   {_('Serial')}: {ws_serial}"
+            f"Test: {test_name}   ·   Workstation: {ws_name}   ·   Serial: {ws_serial}"
         )
 
         # Load batches

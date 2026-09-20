@@ -7,7 +7,6 @@
 import tkinter as tk
 from tkinter import ttk
 
-from i18n import _
 from ui.parent_view import ParentView
 
 class UI(ParentView):
@@ -27,7 +26,7 @@ class UI(ParentView):
         super().__init__(parent, name="analytical")
         self._is_init = True
 
-        self.title(_("Analytical Goals Explained"))
+        self.title("Analytical Goals Explained")
         self.transient(parent)
         self.resizable(0, 0)
 
@@ -60,7 +59,7 @@ class UI(ParentView):
             r += 1
 
         # Colonna 3: Eta (Errore Totale)
-        items_eta = ((_("Total Error (TEa):"), None),
+        items_eta = (("Total Error (TEa):", None),
                      ("ETa < 1.65 (0.25 CVi) + 0.125 (CVi² + CVg²) ½ ", "green"),
                      ("ETa < 1.65 (0.50 CVi) + 0.25 (CVi² + CVg²) ½", "yellow"),
                      ("ETa < 1.65 (0.75 CVi) + 0.375 (CVi² + CVg²) ½", "red"),)

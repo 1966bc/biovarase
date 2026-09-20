@@ -18,7 +18,6 @@ They have:
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 from ui.parent_view import ParentView
 from ui.child_view import ChildView
 
@@ -63,13 +62,13 @@ class UI(ParentView):
         self.lstItems = ttk.Treeview(frm_left, columns=cols, show="headings")
 
         self.lstItems.column("code", width=150, minwidth=100, anchor=tk.W)
-        self.lstItems.heading("code", text=_("Code"), anchor=tk.W)
+        self.lstItems.heading("code", text="Code", anchor=tk.W)
 
         self.lstItems.column("description", width=250, minwidth=150, anchor=tk.W)
-        self.lstItems.heading("description", text=_("Description"), anchor=tk.W)
+        self.lstItems.heading("description", text="Description", anchor=tk.W)
 
         self.lstItems.column("status", width=80, minwidth=60, anchor=tk.CENTER)
-        self.lstItems.heading("status", text=_("Status"), anchor=tk.CENTER)
+        self.lstItems.heading("status", text="Status", anchor=tk.CENTER)
 
         sb = ttk.Scrollbar(frm_left, orient=tk.VERTICAL, command=self.lstItems.yview)
         self.lstItems.configure(yscrollcommand=sb.set)
@@ -84,15 +83,15 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame", relief=tk.GROOVE, padding=8)
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
-        self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self.on_item_activated)
 
     def on_open(self):
         """Initialize view."""
-        self.title(_("Actions") + " - " + _("Global Master Data"))
+        self.title("Actions" + " - " + "Global Master Data")
         self._set_values()
 
     def _set_values(self):
@@ -109,7 +108,7 @@ class UI(ParentView):
         rows = self.engine.read(True, sql, ()) or []
 
         for row in rows:
-            status_text = _("Enabled") if row["status"] == 1 else _("Disabled")
+            status_text = "Enabled" if row["status"] == 1 else "Disabled"
             tags = () if row["status"] == 1 else ("disabled",)
 
             # Translate description for display
@@ -122,7 +121,7 @@ class UI(ParentView):
             )
             self.dict_items[iid] = row["action_id"]
 
-        self.items.set(f"{_('Items')}: {len(rows)}")
+        self.items.set(f"Items: {len(rows)}")
 
     def on_item_selected(self, _evt=None):
         """Update selected_item when selection changes."""
@@ -193,32 +192,32 @@ class ActionEditor(ChildView):
 
         r = 0
         # Code field (English, uppercase)
-        ttk.Label(frm_left, text=_("Code:")).grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(frm_left, text="Code:").grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
         self.txCode = ttk.Entry(frm_left, textvariable=self.code, width=30)
         self.txCode.grid(row=r, column=1, sticky="ew", padx=5, pady=5)
 
         r += 1
         # Description field (English readable)
-        ttk.Label(frm_left, text=_("Description:")).grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(frm_left, text="Description:").grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
         self.txDescription = ttk.Entry(frm_left, textvariable=self.description, width=40)
         self.txDescription.grid(row=r, column=1, sticky="ew", padx=5, pady=5)
 
         r += 1
         # Help text
-        help_text = _("Code: English uppercase (e.g., CALIBRATION)")
+        help_text = "Code: English uppercase (e.g., CALIBRATION)"
         ttk.Label(frm_left, text=help_text, foreground="gray").grid(
             row=r, column=0, columnspan=2, sticky=tk.W, padx=5
         )
 
         r += 1
-        help_text2 = _("Description: English text (translated via i18n)")
+        help_text2 = "Description: English text (translated via i18n)"
         ttk.Label(frm_left, text=help_text2, foreground="gray").grid(
             row=r, column=0, columnspan=2, sticky=tk.W, padx=5
         )
 
         r += 1
         # Status
-        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
         ttk.Checkbutton(
             frm_left, onvalue=1, offvalue=0, variable=self.status
         ).grid(row=r, column=1, sticky="w", padx=5, pady=5)
@@ -228,24 +227,24 @@ class ActionEditor(ChildView):
         frm_buttons.grid(row=0, column=1, sticky="ns", **pad)
 
         ttk.Button(
-            frm_buttons, style="App.TButton", text=_("Save"),
+            frm_buttons, style="App.TButton", text="Save",
             underline=0, command=self._on_save
         ).grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
         ttk.Button(
-            frm_buttons, style="App.TButton", text=_("Cancel"),
+            frm_buttons, style="App.TButton", text="Cancel",
             underline=0, command=self.on_cancel
         ).grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
     def on_open(self):
         """Initialize editor."""
         if self.index is not None:
-            self.title(_("Update") + " " + _("Action"))
+            self.title("Update" + " " + "Action")
             self.selected_item = getattr(self.parent, "selected_item", None)
             if self.selected_item:
                 self._set_values()
         else:
-            self.title(_("Add") + " " + _("Action"))
+            self.title("Add" + " " + "Action")
             self.status.set(True)
 
         self.txCode.focus_set()
@@ -274,7 +273,7 @@ class ActionEditor(ChildView):
         if not code_val:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Code is required."),
+                "Code is required.",
                 parent=self,
             )
             return
@@ -284,7 +283,7 @@ class ActionEditor(ChildView):
         if not desc_val:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Description is required."),
+                "Description is required.",
                 parent=self,
             )
             return
@@ -297,7 +296,7 @@ class ActionEditor(ChildView):
             if existing["action_id"] != current_id:
                 messagebox.showwarning(
                     self.engine.app_title,
-                    f"{_('Code')} '{code_val}' {_('already exists!')}",
+                    f"Code '{code_val}' already exists!",
                     parent=self,
                 )
                 return
@@ -331,7 +330,7 @@ class ActionEditor(ChildView):
         last_id = self.engine.write(sql, args)
         if last_id is None:
             err = self.engine.last_write_error
-            msg = self.engine.get_user_friendly_db_error(err) if err else _("Save failed.")
+            msg = self.engine.get_user_friendly_db_error(err) if err else "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 

@@ -7,7 +7,6 @@
 #-----------------------------------------------------------------------------
 import tkinter as tk
 
-from i18n import _
 from ui.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -64,7 +63,7 @@ class UI(ParentView):
         frm_main = ttk.Frame(self, style="App.TFrame", padding=8)
         frm_main.grid(row=0, column=0, sticky="nsew")
 
-        lf = ttk.Labelframe(frm_main, text=_("Set z-score"))
+        lf = ttk.Labelframe(frm_main, text="Set z-score")
         lf.grid(row=0, column=0, sticky="nsew", **pad)
         lf.columnconfigure(0, weight=1)
 
@@ -83,9 +82,9 @@ class UI(ParentView):
         frm_btns.grid(row=0, column=1, sticky="ns", **pad)
         frm_btns.columnconfigure(0, weight=1)
 
-        ttk.Button(frm_btns, style="App.TButton", text=_("Save"), underline=0,
+        ttk.Button(frm_btns, style="App.TButton", text="Save", underline=0,
                    command=self._on_save).grid(row=0, column=0, sticky="ew", **pad)
-        ttk.Button(frm_btns, style="App.TButton", text=_("Cancel"), underline=0,
+        ttk.Button(frm_btns, style="App.TButton", text="Cancel", underline=0,
                    command=self._on_close).grid(row=1, column=0, sticky="ew", **pad)
 
         # Keep a reference for optional global validation
@@ -96,7 +95,7 @@ class UI(ParentView):
     # ---------------------------------------------------------------------
     def on_open(self):
         """Populate current value and set focus."""
-        self.title(_("Set Z-score"))
+        self.title("Set Z-score")
         try:
             self.z_score.set(self.engine.get_zscore())
         except Exception as e:
@@ -122,7 +121,7 @@ class UI(ParentView):
         try:
             value = float(self.z_score.get())
         except (TypeError, ValueError) as e:
-            messagebox.showwarning(self.engine.app_title, _("Please enter a valid number."), parent=self)
+            messagebox.showwarning(self.engine.app_title, "Please enter a valid number.", parent=self)
             self.tx_value.focus_set()
             return
 
@@ -131,7 +130,7 @@ class UI(ParentView):
             if hasattr(self.parent, "set_zscore"):
                 self.parent.set_zscore()
         except Exception as exc:
-            messagebox.showerror(self.engine.app_title, f"{_('Save error:')}\n{exc}", parent=self)
+            messagebox.showerror(self.engine.app_title, f"Save error:\n{exc}", parent=self)
             return
 
         self._on_close()

@@ -37,7 +37,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from i18n import _
 from ui.parent_view import ParentView
 import ui.batch as batch
 
@@ -172,7 +171,7 @@ class UI(ParentView):
         self.Sites = ttk.Treeview(pane_left, show="tree")
 
         self.Sites.column("#0", width=220, minwidth=180, stretch=True)
-        self.Sites.heading("#0", text=_("Sites"), anchor=tk.W)
+        self.Sites.heading("#0", text="Sites", anchor=tk.W)
 
         sb_sites = ttk.Scrollbar(pane_left, orient=tk.VERTICAL, command=self.Sites.yview)
         self.Sites.configure(yscrollcommand=sb_sites.set)
@@ -185,25 +184,25 @@ class UI(ParentView):
         # Middle pane: Test Methods
         # ---------------------------------------------------------------------
         frm_tests = ttk.Frame(pane_mid)
-        self.lblTests = ttk.LabelFrame(frm_tests, style="App.TLabelframe", text=_("Test Methods"))
+        self.lblTests = ttk.LabelFrame(frm_tests, style="App.TLabelframe", text="Test Methods")
 
         cols_tests = ("test", "code", "sample", "method", "unit")
         self.lstTestsMethods = ttk.Treeview(self.lblTests, columns=cols_tests, show="headings")
 
         self.lstTestsMethods.column("test", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("test", text=_("Test"), anchor=tk.W)
+        self.lstTestsMethods.heading("test", text="Test", anchor=tk.W)
 
         self.lstTestsMethods.column("code", width=60, minwidth=60, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("code", text=_("Code"), anchor=tk.W)
+        self.lstTestsMethods.heading("code", text="Code", anchor=tk.W)
 
         self.lstTestsMethods.column("sample", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("sample", text=_("Sample"), anchor=tk.W)
+        self.lstTestsMethods.heading("sample", text="Sample", anchor=tk.W)
 
         self.lstTestsMethods.column("method", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("method", text=_("Method"), anchor=tk.W)
+        self.lstTestsMethods.heading("method", text="Method", anchor=tk.W)
 
         self.lstTestsMethods.column("unit", width=80, minwidth=80, anchor=tk.W, stretch=True)
-        self.lstTestsMethods.heading("unit", text=_("Unit"), anchor=tk.W)
+        self.lstTestsMethods.heading("unit", text="Unit", anchor=tk.W)
 
         sb_tests = ttk.Scrollbar(self.lblTests, orient=tk.VERTICAL, command=self.lstTestsMethods.yview)
         self.lstTestsMethods.configure(yscrollcommand=sb_tests.set)
@@ -223,25 +222,25 @@ class UI(ParentView):
         # Right pane: Batches
         # ---------------------------------------------------------------------
         frm_batches = ttk.Frame(pane_right)
-        self.lblBatches = ttk.LabelFrame(frm_batches, style="App.TLabelframe", text=_("Batches"))
+        self.lblBatches = ttk.LabelFrame(frm_batches, style="App.TLabelframe", text="Batches")
 
         cols_batches = ("control", "lot", "description", "expiration", "target")
         self.lstBatches = ttk.Treeview(self.lblBatches, columns=cols_batches, show="headings")
 
         self.lstBatches.column("control", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstBatches.heading("control", text=_("Control"), anchor=tk.W)
+        self.lstBatches.heading("control", text="Control", anchor=tk.W)
 
         self.lstBatches.column("lot", width=80, minwidth=80, anchor=tk.W, stretch=True)
-        self.lstBatches.heading("lot", text=_("Lot"), anchor=tk.W)
+        self.lstBatches.heading("lot", text="Lot", anchor=tk.W)
 
         self.lstBatches.column("description", width=100, minwidth=100, anchor=tk.W, stretch=True)
-        self.lstBatches.heading("description", text=_("Description"), anchor=tk.W)
+        self.lstBatches.heading("description", text="Description", anchor=tk.W)
 
         self.lstBatches.column("expiration", width=80, minwidth=80, anchor=tk.CENTER, stretch=True)
-        self.lstBatches.heading("expiration", text=_("Expiration"), anchor=tk.CENTER)
+        self.lstBatches.heading("expiration", text="Expiration", anchor=tk.CENTER)
 
         self.lstBatches.column("target", width=80, minwidth=80, anchor=tk.CENTER, stretch=True)
-        self.lstBatches.heading("target", text=_("Target"), anchor=tk.CENTER)
+        self.lstBatches.heading("target", text="Target", anchor=tk.CENTER)
 
         sb_batches = ttk.Scrollbar(self.lblBatches, orient=tk.VERTICAL, command=self.lstBatches.yview)
         self.lstBatches.configure(yscrollcommand=sb_batches.set)
@@ -344,7 +343,7 @@ class UI(ParentView):
             _evt: Optional Tkinter event (unused, for event binding compatibility)
         """
         self.Sites.delete(*self.Sites.get_children())
-        root = self.Sites.insert("", tk.END, iid="root", text=_("Organizations"))
+        root = self.Sites.insert("", tk.END, iid="root", text="Organizations")
 
         # Determine user role and org scope
         try:
@@ -585,8 +584,8 @@ class UI(ParentView):
             # Clear middle/right panes when not on a workstation
             self.lstTestsMethods.delete(*self.lstTestsMethods.get_children())
             self.lstBatches.delete(*self.lstBatches.get_children())
-            self.lblTests["text"] = f"{_('Test Methods')}: 0"
-            self.lblBatches["text"] = f"{_('Batches')} 0"
+            self.lblTests["text"] = f"Test Methods: 0"
+            self.lblBatches["text"] = f"Batches 0"
             self.selected_workstation = None
             self.selected_test_method = None
             self.selected_batch = None
@@ -617,10 +616,10 @@ class UI(ParentView):
         # Clear existing lists
         self.lstTestsMethods.delete(*self.lstTestsMethods.get_children())
         self.lstBatches.delete(*self.lstBatches.get_children())
-        self.lblBatches["text"] = f"{_('Batches')} 0"
+        self.lblBatches["text"] = f"Batches 0"
 
         if not self.selected_workstation:
-            self.lblTests["text"] = f"{_('Test Methods')}: 0"
+            self.lblTests["text"] = f"Test Methods: 0"
             return
 
         workstation_id = self.selected_workstation["workstation_id"]
@@ -678,7 +677,7 @@ class UI(ParentView):
             )
             count += 1
 
-        self.lblTests["text"] = f"{_('Test Methods')}: {count}"
+        self.lblTests["text"] = f"Test Methods: {count}"
 
     def set_batches(self):
         """
@@ -688,7 +687,7 @@ class UI(ParentView):
         Only loads batches that have both lot_number and expiration date.
         """
         self.lstBatches.delete(*self.lstBatches.get_children())
-        self.lblBatches["text"] = f"{_('Batches')} 0"
+        self.lblBatches["text"] = f"Batches 0"
 
         if not (self.selected_test_method and self.selected_workstation):
             return
@@ -742,7 +741,7 @@ class UI(ParentView):
             )
             count += 1
 
-        self.lblBatches["text"] = f"{_('Batches')} {count}"
+        self.lblBatches["text"] = f"Batches {count}"
 
     # ---------------------------------------------------------------------
     # Event Handlers
@@ -760,7 +759,7 @@ class UI(ParentView):
         if not sel:
             self.selected_test_method = None
             self.lstBatches.delete(*self.lstBatches.get_children())
-            self.lblBatches["text"] = f"{_('Batches')} 0"
+            self.lblBatches["text"] = f"Batches 0"
             return
 
         try:

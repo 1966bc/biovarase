@@ -12,7 +12,6 @@ Category editor - categories are always created in the current lab context.
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 from ui.child_view import ChildView
 
 
@@ -56,7 +55,7 @@ class UI(ChildView):
         r = 0
 
         # Description
-        ttk.Label(frm_left, text=_("Category:")).grid(
+        ttk.Label(frm_left, text="Category:").grid(
             row=r, column=0, sticky="w", padx=5, pady=5
         )
         self.txDescription = ttk.Entry(
@@ -69,7 +68,7 @@ class UI(ChildView):
         r += 1
 
         # Status
-        ttk.Label(frm_left, text=_("Status:")).grid(
+        ttk.Label(frm_left, text="Status:").grid(
             row=r, column=0, sticky="w", padx=5, pady=5
         )
         ttk.Checkbutton(
@@ -87,13 +86,13 @@ class UI(ChildView):
 
         ttk.Button(
             frm_buttons,
-            text=_("Save"),
+            text="Save",
             command=self._on_save,
         ).grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
         ttk.Button(
             frm_buttons,
-            text=_("Cancel"),
+            text="Cancel",
             command=self.on_cancel,
         ).grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
@@ -104,7 +103,7 @@ class UI(ChildView):
         """Load data and set form values."""
         if self.index is not None:
             # UPDATE mode
-            self.title(_("Update Category"))
+            self.title("Update Category")
             self.selected_item = getattr(self.parent, "selected_item", None)
             if self.selected_item is None:
                 self.on_cancel()
@@ -112,7 +111,7 @@ class UI(ChildView):
             self._set_values()
         else:
             # INSERT mode
-            self.title(_("Add Category"))
+            self.title("Add Category")
             self.status.set(True)
 
         self.txDescription.focus_set()
@@ -131,7 +130,7 @@ class UI(ChildView):
         if not desc:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Category is required."),
+                "Category is required.",
                 parent=self
             )
             return
@@ -141,7 +140,7 @@ class UI(ChildView):
         if not org_id:
             messagebox.showerror(
                 self.engine.app_title,
-                _("No laboratory selected."),
+                "No laboratory selected.",
                 parent=self
             )
             return
@@ -158,7 +157,7 @@ class UI(ChildView):
             if current_id is None or row["category_id"] != current_id:
                 messagebox.showwarning(
                     self.engine.app_title,
-                    _("Category already exists in this laboratory!"),
+                    "Category already exists in this laboratory!",
                     parent=self
                 )
                 return
@@ -199,7 +198,7 @@ class UI(ChildView):
             if err:
                 msg = self.engine.get_user_friendly_db_error(err)
             else:
-                msg = _("Save failed.")
+                msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 

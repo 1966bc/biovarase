@@ -8,7 +8,6 @@
 
 import tkinter as tk
 
-from i18n import _
 from ui.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -68,51 +67,51 @@ class UI(ParentView):
         left.columnconfigure(1, weight=1)
 
         r = 0; c = 1
-        ttk.Label(left, text=_("Category:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Category:").grid(row=r, column=0, sticky=tk.W)
         self.cbCategories = ttk.Combobox(left, state="readonly")
         self.cbCategories.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Code:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Code:").grid(row=r, column=0, sticky=tk.W)
         self.txCode = ttk.Entry(left, textvariable=self.code)
         self.txCode.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Sample:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Sample:").grid(row=r, column=0, sticky=tk.W)
         self.cbSamples = ttk.Combobox(left, state="readonly")
         self.cbSamples.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Method:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Method:").grid(row=r, column=0, sticky=tk.W)
         self.cbMethods = ttk.Combobox(left, state="readonly")
         self.cbMethods.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Unit:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Unit:").grid(row=r, column=0, sticky=tk.W)
         self.cbUnits = ttk.Combobox(left, state="readonly")
         self.cbUnits.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Section:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Section:").grid(row=r, column=0, sticky=tk.W)
         self.cbSections = ttk.Combobox(left, state="readonly")
         self.cbSections.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Mandatory:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Mandatory:").grid(row=r, column=0, sticky=tk.W)
         self.chkMandatory = ttk.Checkbutton(left, variable=self.is_mandatory, onvalue=1, offvalue=0)
         self.chkMandatory.grid(row=r, column=c, sticky="w", **pad)
 
         r += 1
-        ttk.Label(left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(left, text="Status:").grid(row=r, column=0, sticky=tk.W)
         self.chkStatus = ttk.Checkbutton(left, variable=self.status, onvalue=1, offvalue=0)
         self.chkStatus.grid(row=r, column=c, sticky="w", **pad)
 
         # Right buttons
         right = ttk.Frame(self.frm_main, style="App.TFrame")
         right.grid(row=0, column=1, sticky=tk.NS, padx=6)
-        ttk.Button(right, style="App.TButton", text=_("Save"), underline=0,
+        ttk.Button(right, style="App.TButton", text="Save", underline=0,
                    command=self._on_save).grid(row=0, column=0, sticky="ew", padx=4, pady=4)
-        ttk.Button(right, style="App.TButton", text=_("Cancel"), underline=0,
+        ttk.Button(right, style="App.TButton", text="Cancel", underline=0,
                    command=self.on_cancel).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
 
     # ---------------------------------------------------------------------
@@ -146,11 +145,11 @@ class UI(ParentView):
 
         if self.index is not None and self.selected_item is not None:
             # UPDATE mode
-            title = f"{_('Update method for')} {test_descr}"
+            title = f"Update method for {test_descr}"
             self._load_selected()
         else:
             # INSERT mode
-            title = f"{_('Add method for')} {test_descr}"
+            title = f"Add method for {test_descr}"
             self._clear_fields()
             # Prefill code with first 5 chars of test description
             self.code.set((test_descr or "")[:5].upper())
@@ -374,19 +373,19 @@ class UI(ParentView):
         """
 
         # Required: all combos selected
-        for label, cb in ((_("Category"), self.cbCategories),
-                          (_("Sample"), self.cbSamples),
-                          (_("Method"), self.cbMethods),
-                          (_("Unit"), self.cbUnits),
-                          (_("Section"), self.cbSections),):
+        for label, cb in (("Category", self.cbCategories),
+                          ("Sample", self.cbSamples),
+                          ("Method", self.cbMethods),
+                          ("Unit", self.cbUnits),
+                          ("Section", self.cbSections),):
             if cb.current() < 0:
-                messagebox.showwarning(self.engine.app_title, f"{_('Select a')} {label}.", parent=self)
+                messagebox.showwarning(self.engine.app_title, f"Select a {label}.", parent=self)
                 raise RuntimeError("validation")
 
         # Required: code (non-empty)
         code = (self.code.get() or "").strip()
         if not code:
-            messagebox.showwarning(self.engine.app_title, _("Code is required."), parent=self)
+            messagebox.showwarning(self.engine.app_title, "Code is required.", parent=self)
             self.txCode.focus_set()
             raise RuntimeError("validation")
 
@@ -442,7 +441,7 @@ class UI(ParentView):
             if err:
                 msg = self.engine.get_user_friendly_db_error(err)
             else:
-                msg = _("Save failed.")
+                msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 

@@ -10,7 +10,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from i18n import _
 from ui.parent_view import ParentView
 import ui.equipment as ui
 
@@ -83,16 +82,16 @@ class UI(ParentView):
         # Right: buttons
         frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
 
-        self.engine.add_button(frm_buttons, _("Add"), self._on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self._on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
 
       
     def on_open(self):
 
-        self.title(_("Equipments Management"))
+        self.title("Equipments Management")
         self.set_values()
 
     def set_values(self):
@@ -126,7 +125,7 @@ class UI(ParentView):
 
             self.dict_items[index] = eq_id
 
-        self.items.set(f"{_('Equipments')}: {self.lstItems.size()}")
+        self.items.set(f"Equipments: {self.lstItems.size()}")
 
     def on_item_selected(self, _evt=None):
         """Fetch selected equipment from DB (hybrid dict)."""

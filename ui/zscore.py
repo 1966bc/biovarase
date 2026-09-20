@@ -8,7 +8,6 @@
 import tkinter as tk
 from tkinter import ttk
 
-from i18n import _
 from ui.parent_view import ParentView
 
 
@@ -20,7 +19,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.title(_("Z-Score, P-Value, Probability"))
+        self.title("Z-Score, P-Value, Probability")
         self.resizable(False, False)
 
         self._build_ui()

@@ -12,7 +12,6 @@ from tkinter import messagebox
 from calendarium import Calendarium
 from datetime import date, datetime
 
-from i18n import _
 from ui.child_view import ChildView
 from app_config import BATCH_DESCRIPTION_MAX_LENGTH, LOT_NUMBER_MAX_LENGTH
 
@@ -85,29 +84,29 @@ class UI(ChildView):
         frm_left.grid(row=0, column=0, sticky=tk.NS, **paddings)
 
         r = 0; c = 1
-        ttk.Label(frm_left, text=_("Control:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Control:").grid(row=r, sticky=tk.W)
         self.cbControls = ttk.Combobox(frm_left, state="readonly")
         self.cbControls.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Lot:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Lot:").grid(row=r, sticky=tk.W)
         self.txLotNumber = ttk.Entry(frm_left, textvariable=self.lot_number)
         self.txLotNumber.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Description:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Description:").grid(row=r, sticky=tk.W)
         self.txDescription = ttk.Entry(frm_left, textvariable=self.description)
         self.txDescription.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Expiration:")).grid(row=r, sticky=tk.N + tk.W)
+        ttk.Label(frm_left, text="Expiration:").grid(row=r, sticky=tk.N + tk.W)
         # Safe fallback: use BASE_BG_RGB if available, otherwise fallback to a known RGB
         bg = getattr(self.engine, "BASE_BG_RGB", self.engine.get_rgb(240, 240, 237))
         self.expiration_date = Calendarium( frm_left, "", base_bg_color=bg)
         self.expiration_date.grid(row=r, column=c, sticky=tk.W)
 
         r += 1
-        ttk.Label(frm_left, text=_("Target:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Target:").grid(row=r, sticky=tk.W)
         self.txtTarget = ttk.Entry(
             frm_left,
             width=8,
@@ -119,7 +118,7 @@ class UI(ChildView):
         self.txtTarget.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Lower:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Lower:").grid(row=r, sticky=tk.W)
         self.txtLower = ttk.Entry(
             frm_left,
             width=8,
@@ -132,7 +131,7 @@ class UI(ChildView):
         self.txtLower.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Upper:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Upper:").grid(row=r, sticky=tk.W)
         self.txtUpper = ttk.Entry(
             frm_left,
             width=8,
@@ -145,7 +144,7 @@ class UI(ChildView):
         self.txtUpper.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("SD:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="SD:").grid(row=r, sticky=tk.W)
         self.txtSD = ttk.Entry(
             frm_left,
             width=8,
@@ -157,7 +156,7 @@ class UI(ChildView):
         self.txtSD.grid(row=r, column=c, sticky=tk.W, **paddings)
 
         r += 1
-        ttk.Label(frm_left, text=_("Rank:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Rank:").grid(row=r, sticky=tk.W)
         self.txtRank = ttk.Entry(
             frm_left,
             width=8,
@@ -169,7 +168,7 @@ class UI(ChildView):
         self.txtRank.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_left, text=_("Status:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_left, text="Status:").grid(row=r, sticky=tk.W)
         ttk.Checkbutton(frm_left, onvalue=1, offvalue=0, variable=self.status).grid(
             row=r, column=c, sticky=tk.W
         )
@@ -180,7 +179,7 @@ class UI(ChildView):
 
         r = 0; c = 0
         btn = ttk.Button(
-            frm_buttons, style="App.TButton", text=_("Save"), underline=0, command=self.on_save
+            frm_buttons, style="App.TButton", text="Save", underline=0, command=self.on_save
         )
         self.bind("<Alt-s>", self.on_save)
         self.bind("<Return>", self.on_save)
@@ -188,7 +187,7 @@ class UI(ChildView):
 
         r += 1
         btn = ttk.Button(
-            frm_buttons, style="App.TButton", text=_("Cancel"), underline=0, command=self.on_cancel
+            frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.on_cancel
         )
         self.bind("<Alt-c>", self.on_cancel)
         #self.bind("<Escape>", self.on_cancel)  # remove if you prefer Alt+F only
@@ -197,16 +196,16 @@ class UI(ChildView):
         r += 1
         ttk.Checkbutton(
             frm_buttons,
-            text=_("Remember data"),
+            text="Remember data",
             variable=self.remember_batch,
             command=lambda: self.engine.set_remember_batch(self.remember_batch.get())
         ).grid(row=r, column=c, sticky=tk.W)
 
         r += 1
-        frm_sd = ttk.LabelFrame(frm_buttons, style="App.TLabelframe", text=_("SD mode"))
+        frm_sd = ttk.LabelFrame(frm_buttons, style="App.TLabelframe", text="SD mode")
         frm_sd.grid(row=r, column=c, rowspan=4, sticky=tk.NW)
 
-        voices = [_("Manual"), _("Computed")]
+        voices = ["Manual", "Computed"]
         for idx, text in enumerate(voices):
             ttk.Radiobutton(
                 frm_sd,
@@ -222,7 +221,7 @@ class UI(ChildView):
  
         # Fail fast: mandatory context
         if not selected_test_method or not selected_workstation:
-            messagebox.showerror(self.engine.app_title, _("Missing context: test method or workstation."), parent=self)
+            messagebox.showerror(self.engine.app_title, "Missing context: test method or workstation.", parent=self)
             self.on_cancel()
             return
 
@@ -258,7 +257,7 @@ class UI(ChildView):
         self.selected_test = self.engine.read(False, sql, args)
         
         if not self.selected_test:
-            messagebox.showerror(self.engine.app_title, _("Test not found."), parent=self)
+            messagebox.showerror(self.engine.app_title, "Test not found.", parent=self)
             self.on_cancel()
             return
 
@@ -267,7 +266,7 @@ class UI(ChildView):
         if self.index is not None:
             # UPDATE mode
             if not selected_batch:
-                messagebox.showerror(self.engine.app_title, _("Batch not found."), parent=self)
+                messagebox.showerror(self.engine.app_title, "Batch not found.", parent=self)
                 self.on_cancel()
                 return
 
@@ -475,7 +474,7 @@ class UI(ChildView):
             # Allow partial typing; upstream validation will catch on save
             return True
         if lo > up:
-            msg = _("Lower value exceeds upper value.") + "\n" + _("Cannot compute SD.")
+            msg = "Lower value exceeds upper value." + "\n" + "Cannot compute SD."
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
             return False
         return True
@@ -489,7 +488,7 @@ class UI(ChildView):
 
         # Date validity (fail fast)
         if not self.expiration_date.is_valid:
-            msg = _("Date format error.") + " " + _("Please check the expiration date.")
+            msg = "Date format error." + " " + "Please check the expiration date."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 
@@ -501,7 +500,7 @@ class UI(ChildView):
         try:
             args = self._get_values()
         except ValueError as e:
-            messagebox.showerror(self.engine.app_title, f"{_('Validation error:')}\n{e}", parent=self)
+            messagebox.showerror(self.engine.app_title, f"Validation error:\n{e}", parent=self)
             return
 
         # Build SQL
@@ -518,7 +517,7 @@ class UI(ChildView):
             if err:
                 msg = self.engine.get_user_friendly_db_error(err)
             else:
-                msg = _("Save failed.")
+                msg = "Save failed."
             messagebox.showerror(self.engine.app_title, msg, parent=self)
             return
 

@@ -20,7 +20,6 @@ from tkinter import ttk, messagebox, filedialog
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from i18n import _
 from ui.parent_view import ParentView
 from calendarium import Calendarium
 
@@ -116,7 +115,7 @@ class UI(ParentView):
 
     def _build_ui(self):
         """Build the UI components."""
-        self.title(_("Performance Dashboard"))
+        self.title("Performance Dashboard")
         padd = {"padx": 5, "pady": 5}
 
         # Main container
@@ -134,30 +133,30 @@ class UI(ParentView):
             bg = "#f0f0ed"
 
         # From date
-        ttk.Label(frm_top, text=_("From:"), style="App.TLabel").pack(side=tk.LEFT, **padd)
+        ttk.Label(frm_top, text="From:", style="App.TLabel").pack(side=tk.LEFT, **padd)
         self.cal_from = Calendarium(frm_top, "", base_bg_color=bg)
         self.cal_from.pack(side=tk.LEFT, **padd)
 
         # To date
-        ttk.Label(frm_top, text=_("To:"), style="App.TLabel").pack(side=tk.LEFT, **padd)
+        ttk.Label(frm_top, text="To:", style="App.TLabel").pack(side=tk.LEFT, **padd)
         self.cal_to = Calendarium(frm_top, "", base_bg_color=bg)
         self.cal_to.pack(side=tk.LEFT, **padd)
 
         # Buttons
         ttk.Button(
             frm_top,
-            text=_("Refresh"),
+            text="Refresh",
             command=self._on_refresh,
         ).pack(side=tk.LEFT, **padd)
 
         ttk.Button(
             frm_top,
-            text=_("Export"),
+            text="Export",
             command=self._on_export,
         ).pack(side=tk.LEFT, **padd)
 
         # Color filter
-        ttk.Label(frm_top, text=_("Filter:"), style="App.TLabel").pack(side=tk.LEFT, padx=(15, 5))
+        ttk.Label(frm_top, text="Filter:", style="App.TLabel").pack(side=tk.LEFT, padx=(15, 5))
         self.filter_var = tk.StringVar(value="all")
         self.cbx_filter = ttk.Combobox(
             frm_top,
@@ -165,10 +164,10 @@ class UI(ParentView):
             state="readonly",
             width=12,
             values=[
-                _("All"),
-                _("Critical"),    # Red
-                _("Warning"),     # Yellow
-                _("Good"),        # Green
+                "All",
+                "Critical",    # Red
+                "Warning",     # Yellow
+                "Good",        # Green
             ],
         )
         self.cbx_filter.current(0)
@@ -177,7 +176,7 @@ class UI(ParentView):
 
         ttk.Button(
             frm_top,
-            text=_("Close"),
+            text="Close",
             command=self.on_cancel,
         ).pack(side=tk.RIGHT, **padd)
 
@@ -213,14 +212,14 @@ class UI(ParentView):
 
         # Column definitions
         col_defs = [
-            ("test", _("Test"), 200, tk.W),
-            ("workstation", _("Workstation"), 100, tk.W),
-            ("total", _("Total"), 60, tk.CENTER),
-            ("viol_pct", _("Viol%"), 70, tk.CENTER),
-            ("warn_pct", _("Warn%"), 70, tk.CENTER),
-            ("note_pct", _("Note%"), 70, tk.CENTER),
-            ("cv_pct", _("CV%"), 70, tk.CENTER),
-            ("bias_pct", _("Bias%"), 80, tk.CENTER),
+            ("test", "Test", 200, tk.W),
+            ("workstation", "Workstation", 100, tk.W),
+            ("total", "Total", 60, tk.CENTER),
+            ("viol_pct", "Viol%", 70, tk.CENTER),
+            ("warn_pct", "Warn%", 70, tk.CENTER),
+            ("note_pct", "Note%", 70, tk.CENTER),
+            ("cv_pct", "CV%", 70, tk.CENTER),
+            ("bias_pct", "Bias%", 80, tk.CENTER),
         ]
 
         for col_id, heading, width, anchor in col_defs:
@@ -243,7 +242,7 @@ class UI(ParentView):
         self.tree.bind("<<TreeviewSelect>>", self._on_tree_select)
 
         # Details panel
-        frm_details = ttk.LabelFrame(self.pw, text=_("Actions Breakdown"))
+        frm_details = ttk.LabelFrame(self.pw, text="Actions Breakdown")
         self.pw.add(frm_details, minsize=100, stretch="never")
 
         # Details listbox with scrollbar
@@ -277,7 +276,7 @@ class UI(ParentView):
         if from_date is None or to_date is None:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Invalid date."),
+                "Invalid date.",
                 parent=self,
             )
             return
@@ -285,7 +284,7 @@ class UI(ParentView):
         if from_date > to_date:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("From date must be before To date."),
+                "From date must be before To date.",
                 parent=self,
             )
             return
@@ -314,7 +313,7 @@ class UI(ParentView):
             self.dict_items.clear()
             self.aggregated.clear()
             self.lst_details.delete(0, tk.END)
-            self.status_var.set(_("No data for selected date range"))
+            self.status_var.set("No data for selected date range")
             return
 
         # Aggregate results
@@ -326,7 +325,7 @@ class UI(ParentView):
         # Update status
         count = len(self.aggregated)
         self.status_var.set(
-            f"{_('Test Methods')}: {count} | "
+            f"Test Methods: {count} | "
             f"{from_date.strftime('%d/%m/%Y')} - {to_date.strftime('%d/%m/%Y')}"
         )
 
@@ -505,9 +504,9 @@ class UI(ParentView):
         if self.current_from and self.current_to:
             period = f"{self.current_from.strftime('%d/%m/%Y')} - {self.current_to.strftime('%d/%m/%Y')}"
             if filter_idx > 0:
-                self.status_var.set(f"{_('Showing')}: {shown_count}/{total_count} | {period}")
+                self.status_var.set(f"Showing: {shown_count}/{total_count} | {period}")
             else:
-                self.status_var.set(f"{_('Test Methods')}: {total_count} | {period}")
+                self.status_var.set(f"Test Methods: {total_count} | {period}")
 
     def _get_row_tag(self, viol_pct, warn_pct):
         """Return color tag based on violation/warning rates."""
@@ -587,7 +586,7 @@ class UI(ParentView):
         ) or []
 
         if not rows:
-            self.lst_details.insert(tk.END, _("No actions recorded"))
+            self.lst_details.insert(tk.END, "No actions recorded")
             return
 
         # Calculate total for percentages
@@ -604,14 +603,14 @@ class UI(ParentView):
         if not self.dict_items:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("No data to export."),
+                "No data to export.",
                 parent=self,
             )
             return
 
         # Create preview window
         preview = tk.Toplevel(self)
-        preview.title(_("Export Preview"))
+        preview.title("Export Preview")
         preview.transient(self)
         preview.geometry("800x500")
         preview.minsize(600, 400)
@@ -626,7 +625,7 @@ class UI(ParentView):
 
         ttk.Label(
             frm_header,
-            text=f"{_('Performance Dashboard')} - {period_text}",
+            text=f"Performance Dashboard - {period_text}",
             style="App.TLabel",
             font=("TkDefaultFont", 12, "bold"),
         ).pack(side=tk.LEFT)
@@ -679,13 +678,13 @@ class UI(ParentView):
 
         ttk.Button(
             frm_buttons,
-            text=_("Save Excel"),
+            text="Save Excel",
             command=lambda: self._save_excel(preview),
         ).pack(side=tk.LEFT, padx=5)
 
         ttk.Button(
             frm_buttons,
-            text=_("Close"),
+            text="Close",
             command=preview.destroy,
         ).pack(side=tk.RIGHT, padx=5)
 
@@ -703,7 +702,7 @@ class UI(ParentView):
         except ImportError:
             messagebox.showerror(
                 self.engine.app_title,
-                _("openpyxl not installed."),
+                "openpyxl not installed.",
                 parent=self,
             )
             return
@@ -741,14 +740,14 @@ class UI(ParentView):
 
             # Headers
             headers = [
-                _("Test"),
-                _("Workstation"),
-                _("Total"),
-                _("Viol%"),
-                _("Warn%"),
-                _("Note%"),
-                _("CV%"),
-                _("Bias%"),
+                "Test",
+                "Workstation",
+                "Total",
+                "Viol%",
+                "Warn%",
+                "Note%",
+                "CV%",
+                "Bias%",
             ]
 
             for col, header in enumerate(headers, 1):
@@ -807,7 +806,7 @@ class UI(ParentView):
 
             messagebox.showinfo(
                 self.engine.app_title,
-                f"{_('File saved')}: {filepath}",
+                f"File saved: {filepath}",
                 parent=self,
             )
 
@@ -820,7 +819,7 @@ class UI(ParentView):
             )
             messagebox.showerror(
                 self.engine.app_title,
-                f"{_('Export failed')}: {e}",
+                f"Export failed: {e}",
                 parent=self,
             )
         finally:

@@ -16,7 +16,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import statistics
 
-from i18n import _
 from ui.parent_view import ParentView
 
 
@@ -65,19 +64,19 @@ class UI(ParentView):
         frm_left.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 8))
 
         # Category
-        ttk.Label(frm_left, text=_("Category:")).pack(anchor=tk.W, pady=(0, 2))
+        ttk.Label(frm_left, text="Category:").pack(anchor=tk.W, pady=(0, 2))
         self.cbCategory = ttk.Combobox(frm_left, state="readonly", width=25)
         self.cbCategory.bind("<<ComboboxSelected>>", self._on_category_selected)
         self.cbCategory.pack(fill=tk.X, pady=(0, 8))
 
         # Test
-        ttk.Label(frm_left, text=_("Test:")).pack(anchor=tk.W, pady=(0, 2))
+        ttk.Label(frm_left, text="Test:").pack(anchor=tk.W, pady=(0, 2))
         self.cbTest = ttk.Combobox(frm_left, state="readonly", width=25)
         self.cbTest.bind("<<ComboboxSelected>>", self._on_test_selected)
         self.cbTest.pack(fill=tk.X, pady=(0, 8))
 
         # Level
-        ttk.Label(frm_left, text=_("Level:")).pack(anchor=tk.W, pady=(0, 2))
+        ttk.Label(frm_left, text="Level:").pack(anchor=tk.W, pady=(0, 2))
         self.cbLevel = ttk.Combobox(frm_left, state="readonly", width=25)
         self.cbLevel.bind("<<ComboboxSelected>>", self._on_level_selected)
         self.cbLevel.pack(fill=tk.X, pady=(0, 8))
@@ -86,13 +85,13 @@ class UI(ParentView):
         ttk.Separator(frm_left, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=8)
 
         # Workstation 1
-        ttk.Label(frm_left, text=_("Workstation 1:")).pack(anchor=tk.W, pady=(0, 2))
+        ttk.Label(frm_left, text="Workstation 1:").pack(anchor=tk.W, pady=(0, 2))
         self.cbWorkstation1 = ttk.Combobox(frm_left, state="readonly", width=25)
         self.cbWorkstation1.bind("<<ComboboxSelected>>", self._on_workstation_changed)
         self.cbWorkstation1.pack(fill=tk.X, pady=(0, 8))
 
         # Workstation 2
-        ttk.Label(frm_left, text=_("Workstation 2:")).pack(anchor=tk.W, pady=(0, 2))
+        ttk.Label(frm_left, text="Workstation 2:").pack(anchor=tk.W, pady=(0, 2))
         self.cbWorkstation2 = ttk.Combobox(frm_left, state="readonly", width=25)
         self.cbWorkstation2.bind("<<ComboboxSelected>>", self._on_workstation_changed)
         self.cbWorkstation2.pack(fill=tk.X, pady=(0, 8))
@@ -100,14 +99,14 @@ class UI(ParentView):
         # Calculate button
         ttk.Button(
             frm_left,
-            text=_("Calculate"),
+            text="Calculate",
             command=self._on_calculate
         ).pack(fill=tk.X, pady=(8, 4))
 
         # Clear button
         ttk.Button(
             frm_left,
-            text=_("Clear"),
+            text="Clear",
             command=self._on_clear
         ).pack(fill=tk.X, pady=4)
 
@@ -115,31 +114,31 @@ class UI(ParentView):
         ttk.Separator(frm_left, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=8)
 
         # Statistics frame
-        frm_stats = ttk.LabelFrame(frm_left, text=_("Statistics"), padding=8)
+        frm_stats = ttk.LabelFrame(frm_left, text="Statistics", padding=8)
         frm_stats.pack(fill=tk.X, pady=(0, 8))
 
         # Pairs count
-        ttk.Label(frm_stats, text=_("Pairs:")).grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(frm_stats, text="Pairs:").grid(row=0, column=0, sticky=tk.W)
         self.lblPairs = ttk.Label(frm_stats, text="-")
         self.lblPairs.grid(row=0, column=1, sticky=tk.E, padx=(8, 0))
 
         # Bias
-        ttk.Label(frm_stats, text=_("Bias:")).grid(row=1, column=0, sticky=tk.W)
+        ttk.Label(frm_stats, text="Bias:").grid(row=1, column=0, sticky=tk.W)
         self.lblBias = ttk.Label(frm_stats, text="-")
         self.lblBias.grid(row=1, column=1, sticky=tk.E, padx=(8, 0))
 
         # SD of differences
-        ttk.Label(frm_stats, text=_("SD:")).grid(row=2, column=0, sticky=tk.W)
+        ttk.Label(frm_stats, text="SD:").grid(row=2, column=0, sticky=tk.W)
         self.lblSD = ttk.Label(frm_stats, text="-")
         self.lblSD.grid(row=2, column=1, sticky=tk.E, padx=(8, 0))
 
         # Upper limit
-        ttk.Label(frm_stats, text=_("+1.96 SD:")).grid(row=3, column=0, sticky=tk.W)
+        ttk.Label(frm_stats, text="+1.96 SD:").grid(row=3, column=0, sticky=tk.W)
         self.lblUpper = ttk.Label(frm_stats, text="-")
         self.lblUpper.grid(row=3, column=1, sticky=tk.E, padx=(8, 0))
 
         # Lower limit
-        ttk.Label(frm_stats, text=_("-1.96 SD:")).grid(row=4, column=0, sticky=tk.W)
+        ttk.Label(frm_stats, text="-1.96 SD:").grid(row=4, column=0, sticky=tk.W)
         self.lblLower = ttk.Label(frm_stats, text="-")
         self.lblLower.grid(row=4, column=1, sticky=tk.E, padx=(8, 0))
 
@@ -148,7 +147,7 @@ class UI(ParentView):
         # Cancel button at bottom
         ttk.Button(
             frm_left,
-            text=_("Cancel"),
+            text="Cancel",
             command=self.on_cancel
         ).pack(side=tk.BOTTOM, fill=tk.X, pady=(8, 0))
 
@@ -159,7 +158,7 @@ class UI(ParentView):
         # Title label
         self.lblTitle = ttk.Label(
             frm_right,
-            text=_("Bland-Altman Plot"),
+            text="Bland-Altman Plot",
             font=("TkDefaultFont", 12, "bold")
         )
         self.lblTitle.pack(pady=(0, 8))
@@ -184,7 +183,7 @@ class UI(ParentView):
                 - ws1_id: int
                 - ws2_id: int
         """
-        self.title(_("Bland-Altman Comparison"))
+        self.title("Bland-Altman Comparison")
         self._load_categories()
 
         # If preselect data provided, auto-select and calculate
@@ -455,7 +454,7 @@ class UI(ParentView):
         if self.cbWorkstation1.current() < 0 or self.cbWorkstation2.current() < 0:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Please select two workstations."),
+                "Please select two workstations.",
                 parent=self
             )
             return
@@ -466,7 +465,7 @@ class UI(ParentView):
         if ws1_id == ws2_id:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Please select two different workstations."),
+                "Please select two different workstations.",
                 parent=self
             )
             return
@@ -477,7 +476,7 @@ class UI(ParentView):
         if test_id is None or level is None:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Please select test and level."),
+                "Please select test and level.",
                 parent=self
             )
             return
@@ -488,8 +487,8 @@ class UI(ParentView):
         if len(self.pairs) < 10:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Not enough paired data. Minimum 10 pairs required.") +
-                f"\n{_('Found')}: {len(self.pairs)}",
+                "Not enough paired data. Minimum 10 pairs required." +
+                f"\nFound: {len(self.pairs)}",
                 parent=self
             )
             return
@@ -645,14 +644,14 @@ class UI(ParentView):
         # X axis label
         self.canvas.create_text(
             width / 2, height - 10,
-            text=_("Mean of measurements"),
+            text="Mean of measurements",
             font=("TkDefaultFont", 9)
         )
 
         # Y axis label
         self.canvas.create_text(
             15, height / 2,
-            text=_("Difference"),
+            text="Difference",
             font=("TkDefaultFont", 9),
             angle=90
         )

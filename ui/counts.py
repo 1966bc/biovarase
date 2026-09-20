@@ -6,7 +6,6 @@
 #-----------------------------------------------------------------------------
 import tkinter as tk
 
-from i18n import _
 from ui.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -54,7 +53,7 @@ class UI(ParentView):
         frm_left.grid(row=0, column=0, sticky=tk.NS, **padd)
 
         # Date selector (Calendarium v2.2: no get_calendarium())
-        self.export_date = Calendarium(frm_left, _("Export from:"))
+        self.export_date = Calendarium(frm_left, "Export from:")
         self.export_date.grid(
             row=0,
             column=0,
@@ -71,7 +70,7 @@ class UI(ParentView):
         btn_export = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Export"),
+            text="Export",
             underline=0,
             command=self.on_export,
         )
@@ -81,7 +80,7 @@ class UI(ParentView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Cancel"),
+            text="Cancel",
             underline=0,
             command=self.on_cancel,
         )
@@ -90,7 +89,7 @@ class UI(ParentView):
     def on_open(self):
         """Called by parent to (re)show the dialog."""
 
-        self.title(_("Export Counts"))
+        self.title("Export Counts")
 
         # Prefill: today
         try:
@@ -142,7 +141,7 @@ class UI(ParentView):
         if selected_date is None:
             return
 
-        if messagebox.askyesno(self.engine.app_title, _("Export data?"), parent=self):
+        if messagebox.askyesno(self.engine.app_title, "Export data?", parent=self):
             args = (selected_date,)  # tuple(date,)
             self.engine.get_counts(args)
             self.on_cancel()

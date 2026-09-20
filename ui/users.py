@@ -10,7 +10,6 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 
-from i18n import _
 from ui.parent_view import ParentView
 import ui.user as ui
 
@@ -76,16 +75,16 @@ class UI(ParentView):
 
         # Configure columns
         self.lstItems.column("last_name", width=180, minwidth=120, anchor=tk.W)
-        self.lstItems.heading("last_name", text=_("Surname:").rstrip(":"), anchor=tk.W)
+        self.lstItems.heading("last_name", text="Surname:".rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("first_name", width=180, minwidth=120, anchor=tk.W)
-        self.lstItems.heading("first_name", text=_("First Name:").rstrip(":"), anchor=tk.W)
+        self.lstItems.heading("first_name", text="First Name:".rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("nickname", width=120, minwidth=80, anchor=tk.W)
-        self.lstItems.heading("nickname", text=_("Nick:").rstrip(":"), anchor=tk.W)
+        self.lstItems.heading("nickname", text="Nick:".rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("lab", width=200, minwidth=150, anchor=tk.W)
-        self.lstItems.heading("lab", text=_("Laboratory"), anchor=tk.W)
+        self.lstItems.heading("lab", text="Laboratory", anchor=tk.W)
 
         # Tag for inactive users
         self.lstItems.tag_configure("inactive", background=self.engine.get_rgb(211, 211, 211))
@@ -103,14 +102,14 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="Panel.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5, expand=False)
 
-        self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
     # ------------------------------------------------------------------ OPEN
     def on_open(self):
         """Called once the window is ready: set title and load users."""
-        self.title(_("Users"))
+        self.title("Users")
         self._load_items()
 
     # ------------------------------------------------------------------ LOAD DATA
@@ -195,7 +194,7 @@ class UI(ParentView):
             last_name = (row.get("last_name") or "").strip()
             first_name = (row.get("first_name") or "").strip()
             nickname = (row.get("nickname") or "").strip()
-            lab_name = row.get("lab_name") or _("Not Assigned")
+            lab_name = row.get("lab_name") or "Not Assigned"
 
             tags = ("inactive",) if status != 1 else ()
 
@@ -209,7 +208,7 @@ class UI(ParentView):
 
             self.dict_items[iid] = user_id
 
-        self.items.set(f"{_('Users')}: {len(self.dict_items)}")
+        self.items.set(f"Users: {len(self.dict_items)}")
 
     # ------------------------------------------------------------------ SELECTION
     def on_item_selected(self, _evt=None):

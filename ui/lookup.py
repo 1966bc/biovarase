@@ -20,7 +20,6 @@ Expected table schema:
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 from ui.parent_view import ParentView
 from ui.editor import Editor
 
@@ -154,7 +153,7 @@ class LookupUI(ParentView):
         frm_search = ttk.Frame(frm_right, style="App.TFrame")
         frm_search.pack(fill=tk.X, pady=(0, 8))
 
-        ttk.Label(frm_search, text=_("Search:"), style="App.TLabel").pack(anchor=tk.W)
+        ttk.Label(frm_search, text="Search:", style="App.TLabel").pack(anchor=tk.W)
         self.txSearch = ttk.Entry(frm_search, textvariable=self.search_var, width=15)
         self.txSearch.pack(fill=tk.X)
 
@@ -167,9 +166,9 @@ class LookupUI(ParentView):
         )
         frm_buttons.pack(fill=tk.Y, expand=True)
 
-        self.engine.add_button(frm_buttons, _("Add"), self.on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self.on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self.on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self.on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
         self.bind("<Return>", self.on_item_activated)
 
@@ -233,9 +232,9 @@ class LookupUI(ParentView):
         total = len(self.all_items)
         shown = self.lstItems.size()
         if search_text:
-            self.items.set(f"{_('Items')}: {shown}/{total}")
+            self.items.set(f"Items: {shown}/{total}")
         else:
-            self.items.set(f"{_('Items')}: {total}")
+            self.items.set(f"Items: {total}")
 
     def _on_search_changed(self, *args):
         """Handle search text changes."""

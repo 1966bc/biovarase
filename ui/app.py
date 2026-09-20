@@ -17,7 +17,6 @@ import tkinter as tk
 from tkinter import messagebox
 
 from engine import Engine
-from i18n import _
 from ui.login import Login
 
 __author__ = "Giuseppe Costanzi (1966bc)"
@@ -80,7 +79,7 @@ class App(tk.Tk):
 
     def on_exit(self, evt=None):
         """Close the database and go, once the question has been answered."""
-        msg = _("Do you want to quit {app_name}?").format(app_name=self.title())
+        msg = "Do you want to quit {app_name}?".format(app_name=self.title())
         if messagebox.askokcancel(self.title(), msg, parent=self):
             self.engine.db.close()
             self.engine.log.trace("database closed: goodbye")

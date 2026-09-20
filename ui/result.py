@@ -16,7 +16,6 @@ import inspect
 from datetime import datetime
 import tkinter as tk
 
-from i18n import _
 from ui.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
@@ -88,7 +87,7 @@ class UI(ChildView):
 
         r = 0
         c = 1
-        ttk.Label(frm_content, text=_("Test:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Test:").grid(row=r, sticky=tk.W)
         ttk.Label(
             frm_content,
             style="Data.TLabel",
@@ -96,7 +95,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_content, text=_("Batch:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Batch:").grid(row=r, sticky=tk.W)
         ttk.Label(
             frm_content,
             style="Data.TLabel",
@@ -104,7 +103,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_content, text=_("Level:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Level:").grid(row=r, sticky=tk.W)
         ttk.Label(
             frm_content,
             style="Data.TLabel",
@@ -112,7 +111,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_content, text=_("Workstation:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Workstation:").grid(row=r, sticky=tk.W)
         ttk.Label(
             frm_content,
             style="Data.TLabel",
@@ -120,7 +119,7 @@ class UI(ChildView):
         ).grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_content, text=_("Reagent Lot:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Reagent Lot:").grid(row=r, sticky=tk.W)
         self.txtReagentLot = ttk.Entry(
             frm_content,
             width=20,
@@ -129,7 +128,7 @@ class UI(ChildView):
         self.txtReagentLot.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_content, text=_("Result:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Result:").grid(row=r, sticky=tk.W)
         self.txtResult = ttk.Entry(
             frm_content,
             width=8,
@@ -143,7 +142,7 @@ class UI(ChildView):
         self.txtResult.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         r += 1
-        ttk.Label(frm_content, text=_("Received:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Received:").grid(row=r, sticky=tk.W)
 
         # Two widgets for "Received" field:
         # 1. Calendarium (editable) - shown only when inserting new result
@@ -163,7 +162,7 @@ class UI(ChildView):
         self.calendarium_received.grid_remove()
 
         r += 1
-        ttk.Label(frm_content, text=_("Status:")).grid(row=r, sticky=tk.W)
+        ttk.Label(frm_content, text="Status:").grid(row=r, sticky=tk.W)
         self.ckStatus = ttk.Checkbutton(
             frm_content,
             onvalue=1,
@@ -186,7 +185,7 @@ class UI(ChildView):
         btn_cancel = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Cancel"),
+            text="Cancel",
             underline=0,
             command=self.on_cancel,
         )
@@ -199,7 +198,7 @@ class UI(ChildView):
             btn_delete = ttk.Button(
                 frm_buttons,
                 style="App.TButton",
-                text=_("Delete"),
+                text="Delete",
                 underline=0,
                 command=self._delete,
             )
@@ -210,7 +209,7 @@ class UI(ChildView):
         btn_save = ttk.Button(
             frm_buttons,
             style="App.TButton",
-            text=_("Save"),
+            text="Save",
             underline=0,
             command=self._on_save,
         )
@@ -415,7 +414,7 @@ class UI(ChildView):
             if not self.calendarium_received.is_valid:
                 messagebox.showerror(
                     self.engine.app_title,
-                    _("Please enter a valid received date."),
+                    "Please enter a valid received date.",
                     parent=self,
                 )
                 return

@@ -9,7 +9,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from i18n import _
 from ui.parent_view import ParentView
 import ui.control as control_editor
 
@@ -71,13 +70,13 @@ class UI(ParentView):
         self.lstItems = ttk.Treeview(frm_left, columns=cols_controls, show="headings")
 
         self.lstItems.column("description", width=260, minwidth=260, anchor=tk.W, stretch=True)
-        self.lstItems.heading("description", text=_("Description"), anchor=tk.W)
+        self.lstItems.heading("description", text="Description", anchor=tk.W)
 
         self.lstItems.column("reference", width=120, minwidth=120, anchor=tk.W, stretch=True)
-        self.lstItems.heading("reference", text=_("Reference:").rstrip(":"), anchor=tk.W)
+        self.lstItems.heading("reference", text="Reference:".rstrip(":"), anchor=tk.W)
 
         self.lstItems.column("supplier", width=180, minwidth=180, anchor=tk.W, stretch=True)
-        self.lstItems.heading("supplier", text=_("Supplier:").rstrip(":"), anchor=tk.W)
+        self.lstItems.heading("supplier", text="Supplier:".rstrip(":"), anchor=tk.W)
 
         sb_controls = ttk.Scrollbar(frm_left, orient=tk.VERTICAL, command=self.lstItems.yview)
         self.lstItems.configure(yscrollcommand=sb_controls.set)
@@ -92,15 +91,15 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=6, pady=6)
 
-        self.engine.add_button(frm_buttons, _("Add"), self._on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self._on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Cancel"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Cancel", self.on_cancel, "<Alt-c>", self)
 
        
 
     def on_open(self) -> None:
         """Configure title, reload data and center the window."""
-        self.title(_("Controls"))
+        self.title("Controls")
         self.set_values()
 
     def set_values(self) -> None:
@@ -129,7 +128,7 @@ class UI(ParentView):
                 tags=tag,
             )
 
-        self.items.set(f"{_('Controls')}: {len(self.lstItems.get_children())}")
+        self.items.set(f"Controls: {len(self.lstItems.get_children())}")
         self.selected_item = None
 
     def _on_item_selected(self, _evt=None) -> None:

@@ -17,7 +17,6 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 from calendarium import Calendarium
 from ui.child_view import ChildView
 
@@ -80,17 +79,17 @@ class UI(ChildView):
         r = 0
         c = 1
 
-        ttk.Label(frm_left, text=_("Action:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Action:").grid(row=r, column=0, sticky=tk.W)
         self.cbActions = ttk.Combobox(frm_left, state="readonly")
         self.cbActions.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(frm_left, text=_("Description:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Description:").grid(row=r, column=0, sticky=tk.W)
         self.txDescription = ttk.Entry(frm_left, textvariable=self.description)
         self.txDescription.grid(row=r, column=c, sticky="ew", **pad)
 
         r += 1
-        ttk.Label(frm_left, text=_("Modified:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Modified:").grid(row=r, column=0, sticky=tk.W)
 
         # Safe fallback background for Calendarium
         try:
@@ -105,7 +104,7 @@ class UI(ChildView):
         self.modified.grid(row=r, column=c, sticky=tk.W)
 
         r += 1
-        ttk.Label(frm_left, text=_("Status:")).grid(row=r, column=0, sticky=tk.W)
+        ttk.Label(frm_left, text="Status:").grid(row=r, column=0, sticky=tk.W)
         self.chkStatus = ttk.Checkbutton(
             frm_left,
             onvalue=1,
@@ -125,7 +124,7 @@ class UI(ChildView):
 
         self.btn_save = ttk.Button(
             right,
-            text=_("Save"),
+            text="Save",
             style="App.TButton",
             command=self._on_save,
         )
@@ -133,7 +132,7 @@ class UI(ChildView):
 
         btn_cancel = ttk.Button(
             right,
-            text=_("Cancel"),
+            text="Cancel",
             style="App.TButton",
             command=self.on_cancel,
         )
@@ -158,11 +157,11 @@ class UI(ChildView):
         self._set_actions()
 
         if self.index is not None and self.selected_note:
-            msg = _("Update Note")
+            msg = "Update Note"
             self._set_values_from_selected_note()
             self._check_edit_permission()
         else:
-            msg = _("Add Note")
+            msg = "Add Note"
             self.status.set(1)
             self.modified.set_today()
             self.lbl_creator.config(text="")
@@ -188,7 +187,7 @@ class UI(ChildView):
         if created_by is None:
             # Old notes without creator - allow editing
             self.can_edit = True
-            self.lbl_creator.config(text=_("Created by: Unknown"))
+            self.lbl_creator.config(text="Created by: Unknown")
             return
 
         # Check if current user is the creator
@@ -210,12 +209,12 @@ class UI(ChildView):
                 creator_name = f"{user['first_name']} {user['last_name']}"
                 if not self.can_edit:
                     self.lbl_creator.config(
-                        text=_("Created by: {0} (read-only)").format(creator_name),
+                        text="Created by: {0} (read-only)".format(creator_name),
                         foreground="orange"
                     )
                 else:
                     self.lbl_creator.config(
-                        text=_("Created by: {0}").format(creator_name),
+                        text="Created by: {0}".format(creator_name),
                         foreground="gray"
                     )
         except Exception:
@@ -332,7 +331,7 @@ class UI(ChildView):
         if not self.can_edit:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("You don't have permission to edit this note."),
+                "You don't have permission to edit this note.",
                 parent=self,
             )
             return
@@ -345,7 +344,7 @@ class UI(ChildView):
         if not self.modified.is_valid:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Invalid date."),
+                "Invalid date.",
                 parent=self,
             )
             return
@@ -354,7 +353,7 @@ class UI(ChildView):
         if values is None:
             messagebox.showwarning(
                 self.engine.app_title,
-                _("Missing or invalid data."),
+                "Missing or invalid data.",
                 parent=self,
             )
             return
@@ -397,7 +396,7 @@ class UI(ChildView):
                 if err:
                     msg = self.engine.get_user_friendly_db_error(err)
                 else:
-                    msg = _("Save failed.")
+                    msg = "Save failed."
                 messagebox.showerror(self.engine.app_title, msg, parent=self)
                 return
 
@@ -430,7 +429,7 @@ class UI(ChildView):
             )
             messagebox.showerror(
                 self.engine.app_title,
-                _("Error while saving data.") + "\n" + _("Please check the log file."),
+                "Error while saving data." + "\n" + "Please check the log file.",
                 parent=self,
             )
 

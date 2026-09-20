@@ -7,7 +7,6 @@
 # -----------------------------------------------------------------------------
 import tkinter as tk
 
-from i18n import _
 from ui.parent_view import ParentView
 from tkinter import ttk
 
@@ -46,7 +45,7 @@ class UI(ParentView):
     def _build_ui(self):
         """Create the main frame and scrollable container for stacked charts."""
 
-        self.title(_("Quality Control Plots"))
+        self.title("Quality Control Plots")
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -158,9 +157,9 @@ class UI(ParentView):
         ws_name = selected_workstation[3]
         ws_serial = selected_workstation[4]
 
-        self.title(f"{test_name} – {_('Quality Control Plots')}")
+        self.title(f"{test_name} – Quality Control Plots")
         self._header_var.set(
-            f"{_('Test')}: {test_name}   ·   {_('Workstation')}: {ws_name}   ·   {_('Serial')}: {ws_serial}"
+            f"Test: {test_name}   ·   Workstation: {ws_name}   ·   Serial: {ws_serial}"
         )
 
         # Load batches and plot
@@ -214,7 +213,7 @@ class UI(ParentView):
         if not batches:
             no_data = ttk.Label(
                 self.frm_plots,
-                text=_("No batches available for this test."),
+                text="No batches available for this test.",
                 style="App.TLabel",
             )
             no_data.grid(row=0, column=0, sticky="w")
@@ -294,7 +293,7 @@ class UI(ParentView):
             card.rowconfigure(1, weight=1)
 
             # Default text for the summary row
-            info_text = _("No data available")
+            info_text = "No data available"
 
             # If there are results, plot; otherwise show "No data"
             if rs:
@@ -330,23 +329,23 @@ class UI(ParentView):
                     # Summary string (like main LJ window)
                     count_series = len(series)
                     count_rs = len(rs)
-                    info_text = f"{_('Computed')} {count_series} {_('on')} {count_rs} {_('results')}"
+                    info_text = f"Computed {count_series} on {count_rs} results"
                 else:
                     lj_canvas.create_text(
                         lj_canvas.winfo_reqwidth() / 2,
                         lj_canvas.winfo_reqheight() / 2,
-                        text=_("No series available"),
+                        text="No series available",
                         fill="red",
                     )
-                    info_text = _("No series available")
+                    info_text = "No series available"
             else:
                 lj_canvas.create_text(
                     lj_canvas.winfo_reqwidth() / 2,
                     lj_canvas.winfo_reqheight() / 2,
-                    text=_("No data available"),
+                    text="No data available",
                     fill="red",
                 )
-                info_text = _("No data available")
+                info_text = "No data available"
 
             # Summary label under the chart (right aligned)
             ttk.Label(card, text=info_text, style="App.TLabel")\

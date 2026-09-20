@@ -8,7 +8,6 @@
 
 import tkinter as tk
 
-from i18n import _
 from ui.parent_view import ParentView
 from tkinter import ttk
 from tkinter import messagebox
@@ -62,20 +61,20 @@ class UI(ParentView):
         c = 1
         
         # Old Password
-        ttk.Label(frm_input, text=_("Old Password:")).grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(frm_input, text="Old Password:").grid(row=r, column=0, sticky=tk.W, **paddings)
         self.txtOldPassword = ttk.Entry(frm_input, show="*", textvariable=self.old_password, width=30)
         self.txtOldPassword.grid(row=r, column=c, sticky=tk.EW, **paddings)
         self.txtOldPassword.focus_set()
 
         r += 1
         # New Password
-        ttk.Label(frm_input, text=_("New Password:")).grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(frm_input, text="New Password:").grid(row=r, column=0, sticky=tk.W, **paddings)
         self.txtNewPassword = ttk.Entry(frm_input, show="*", textvariable=self.new_password, width=30)
         self.txtNewPassword.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
         r += 1
         # Repeat Password
-        ttk.Label(frm_input, text=_("Confirm Password:")).grid(row=r, column=0, sticky=tk.W, **paddings)
+        ttk.Label(frm_input, text="Confirm Password:").grid(row=r, column=0, sticky=tk.W, **paddings)
         self.txtRepeatPassword = ttk.Entry(frm_input, show="*", textvariable=self.repeat_password, width=30)
         self.txtRepeatPassword.grid(row=r, column=c, sticky=tk.EW, **paddings)
 
@@ -87,24 +86,24 @@ class UI(ParentView):
         c = 0
         
         # Save Button
-        btn_save = ttk.Button(frm_buttons, style="App.TButton", text=_("Save"), underline=0, command=self.on_save)
+        btn_save = ttk.Button(frm_buttons, style="App.TButton", text="Save", underline=0, command=self.on_save)
         btn_save.grid(row=r, column=c, sticky=tk.EW, padx=5, pady=5)
         self.bind("<Alt-s>", self.on_save)
 
         c += 1
         # Cancel Button
-        btn_cancel = ttk.Button(frm_buttons, style="App.TButton", text=_("Cancel"), underline=0, command=self.__on_cancel)
+        btn_cancel = ttk.Button(frm_buttons, style="App.TButton", text="Cancel", underline=0, command=self.__on_cancel)
         btn_cancel.grid(row=r, column=c, sticky=tk.EW, padx=5, pady=5)
         self.bind("<Alt-c>", self.__on_cancel, add="+") # Use add="+" to avoid overwriting existing bindings
 
     def on_open(self):
-        self.title(_("Change Password"))
+        self.title("Change Password")
         self.after_idle(self.txtOldPassword.focus_set)
 
     def _fetch_current_hash(self):
         """Retrieves the bcrypt hash (string) of the logged-in user or None."""
         if not (hasattr(self.engine, 'log_user') and self.engine.log_user):
-            messagebox.showerror(self.title(), _("User not found."), parent=self)
+            messagebox.showerror(self.title(), "User not found.", parent=self)
             return None
 
         user_id = self.engine.log_user["user_id"]
@@ -153,7 +152,7 @@ class UI(ParentView):
         # 1) Verify old password
         if not self._match_old_password():
             messagebox.showinfo(self.parent.title(),
-                                _("Current password is incorrect."), parent=self)
+                                "Current password is incorrect.", parent=self)
             self.txtOldPassword.focus_set()
             return
 
@@ -163,13 +162,13 @@ class UI(ParentView):
 
         if len(new_pw) < 8:
             messagebox.showinfo(self.parent.title(),
-                                _("Password must be at least 8 characters."), parent=self)
+                                "Password must be at least 8 characters.", parent=self)
             self.txtNewPassword.focus_set()
             return
 
         if new_pw != rep_pw:
             messagebox.showinfo(self.parent.title(),
-                                _("Passwords do not match."), parent=self)
+                                "Passwords do not match.", parent=self)
             self.txtRepeatPassword.focus_set()
             return
 
@@ -183,11 +182,11 @@ class UI(ParentView):
             if err:
                 msg = self.engine.get_user_friendly_db_error(err)
             else:
-                msg = _("Save failed.")
+                msg = "Save failed."
             messagebox.showerror(self.parent.title(), msg, parent=self)
             return
 
-        messagebox.showinfo(self.parent.title(), _("Password changed successfully."), parent=self)
+        messagebox.showinfo(self.parent.title(), "Password changed successfully.", parent=self)
         self.on_cancel()
 
     def __on_cancel(self, evt=None):

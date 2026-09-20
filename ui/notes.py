@@ -15,7 +15,6 @@ and opens the editor mask imported as `ui.UI`.
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from i18n import _
 import ui.note as ui
 from ui.parent_view import ParentView
 
@@ -69,16 +68,16 @@ class UI(ParentView):
         )
         frm_left.pack(side=tk.LEFT, fill=tk.BOTH, padx=6, pady=6, expand=True)
 
-        ttk.Label(frm_left, text=_("Batch:")).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, text="Batch:").pack(side=tk.TOP, anchor=tk.W)
         ttk.Label(frm_left, textvariable=self.batch).pack(side=tk.TOP, anchor=tk.W)
 
-        ttk.Label(frm_left, text=_("Description:")).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, text="Description:").pack(side=tk.TOP, anchor=tk.W)
         ttk.Label(frm_left, textvariable=self.description).pack(side=tk.TOP, anchor=tk.W)
 
-        ttk.Label(frm_left, text=_("Result:")).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, text="Result:").pack(side=tk.TOP, anchor=tk.W)
         ttk.Label(frm_left, textvariable=self.result).pack(side=tk.TOP, anchor=tk.W)
 
-        ttk.Label(frm_left, text=_("Received:")).pack(side=tk.TOP, anchor=tk.W)
+        ttk.Label(frm_left, text="Received:").pack(side=tk.TOP, anchor=tk.W)
         ttk.Label(frm_left, textvariable=self.received).pack(side=tk.TOP, anchor=tk.W)
 
         # Middle: Treeview with notes
@@ -100,10 +99,10 @@ class UI(ParentView):
         self.lstItems = ttk.Treeview(frm_middle, columns=cols_notes, show="headings")
 
         self.lstItems.column("description", width=180, minwidth=180, anchor=tk.W, stretch=True)
-        self.lstItems.heading("description", text=_("Description"), anchor=tk.W)
+        self.lstItems.heading("description", text="Description", anchor=tk.W)
 
         self.lstItems.column("modified", width=140, minwidth=140, anchor=tk.W, stretch=True)
-        self.lstItems.heading("modified", text=_("Modified"), anchor=tk.W)
+        self.lstItems.heading("modified", text="Modified", anchor=tk.W)
 
         sb_notes = ttk.Scrollbar(frm_middle, orient=tk.VERTICAL, command=self.lstItems.yview)
         self.lstItems.configure(yscrollcommand=sb_notes.set)
@@ -119,9 +118,9 @@ class UI(ParentView):
         frm_buttons = ttk.Frame(frm_main, style="App.TFrame")
         frm_buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=6, pady=6)
 
-        self.engine.add_button(frm_buttons, _("Add"), self._on_add, "<Alt-a>", self)
-        self.engine.add_button(frm_buttons, _("Update"), self._on_item_activated, "<Alt-u>", self)
-        self.engine.add_button(frm_buttons, _("Close"), self.on_cancel, "<Alt-c>", self)
+        self.engine.add_button(frm_buttons, "Add", self._on_add, "<Alt-a>", self)
+        self.engine.add_button(frm_buttons, "Update", self._on_item_activated, "<Alt-u>", self)
+        self.engine.add_button(frm_buttons, "Close", self.on_cancel, "<Alt-c>", self)
 
     # ----------------------------------------------------------------- Public
     def on_open(self):
