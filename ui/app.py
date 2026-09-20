@@ -9,8 +9,10 @@
 The facts about the program live here too, once: its version and date, who
 wrote it, under which licence. The About window shows them.
 
-Version 4.2 is an homage to the Answer to the Ultimate Question of Life, the
-Universe, and Everything.
+Version 5 because the database is another one: another engine, another
+schema, and a file of either version unreadable by the other. Version 4 was
+numbered 4.2, after the Answer to the Ultimate Question of Life, the
+Universe, and Everything, and it kept that number for as long as it ran.
 """
 
 import tkinter as tk
@@ -26,7 +28,7 @@ __author__ = "Giuseppe Costanzi (1966bc)"
 __copyright__ = "Copyleft"
 __credits__ = ["hal9000", ]
 __license__ = "GNU GPL, version 3 or later"
-__version__ = "4.2"
+__version__ = "5.0"
 __maintainer__ = "1966bc"
 __email__ = "giuseppecostanzi@gmail.com"
 __date__ = "autumnus MMXXVI"

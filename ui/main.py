@@ -629,7 +629,10 @@ class Main(Window, ttk.Frame):
         """A panel chosen: its analytes, and nothing below that yet."""
         self.set_tests()
         self.cb_tests.set("")
+        self.cb_workstations.set("")
+        self.engine.tools.set_combo(self.cb_workstations, ())
         self.test_method = None
+        self.workstation = None
         self.on_reset()
 
     def on_selected_test(self, evt=None):
@@ -640,17 +643,17 @@ class Main(Window, ttk.Frame):
         if self.test_method is not None:
             self.analyte = self.tests[index]["analyte"]
             self.unit = self.tests[index]["unit"]
-            self.set_workstations()
+            self.workstation = None
             self.on_reset()
+            self.set_workstations()
 
     def on_selected_workstation(self, evt=None):
         """An instrument chosen: the lots open on it."""
         self.workstation = self.dict_workstations.get(self.cb_workstations.current())
 
         if self.workstation is not None:
-            self.set_batches()
-            self.batch = None
             self.on_reset()
+            self.set_batches()
 
     def on_selected_batch(self, evt=None):
         """A lot chosen: the results, the charts and the statistics."""
@@ -660,7 +663,15 @@ class Main(Window, ttk.Frame):
             self.set_results()
 
     def on_reset(self):
-        """Empty the charts, the results and the statistics."""
+        """Empty everything that hangs off the choice just abandoned.
+
+        The lots belong to an analyte and an instrument: leaving them on the
+        screen after either has changed offers lots of something else, and
+        they look exactly like the right ones.
+        """
+        self.batch = None
+        self.engine.tools.clear_treeview(self.lst_batches)
+        self.dict_batches.clear()
         self.engine.tools.clear_treeview(self.lst_results)
         self.dict_results.clear()
         self.chart_results = []
