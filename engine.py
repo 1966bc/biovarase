@@ -139,7 +139,9 @@ class Engine:
 
         The window manager picks the size each place needs - the title bar,
         the task list, the switcher - so none of them is scaled up and
-        blurred. The file is written by forge/make_icon.py.
+        blurred. The file is plain text on purpose: base64 is what a PNG
+        looks like when it has to live in a repository beside the code and
+        be read without a viewer.
 
         @return: the icons, as base64
         @rtype: list
