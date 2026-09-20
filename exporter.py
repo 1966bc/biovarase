@@ -134,6 +134,153 @@ class Exporter:
 
         return found
 
+    def get_notes(self, since):
+        """Every note of the period: the log of non conformities, as a sheet.
+
+        What it is asked for is the year rather than the morning - how often
+        a calibration was repeated, on which bench, on which analyte - so it
+        carries the action as its own column, which is what makes it
+        countable in a pivot table by whoever wants one.
+
+        @param name: since
+        @return: path of the file written
+        @rtype: string
+        """
+        sql = """SELECT n.modified, a.code, a.description AS action,
+                        n.description AS note,
+                        t.description AS analyte, s.description AS matrix,
+                        w.description AS bench, b.lot_number,
+                        b.description AS level, r.result, b.target, b.sd,
+                        r.received, u.last_name AS by_whom
+                   FROM notes n
+                   JOIN actions a ON a.action_id = n.action_id
+                   JOIN results r ON r.result_id = n.result_id
+                   JOIN batches b ON b.batch_id = r.batch_id
+                   JOIN test_methods tm ON tm.test_method_id = b.test_method_id
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN samples s ON s.sample_id = tm.sample_id
+                   JOIN workstations w ON w.workstation_id = b.workstation_id
+                   LEFT JOIN users u ON u.user_id = n.created_by
+                  WHERE n.status = 1 AND (? IS NULL OR r.received >= ?)
+               ORDER BY r.received DESC"""
+        rows = self.engine.db.read(True, sql, (since, since))
+
+        headings = ("Date", "Code", "Action", "Note", "Analyte", "Matrix",
+                    "Bench", "Lot", "Level", "Result", "Target", "z", "By")
+
+        book, sheet = self.get_workbook("Notes")
+        self.set_headings(sheet, headings)
+
+        for number, row in enumerate(rows, start=2):
+            values = (self.engine.format_date(row["modified"]), row["code"],
+                      row["action"], row["note"], row["analyte"], row["matrix"],
+                      row["bench"], row["lot_number"], row["level"],
+                      row["result"], row["target"],
+                      self.get_z(row["result"], row["target"], row["sd"]),
+                      row["by_whom"])
+            for column, value in enumerate(values, start=1):
+                sheet.cell(row=number, column=column, value=value)
+
+        self.set_widths(sheet, headings)
+
+        return self.save(book, "notes")
+
+    def get_counts(self, since):
+        """How much control was run, per analyte and per bench.
+
+        The sheet the laboratory is asked for once a year, by whoever counts
+        what was done: how many results per method, over how many days, with
+        how many notes and how many results out of limits.
+
+        @param name: since
+        @return: path of the file written
+        @rtype: string
+        """
+        sql = """SELECT t.description AS analyte, s.description AS matrix,
+                        w.description AS bench, c.description AS panel,
+                        COUNT(r.result_id) AS results,
+                        COUNT(DISTINCT DATE(r.received)) AS days,
+                        MIN(DATE(r.received)) AS first_day,
+                        MAX(DATE(r.received)) AS last_day,
+                        SUM(CASE WHEN ABS(r.result - b.target) >= 3 * b.sd
+                                 THEN 1 ELSE 0 END) AS out_of_limits,
+                        (SELECT COUNT(*) FROM notes n
+                           JOIN results nr ON nr.result_id = n.result_id
+                           JOIN batches nb ON nb.batch_id = nr.batch_id
+                          WHERE nb.test_method_id = tm.test_method_id
+                            AND nb.workstation_id = b.workstation_id
+                            AND n.status = 1) AS notes
+                   FROM results r
+                   JOIN batches b ON b.batch_id = r.batch_id
+                   JOIN test_methods tm ON tm.test_method_id = b.test_method_id
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN samples s ON s.sample_id = tm.sample_id
+                   LEFT JOIN categories c ON c.category_id = tm.category_id
+                   JOIN workstations w ON w.workstation_id = b.workstation_id
+                  WHERE r.status = 1 AND (? IS NULL OR r.received >= ?)
+               GROUP BY tm.test_method_id, b.workstation_id
+               ORDER BY c.description, t.description"""
+        rows = self.engine.db.read(True, sql, (since, since))
+
+        headings = ("Panel", "Analyte", "Matrix", "Bench", "Results", "Days",
+                    "First", "Last", "Beyond 3 SD", "Notes")
+
+        book, sheet = self.get_workbook("Counts")
+        self.set_headings(sheet, headings)
+
+        for number, row in enumerate(rows, start=2):
+            values = (row["panel"], row["analyte"], row["matrix"], row["bench"],
+                      row["results"], row["days"], row["first_day"],
+                      row["last_day"], row["out_of_limits"], row["notes"])
+            for column, value in enumerate(values, start=1):
+                sheet.cell(row=number, column=column, value=value)
+
+        self.set_widths(sheet, headings)
+
+        return self.save(book, "counts")
+
+    def get_goals(self):
+        """The analytical goals of every method, as they stand.
+
+        Asked for when somebody wants to see the whole table of what the
+        laboratory holds itself to, or to check it against a source.
+
+        @return: path of the file written
+        @rtype: string
+        """
+        sql = """SELECT t.description AS analyte, s.description AS matrix,
+                        u.description AS unit, m.description AS method,
+                        c.description AS panel, tm.code,
+                        tm.cvw, tm.cvb, tm.imp, tm.bias, tm.teap005, tm.teap001,
+                        tm.is_mandatory, tm.status
+                   FROM test_methods tm
+                   JOIN tests t ON t.test_id = tm.test_id
+                   JOIN samples s ON s.sample_id = tm.sample_id
+                   JOIN units u ON u.unit_id = tm.unit_id
+                   JOIN methods m ON m.method_id = tm.method_id
+                   LEFT JOIN categories c ON c.category_id = tm.category_id
+               ORDER BY c.description, t.description"""
+        rows = self.engine.db.read(True, sql, ())
+
+        headings = ("Panel", "Analyte", "Matrix", "Unit", "Method", "Code",
+                    "CVi%", "CVg%", "Imprecision%", "Bias%", "TEa% 95",
+                    "TEa% 99", "Every day", "In use")
+
+        book, sheet = self.get_workbook("Analytical goals")
+        self.set_headings(sheet, headings)
+
+        for number, row in enumerate(rows, start=2):
+            values = (row["panel"], row["analyte"], row["matrix"], row["unit"],
+                      row["method"], row["code"], row["cvw"], row["cvb"],
+                      row["imp"], row["bias"], row["teap005"], row["teap001"],
+                      row["is_mandatory"], row["status"])
+            for column, value in enumerate(values, start=1):
+                sheet.cell(row=number, column=column, value=value)
+
+        self.set_widths(sheet, headings)
+
+        return self.save(book, "analytical_goals")
+
     # ------------------------------------------------------- the mechanics
 
     def get_workbook(self, title):

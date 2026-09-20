@@ -37,6 +37,7 @@ import ui.performance_dashboard
 import ui.plots
 import ui.result
 import ui.samples
+import ui.settings
 import ui.since
 import ui.statistics
 import ui.suppliers
@@ -147,6 +148,7 @@ class Main(Window, ttk.Frame):
         m_file.add_separator()
         m_file.add_command(label="Log", underline=0, command=self.engine.open_log)
         m_file.add_separator()
+        m_file.add_command(label="Settings", underline=0, command=self.on_settings)
         m_file.add_command(label="Change password", underline=7,
                            command=self.on_change_password)
         m_file.add_command(label="Exit", underline=1, command=self.parent.on_exit)
@@ -201,6 +203,11 @@ class Main(Window, ttk.Frame):
         m_exports = tk.Menu(bar, tearoff=0)
         m_exports.add_command(label="Controls of a day", underline=0,
                               command=self.on_export_day)
+        m_exports.add_separator()
+        m_exports.add_command(label="Notes", underline=0, command=self.on_export_notes)
+        m_exports.add_command(label="Counts", underline=0, command=self.on_export_counts)
+        m_exports.add_command(label="Analytical goals", underline=0,
+                              command=self.on_export_goals)
         bar.add_cascade(label="Exports", underline=1, menu=m_exports)
 
         m_about = tk.Menu(bar, tearoff=0)
@@ -214,6 +221,25 @@ class Main(Window, ttk.Frame):
         """The controls of a day, as a sheet: what was run and how it came out."""
         self.engine.windows.replace("export_day",
                                     lambda: ui.export_day.UI(self))
+
+    def on_export_notes(self, evt=None):
+        """The log of non conformities over the period, as a sheet."""
+        self.on_export(self.engine.exporter.get_notes, self.since)
+
+    def on_export_counts(self, evt=None):
+        """How much control was run, per analyte and per bench."""
+        self.on_export(self.engine.exporter.get_counts, self.since)
+
+    def on_export_goals(self, evt=None):
+        """The analytical goals of every method, as they stand."""
+        self.on_export(self.engine.exporter.get_goals)
+
+    def on_export(self, write, *args):
+        """Write a sheet while the cursor says the program is busy."""
+        self.engine.tools.busy(self)
+        path = write(*args)
+        self.engine.tools.not_busy(self)
+        self.engine.log.trace("exported {0}".format(path))
 
     def on_backup(self, evt=None):
         """A copy of the database file, named after the moment it was taken.
@@ -238,6 +264,10 @@ class Main(Window, ttk.Frame):
         messagebox.showinfo(self.engine.app_title,
                             "Database written to\n\n{0}".format(path),
                             parent=self)
+
+    def on_settings(self, evt=None):
+        """The numbers the program computes with, in one window."""
+        self.engine.windows.replace("settings", lambda: ui.settings.UI(self))
 
     def on_check(self, evt=None):
         """Ask the database whether it is still sound, and say what it answered."""
