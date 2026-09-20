@@ -236,7 +236,7 @@ class Engine:
 
     # ------------------------------------------------------- the laboratory
 
-    def get_series(self, batch_id, limit, result_id=None, db=None):
+    def get_series(self, batch_id, limit, result_id=None, db=None, since=None):
         """The results of a lot, oldest first, as the chart draws them.
 
         Only the results that count: status 0 is a point excluded from the
@@ -249,26 +249,24 @@ class Engine:
         the Westgard rules are read on the points up to it, not on the ones
         that came after.
 
+        since cuts the series at a day: the Period menu decides how far back
+        a window looks, and a mean of the last thirty results is a different
+        number from a mean of the last thirty within three months.
+
         db is a second connection, for a worker thread doing an export.
 
-        @param name: batch_id, limit, result_id, db
+        @param name: batch_id, limit, result_id, db, since
         @return: results
         @rtype: list
         """
-        if result_id is None:
-            sql = """SELECT ROUND(result, 2) AS result
-                     FROM results
-                     WHERE batch_id = ? AND status = 1
-                     ORDER BY received DESC
-                     LIMIT ?"""
-            args = (batch_id, limit)
-        else:
-            sql = """SELECT ROUND(result, 2) AS result
-                     FROM results
-                     WHERE batch_id = ? AND status = 1 AND result_id <= ?
-                     ORDER BY received DESC
-                     LIMIT ?"""
-            args = (batch_id, result_id, limit)
+        sql = """SELECT ROUND(result, 2) AS result
+                   FROM results
+                  WHERE batch_id = ? AND status = 1
+                    AND (? IS NULL OR result_id <= ?)
+                    AND (? IS NULL OR received >= ?)
+               ORDER BY received DESC
+                  LIMIT ?"""
+        args = (batch_id, result_id, result_id, since, since, limit)
 
         rows = (db or self.db).read(True, sql, args)
 
@@ -291,6 +289,44 @@ class Engine:
         row = self.db.get_selected("units", "unit_id", unit_id)
 
         return row["description"]
+
+    #: The periods the program offers, as (code, months). A code that is not
+    #: one of these is read as a date.
+    PERIODS = {"last_month": 1,
+               "last_3_months": 3,
+               "last_6_months": 6,
+               "last_12_months": 12,
+               "all": None}
+
+    def get_period(self):
+        """How far back the windows look, as a code and the day it starts.
+
+        The day is None for "all", which is what a query reads as "no lower
+        bound". A code that is not one of the known ones is a date: the
+        Period menu writes one there when somebody asks for "Since...".
+
+        @return: code, first day
+        @rtype: tuple
+        """
+        code = self.config.get("display", "period")
+
+        if code in self.PERIODS:
+            months = self.PERIODS[code]
+            if months is None:
+                first = None
+            else:
+                first = self.get_today() - datetime.timedelta(days=months * 31)
+        else:
+            first = datetime.date.fromisoformat(code)
+
+        return (code, first)
+
+    def set_period(self, code):
+        """Remember how far back to look, so the program opens where it was left.
+
+        @param name: code
+        """
+        self.config.set("display", "period", code)
 
     def get_records(self):
         """How many results the main window loads at once."""

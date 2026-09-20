@@ -33,6 +33,9 @@ class UI(Window, tk.Toplevel):
 
         self.parent = parent
         self.count = tk.StringVar()
+        #: Which of the two formats is wanted, remembered while the window
+        #: is open: the sheet for working on the data, the PDF for the record.
+        self.format = tk.StringVar(value="xlsx")
 
         self.transient(parent)
         self.resizable(0, 0)
@@ -54,9 +57,16 @@ class UI(Window, tk.Toplevel):
                   textvariable=self.count).grid(row=1, column=0, columnspan=2,
                                                 sticky=tk.W, pady=(4, 0))
 
+        frm_format = ttk.LabelFrame(frm_fields, text="Format")
+        for value, label in (("xlsx", "xlsx - the data, to work on"),
+                             ("pdf", "PDF - the record, to sign and file")):
+            ttk.Radiobutton(frm_format, style="App.TRadiobutton", text=label,
+                            value=value, variable=self.format).pack(anchor=tk.W,
+                                                                    padx=6, pady=2)
+        frm_format.grid(row=2, column=0, columnspan=2, sticky=tk.EW, pady=(8, 0))
+
         buttons = self.engine.tools.get_button_column(frm_main,
-                                                      (("Sheet", self.on_sheet),
-                                                       ("Form", self.on_form),
+                                                      (("Export", self.on_export),
                                                        ("Cancel", self.on_cancel)),
                                                       window=self)
 
@@ -78,14 +88,6 @@ class UI(Window, tk.Toplevel):
                                   (self.day.get_iso(),))
         self.count.set("{0} results on that day.".format(row["n"]))
 
-    def on_sheet(self, evt=None):
-        """The controls of the day as a spreadsheet: the data."""
-        self.on_export(self.engine.exporter.get_day)
-
-    def on_form(self, evt=None):
-        """The controls of the day as a form: the record that is signed."""
-        self.on_export(self.get_form)
-
     def get_form(self, day):
         """The PDF, written where the system keeps temporary files."""
         path = os.path.join(tempfile.gettempdir(),
@@ -95,8 +97,13 @@ class UI(Window, tk.Toplevel):
 
         return path
 
-    def on_export(self, write):
-        """Check the day, then let the writer make its file and open it."""
+    def on_export(self, evt=None):
+        """Check the day, then write it in the format chosen and open it."""
+        if self.format.get() == "pdf":
+            write = self.get_form
+        else:
+            write = self.engine.exporter.get_day
+
         self.set_count()
         day = self.day.get_date()
 

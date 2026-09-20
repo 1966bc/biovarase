@@ -18,6 +18,7 @@ control of the antiepileptics this morning.
 import datetime
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import simpledialog
 from tkinter import ttk
 
 import ui.about
@@ -92,6 +93,10 @@ class Main(Window, ttk.Frame):
         self.chart_results = []
 
         self.status = tk.StringVar()
+        #: How far back this window looks, from the settings: the menu writes
+        #: it back, so the program opens where it was left.
+        code, self.since = self.engine.get_period()
+        self.period = tk.StringVar(value=code)
         self.values = {name: tk.StringVar()
                        for caption, cells in self.STATISTICS
                        for name, label in cells}
@@ -158,6 +163,16 @@ class Main(Window, ttk.Frame):
                 m_edit.add_command(label=label,
                                    command=lambda m=module: self.on_master_data(m))
             bar.add_cascade(label="Edit", underline=0, menu=m_edit)
+
+        m_period = tk.Menu(bar, tearoff=0)
+        for code, label in self.PERIODS:
+            if code is None:
+                m_period.add_separator()
+            else:
+                m_period.add_radiobutton(label=label, value=code,
+                                         variable=self.period,
+                                         command=self.on_period)
+        bar.add_cascade(label="Period", underline=0, menu=m_period)
 
         m_exports = tk.Menu(bar, tearoff=0)
         m_exports.add_command(label="Controls of a day", underline=0,
@@ -356,11 +371,27 @@ class Main(Window, ttk.Frame):
         self.bias_chart = BiasCanvas(container, height=70)
         self.bias_chart.pack(side=tk.TOP, fill=tk.X, pady=(4, 0))
 
+    #: The periods the menu offers, in order: the code, the label, and a
+    #: separator where None stands.
+    PERIODS = (("last_month", "Last month"),
+               ("last_3_months", "Last 3 months"),
+               ("last_6_months", "Last 6 months"),
+               ("last_12_months", "Last 12 months"),
+               ("all", "All"),
+               (None, None),
+               ("custom", "Since..."))
+
     #: How often the database is asked whether it is still there, in
     #: milliseconds. Half a minute: often enough to notice before a result is
     #: typed into a window that can no longer save it, rare enough to cost
     #: nothing on a file over the network.
     HEARTBEAT = 30000
+
+    def set_status(self):
+        """The line on the left: who is working, and how far back they look."""
+        label = dict((code, label) for code, label in self.PERIODS if code)
+        self.status.set("{0}   |   {1}".format(
+            self.get_who(), label.get(self.period.get(), self.period.get())))
 
     def init_status_bar(self):
         """Who is working, on which laboratory, with which numbers.
@@ -416,7 +447,7 @@ class Main(Window, ttk.Frame):
 
         if reachable:
             self.lamp.configure(fg="#1e8449")
-            self.status.set(self.get_who())
+            self.set_status()
         else:
             self.lamp.configure(fg="#c0392b")
             self.status.set("{0} - database unreachable".format(self.get_who()))
@@ -531,9 +562,11 @@ class Main(Window, ttk.Frame):
                           WHERE n.result_id = r.result_id AND n.status = 1) AS notes
                    FROM results r
                   WHERE r.batch_id = ?
+                    AND (? IS NULL OR r.received >= ?)
                ORDER BY r.received DESC
                   LIMIT ?"""
-        rows = self.engine.db.read(True, sql, (self.batch, self.engine.get_records()))
+        rows = self.engine.db.read(True, sql, (self.batch, self.since, self.since,
+                                                self.engine.get_records()))
 
         self.engine.tools.clear_treeview(self.lst_results)
         self.dict_results.clear()
@@ -587,10 +620,11 @@ class Main(Window, ttk.Frame):
                         r.status
                    FROM results r
                   WHERE r.batch_id = ?
+                    AND (? IS NULL OR r.received >= ?)
                ORDER BY r.received DESC
                   LIMIT ?"""
         rows = list(reversed(self.engine.db.read(True, sql,
-                                                 (self.batch,
+                                                 (self.batch, self.since, self.since,
                                                   self.engine.get_elements()))))
         self.chart_results = [row["result_id"] for row in rows]
         series = [row["result"] for row in rows]
@@ -631,7 +665,8 @@ class Main(Window, ttk.Frame):
 
     def set_statistics(self, lot):
         """The three boxes: the lot, the series, and the two compared."""
-        series = self.engine.get_series(self.batch, self.engine.get_observations())
+        series = self.engine.get_series(self.batch, self.engine.get_observations(),
+                                        since=self.since)
         method = self.engine.db.get_selected("test_methods", "test_method_id",
                                              self.test_method)
 
@@ -682,6 +717,53 @@ class Main(Window, ttk.Frame):
         self.lbl_westgard.configure(foreground=colour)
 
     # ------------------------------------------------------------ the doing
+
+    def on_period(self, evt=None):
+        """Look back as far as the menu says, and read everything again.
+
+        "Since..." asks for a day; anything else is a number of months from
+        today. A mean of the last thirty results and a mean of the last
+        thirty within three months are different numbers, so the series, the
+        chart and the list all follow the same cut.
+        """
+        code = self.period.get()
+
+        if code == "custom":
+            code = self.get_since()
+
+        if code is None:
+            # The question was cancelled: put the menu back where it was.
+            self.period.set(self.engine.get_period()[0])
+        else:
+            self.engine.set_period(code)
+            self.period.set(code)
+            code, self.since = self.engine.get_period()
+            self.set_status()
+            if self.batch is not None:
+                self.set_results()
+
+    def get_since(self):
+        """Ask for the day to start from, as an ISO date, or None.
+
+        @return: the date written, or None
+        @rtype: string
+        """
+        written = simpledialog.askstring(
+            self.engine.app_title,
+            "Show results from which day?\n\nWrite it as 2026-01-31.",
+            initialvalue=self.engine.get_period()[1] or "",
+            parent=self)
+
+        found = None
+        if written:
+            try:
+                found = datetime.date.fromisoformat(written.strip()).isoformat()
+            except ValueError:
+                messagebox.showwarning(self.engine.app_title,
+                                       "{0} is not a date.".format(written),
+                                       parent=self)
+
+        return found
 
     def on_selected_category(self, evt=None):
         """A panel chosen: its analytes, and nothing below that yet."""
