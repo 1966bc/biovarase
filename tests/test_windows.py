@@ -15,9 +15,11 @@ months later.
 These tests open the real windows on the sample database, close them, and
 look at who is left listening.
 
-They need a display, and are skipped where there is none.
+They need a display, and are skipped where there is none. On a desktop they
+open and close in front of whoever is working; a screen of their own spares
+them that, and is also how the machine with no screen runs them at all.
 
-    python3 -m unittest discover -s tests -v
+    xvfb-run -a python3 -m unittest discover -s tests -v
 """
 
 import os

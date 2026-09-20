@@ -28,6 +28,11 @@ python3 biovarase.py --trace     # print what it does, while you use it
 python3 -m unittest discover -s tests -v
 ```
 
+Some of the tests open the real windows, so they want a display. On a
+desktop they flash past while they run, and on a machine with no screen at
+all they are skipped; `xvfb-run -a python3 -m unittest discover -s tests`
+gives them one of their own and does neither.
+
 Python 3.7 or later, Tk 8.6, and `openpyxl`, `bcrypt` and `reportlab`
 (`pip install -r requirements.txt`). To build an executable for a PC that has
 no Python, see [documents/BUILD.md](documents/BUILD.md).
