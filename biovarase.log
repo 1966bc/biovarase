@@ -1,0 +1,12 @@
+2026-09-20 06:16:21 ERROR main: start failed: Engine.__init__() missing 2 required positional arguments: 'password' and 'database'
+Traceback (most recent call last):
+  File "/home/bc/Documents/projects/biovarase/biovarase.py", line 51, in main
+    app = App("Biovarase", log)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bc/Documents/projects/biovarase/ui/app.py", line 40, in __init__
+    self.engine = Engine(log)
+                  ^^^^^^^^^^^
+  File "/home/bc/Documents/projects/biovarase/engine.py", line 121, in __call__
+    cls._instance = super().__call__(*args, **kwargs)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Engine.__init__() missing 2 required positional arguments: 'password' and 'database'

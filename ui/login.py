@@ -14,7 +14,6 @@ from tkinter import ttk
 from tkinter import messagebox
 from typing import Tuple, Optional
 
-from monitor import Monitor
 from app_config import MAX_LOGIN_ATTEMPTS
 from i18n import _, set_language
 import ui.main as ui
@@ -157,7 +156,6 @@ class Login(ttk.Frame):
         Behavior:
             - Validates non-empty fields
             - Calls engine.on_login() for database verification
-            - Sets up idle monitor if enabled for user
             - Opens main window on success
             - Shows warning and increments counter on failure
             - Exits after MAX_LOGIN_ATTEMPTS failed attempts
@@ -179,11 +177,6 @@ class Login(ttk.Frame):
             self.engine.db.set_session_user(rs["user_id"])
 
             self.hide()
-
-            # Start idle monitor if enabled for this user
-            if self.engine.log_user["enable_time"] == True:
-                self.engine.thread = Monitor(self)
-                self.engine.thread.start()
 
             ui.Main(self).on_open()
 
