@@ -433,9 +433,6 @@ class Main(Window, ttk.Frame):
         self.menu_results = tk.Menu(self, tearoff=0)
         self.menu_results.add_command(label="Edit result", command=self.on_edit_result)
         self.menu_results.add_command(label="Note", command=self.on_note)
-        self.menu_results.add_separator()
-        self.menu_results.add_command(label="Delete result",
-                                      command=self.on_delete_result)
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -1002,32 +999,6 @@ class Main(Window, ttk.Frame):
         else:
             self.engine.windows.replace(
                 "result", lambda: ui.result.UI(self, self.batch, result_id))
-
-    def on_delete_result(self, evt=None):
-        """Remove a result that never belonged to this lot.
-
-        Deleting is for what did not happen: a result entered twice, or on
-        the wrong lot. A measurement that was made and came out badly is
-        excluded instead - In use, in its own window - which keeps it on the
-        chart in grey and keeps the series honest. Either way the audit trail
-        holds what it was, which is why the question says so.
-        """
-        result_id = self.dict_results.get(self.lst_results.focus())
-
-        if result_id is None:
-            messagebox.showwarning(self.engine.app_title,
-                                   self.engine.no_selected,
-                                   parent=self)
-        elif messagebox.askyesno(self.engine.app_title,
-                                 "{0}\n\nThe result is removed from the lot."
-                                 " What it was stays in the audit trail.\n\n"
-                                 "A result that was measured and came out badly"
-                                 " is excluded, not deleted.".format(
-                                     self.engine.ask_to_delete),
-                                 parent=self):
-            self.engine.db.write("DELETE FROM results WHERE result_id = ?",
-                                 (result_id,))
-            self.engine.events.notify("results", None)
 
     def on_note(self, evt=None):
         """Write down what was seen on a result and what was done about it."""
