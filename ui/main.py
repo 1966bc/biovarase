@@ -34,6 +34,7 @@ import ui.units
 import ui.users
 import ui.workstations
 
+from bias_canvas import BiasCanvas
 from ljcanvas import LeveyJenningsCanvas
 from ui.window import Window
 
@@ -75,11 +76,13 @@ class Main(Window, ttk.Frame):
         self.method = None
         self.lot = None
         self.analyte = ""
+        self.unit = ""
         #: the search box, and the statistics under the chart
         self.search = tk.StringVar()
         self.laboratory = tk.StringVar()
         self.values = {name: tk.StringVar() for name in
-                       ("n", "target", "sd", "mean", "cv", "bias", "te", "westgard")}
+                       ("n", "target", "sd", "mean", "cv", "bias", "te", "u",
+                        "westgard")}
 
         self.init_menu()
         self.init_ui()
@@ -181,11 +184,19 @@ class Main(Window, ttk.Frame):
         container.add(frm, weight=1)
 
     def init_chart(self, container):
-        """The Levey-Jennings chart, drawn on a canvas and nothing else."""
+        """The Levey-Jennings chart, and the bias under it.
+
+        Two canvases, drawn by hand: the chart answers "is it in control",
+        the bar under it answers "and how far from the target does it sit",
+        which is the same series read the other way round.
+        """
         frm = ttk.LabelFrame(container, text="Levey-Jennings")
 
         self.chart = LeveyJenningsCanvas(frm, height=280)
         self.chart.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
+
+        self.bias_chart = BiasCanvas(frm, height=70)
+        self.bias_chart.pack(fill=tk.X, padx=2, pady=(0, 2))
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -200,6 +211,7 @@ class Main(Window, ttk.Frame):
                               ("cv", "CV%"),
                               ("bias", "Bias%"),
                               ("te", "TE%"),
+                              ("u", "U%"),
                               ("westgard", "Westgard")):
             cell = ttk.Frame(frm, style="App.TFrame")
             ttk.Label(cell, style="App.TLabel", text=caption).pack()
@@ -342,14 +354,53 @@ class Main(Window, ttk.Frame):
         return tags
 
     def set_chart(self, lot):
-        """Draw the series: the points the chart shows, oldest first."""
-        series = self.engine.get_series(self.lot, self.engine.get_elements())
+        """Draw the series: the points the chart shows, oldest first.
+
+        With the day each one was run on along the bottom. A control chart
+        is read to answer when something started going wrong, and a series
+        numbered 1 to 30 cannot answer it.
+        """
+        sql = """SELECT ROUND(r.result, 2) AS result, r.received
+                   FROM results r
+                  WHERE r.batch_id = ? AND r.status = 1
+               ORDER BY r.received DESC
+                  LIMIT ?"""
+        rows = self.engine.db.read(True, sql, (self.lot, self.engine.get_elements()))
+        rows = list(reversed(rows))
 
         title = "{0} - {1} - lot {2}".format(self.analyte,
                                              lot["description"],
                                              lot["lot_number"])
 
-        self.chart.draw_chart(series, lot["target"], lot["sd"], title=title)
+        self.chart.draw_chart([row["result"] for row in rows],
+                              lot["target"],
+                              lot["sd"],
+                              title=title,
+                              dates=[row["received"] for row in rows],
+                              bottom_text=self.get_bottom_text(len(rows)))
+
+        self.bias_chart.draw_bias([row["result"] for row in rows],
+                                  lot["target"],
+                                  unit=self.unit)
+
+    def get_bottom_text(self, drawn):
+        """How many results the chart is drawn on, and how many were left out.
+
+        A series of thirty points where two were excluded is not a series of
+        thirty, and whoever reads the chart has a right to know before
+        reading the mean.
+        """
+        sql = """SELECT COUNT(*) AS excluded FROM results
+                  WHERE batch_id = ? AND status = 0"""
+        row = self.engine.db.read(False, sql, (self.lot,))
+
+        if row["excluded"]:
+            found = "Computed on {0} results, {1} excluded".format(drawn,
+                                                                    row["excluded"])
+        else:
+            found = "Computed on {0} results".format(drawn)
+
+        return found
 
     def set_statistics(self, lot):
         """The statistics of the series, and the rule read on it."""
@@ -366,6 +417,7 @@ class Main(Window, ttk.Frame):
         self.values["cv"].set(cv)
         self.values["bias"].set(bias)
         self.values["te"].set(self.engine.qc.get_te(lot["target"], mean, cv))
+        self.values["u"].set(self.engine.qc.get_uncertainty(cv, bias))
         self.values["westgard"].set(
             self.engine.westgards.get_westgard_violation_rule(lot["target"],
                                                               lot["sd"],
@@ -383,7 +435,9 @@ class Main(Window, ttk.Frame):
         self.method = self.dict_methods.get(item)
 
         if self.method is not None:
-            self.analyte = self.lst_methods.item(item)["values"][0]
+            values = self.lst_methods.item(item)["values"]
+            self.analyte = values[0]
+            self.unit = values[2]
             self.set_lots()
             self.lot = None
             self.on_reset()
@@ -401,6 +455,7 @@ class Main(Window, ttk.Frame):
         self.engine.tools.clear_treeview(self.lst_results)
         self.dict_results.clear()
         self.chart.clear()
+        self.bias_chart.clear()
         for value in self.values.values():
             value.set("")
 
