@@ -18,7 +18,6 @@ from monitor import Monitor
 from app_config import MAX_LOGIN_ATTEMPTS
 from i18n import _, set_language
 import views.main as ui
-from views.lab_selector import LabSelectorDialog
 
 
 class Login(ttk.Frame):
@@ -176,78 +175,8 @@ class Login(ttk.Frame):
         if rs:
             self.engine.set_log_user(rs)
 
-            # Initialize context from user's org_id (lab level in organizations table)
-            user_org_id = self.engine.log_user.get("org_id")
-            user_role = self.engine.log_user.get("role", 99)
-
-            if user_org_id is None:
-                # User without org_id assigned
-                if user_role == 0:
-                    # Admin can select lab
-                    dialog = LabSelectorDialog(self)
-                    self.wait_window(dialog)
-                    selected_lab_id = dialog.get_selected_lab_id()
-
-                    if selected_lab_id is None:
-                        messagebox.showinfo(
-                            self.engine.app_title,
-                            _("Login cancelled."),
-                            parent=self
-                        )
-                        self.engine.log_user.clear()
-                        return
-
-                    self.engine.init_current_ids_from_user(selected_lab_id)
-                else:
-                    # Non-admin without org_id - configuration error
-                    messagebox.showerror(
-                        self.engine.app_title,
-                        _("No laboratory assigned to this user."),
-                        parent=self
-                    )
-                    self.engine.log_user.clear()
-                    return
-            elif user_role == 0:
-                # Admin with org_id: show selector with default
-                dialog = LabSelectorDialog(self, default_lab_id=user_org_id)
-                self.wait_window(dialog)
-                selected_lab_id = dialog.get_selected_lab_id()
-
-                if selected_lab_id is None:
-                    messagebox.showinfo(
-                        self.engine.app_title,
-                        _("Login cancelled."),
-                        parent=self
-                    )
-                    self.engine.log_user.clear()
-                    return
-
-                self.engine.init_current_ids_from_user(selected_lab_id)
-            elif user_role in (1, 2):
-                # Country/Regional Admin: check if assigned to non-lab org
-                org_type = self.engine._get_org_type(user_org_id)
-                if org_type and org_type != "lab":
-                    # Assigned to country/region/site: show filtered lab selector
-                    dialog = LabSelectorDialog(self, parent_org_id=user_org_id)
-                    self.wait_window(dialog)
-                    selected_lab_id = dialog.get_selected_lab_id()
-
-                    if selected_lab_id is None:
-                        messagebox.showinfo(
-                            self.engine.app_title,
-                            _("Login cancelled."),
-                            parent=self
-                        )
-                        self.engine.log_user.clear()
-                        return
-
-                    self.engine.init_current_ids_from_user(selected_lab_id)
-                else:
-                    # Assigned directly to lab
-                    self.engine.init_current_ids_from_user(user_org_id)
-            else:
-                # Normal user (roles 3-6): use assigned org_id (lab level)
-                self.engine.init_current_ids_from_user(user_org_id)
+            # The audit triggers read who is working from the session table.
+            self.engine.db.set_session_user(rs["user_id"])
 
             self.hide()
 

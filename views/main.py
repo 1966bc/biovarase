@@ -52,7 +52,6 @@ from engine import (
 import views.license
 import views.tests
 import views.test_methods
-import views.workstation_test_methods
 import views.batches
 import views.units
 import views.methods
@@ -79,11 +78,8 @@ import views.analitycal_goals
 import views.tea
 import views.analytical
 import views.change_password
-import views.organizations
 import views.zscore
 import views.bland_altman
-import views.bland_altman_alert
-import views.qc_report
 import views.performance_dashboard
 
 
@@ -286,8 +282,6 @@ class Main(tk.Toplevel):
                  (_("Youden"), 0, self.on_youden),
                  (_("Tea"), 0, self.on_tea),
                  (_("Bland-Altman"), 0, self.on_bland_altman),
-                 (_("Bland-Altman Scanner"), 0, self.on_bland_altman_alert),
-                 (_("QC Report"), 0, self.on_qc_report),
                  (_("Performance Dashboard"), 0, self.on_performance_dashboard),)
 
         for i in items:
@@ -299,7 +293,6 @@ class Main(tk.Toplevel):
                 (_("Batches"), 0, self.on_batches),              # B / L(otti)
                 (_("Categories"), 0, self.on_categories),        # C / C(ategorie)
                 (_("Test Methods"), 5, self.on_test_methods),    # L(ab) / L(aboratorio)
-                (_("Tests Methods Workstations"), 12, self.on_workstation_test_methods),  # T(ests) / P(ostazioni)
                 (_("Workstations"), 0, self.on_workstations),    # W / P(ostazioni)
             ]
             # Settings only for lab admins+
@@ -339,7 +332,6 @@ class Main(tk.Toplevel):
                      (_("Controls"), 0, self.on_controls, ROLE_APP_ADMIN),
                      (_("Equipments"), 0, self.on_equipments, ROLE_APP_ADMIN),
                      (_("Methods"), 0, self.on_methods, ROLE_APP_ADMIN),
-                     (_("Organizations"), 0, self.on_organizations, ROLE_APP_ADMIN),
                      (_("Samples"), 0, self.on_samples, ROLE_APP_ADMIN),
                      (_("Suppliers"), 0, self.on_suppliers, ROLE_APP_ADMIN),
                      (_("Tests"), 0, self.on_tests, ROLE_APP_ADMIN),
@@ -1855,14 +1847,6 @@ class Main(tk.Toplevel):
 
         views.test_methods.UI(self).on_open()
 
-    def on_workstation_test_methods(self):
-        if not self.engine.can_validate_qc():
-            msg = self.engine.user_not_enable
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-        
-        views.workstation_test_methods.UI(self).on_open()
-
     def on_categories(self):
         # App Admin, Country/Regional/Lab Admin can manage categories
         role = self.engine.log_user.get("role", 99)
@@ -1931,15 +1915,6 @@ class Main(tk.Toplevel):
             messagebox.showwarning(self.engine.app_title, msg, parent=self)
         else:
             views.suppliers.UI(self).on_open()
-
-    def on_organizations(self,):
-        """Open Organizations management window (App Admin only)."""
-        if not self.engine.is_admin():
-            msg = self.engine.user_not_enable
-            messagebox.showwarning(self.engine.app_title, msg, parent=self)
-            return
-
-        views.organizations.UI(self).on_open()
 
     def on_observations(self,):
         views.observations.UI(self).on_open()
@@ -2080,14 +2055,6 @@ class Main(tk.Toplevel):
     def on_bland_altman(self):
         """Open Bland-Altman comparison view."""
         views.bland_altman.UI(self).on_open()
-
-    def on_bland_altman_alert(self):
-        """Open Bland-Altman alert scanner view."""
-        views.bland_altman_alert.UI(self).on_open()
-
-    def on_qc_report(self):
-        """Open QC Report generator window."""
-        views.qc_report.UI(self).on_open()
 
     def on_performance_dashboard(self):
         """Open Performance Dashboard window."""
@@ -2632,85 +2599,6 @@ class Main(tk.Toplevel):
                         window.destroy()
             except Exception:
                 pass
-
-    def on_change_lab(self, _evt=None):
-        """Change Laboratory - Admin only. Switch to different laboratory without logout."""
-        from views.lab_selector import LabSelectorDialog
-
-        if self.engine.get_user_role() != 0:
-            messagebox.showwarning(
-                _("Permission Denied"),
-                _("Only administrators can change laboratory."),
-                parent=self
-            )
-            return
-
-        try:
-            current_lab_id = self.engine.get_lab_id()
-
-            # Show lab selector dialog with current lab pre-selected
-            dialog = LabSelectorDialog(self, default_lab_id=current_lab_id)
-            self.wait_window(dialog)
-            selected_lab_id = dialog.get_selected_lab_id()
-
-            if selected_lab_id is None:
-                # User cancelled
-                return
-
-            if selected_lab_id == current_lab_id:
-                messagebox.showinfo(
-                    _("Same Laboratory"),
-                    _("Already in this laboratory."),
-                    parent=self
-                )
-                return
-
-            # Apply lab change
-            self.engine.init_current_ids_from_user(selected_lab_id)
-
-            # Close all child windows and refresh
-            self._close_all_windows()
-            self.set_categories()
-
-            # Update title and status bar
-            company = self.engine.get_company_data()
-            if company:
-                site_name = company.get('site', company.get('lab', ''))
-                self.title(f"Biovarase {site_name}")
-                self.status_bar_site_description.set(
-                    self.get_status_bar_site_description(company)
-                )
-            else:
-                self.title("Biovarase")
-                self.status_bar_site_description.set("")
-
-            # Get lab name for confirmation message
-            lab_row = self.engine.read(
-                False,
-                "SELECT description FROM organizations WHERE org_id = ?",
-                (selected_lab_id,)
-            )
-            lab_name = lab_row["description"] if lab_row else str(selected_lab_id)
-
-            messagebox.showinfo(
-                _("Laboratory Changed"),
-                f"{_('Now working in:')} {lab_name}",
-                parent=self
-            )
-
-        except Exception as exc:
-            self.engine.on_log(
-                "on_change_lab",
-                str(exc),
-                type(exc).__name__,
-                sys.modules[__name__],
-                inspect.currentframe()
-            )
-            messagebox.showerror(
-                _("Error"),
-                f"{_('Failed to change laboratory:')} {exc}",
-                parent=self
-            )
 
     def on_change_section(self, _evt=None):
         """Change Section - Switch to different section without logout. DEPRECATED."""
