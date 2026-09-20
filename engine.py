@@ -42,8 +42,8 @@ class Engine:
         self.log = log
         # The settings, read by the Config class from biovarase.ini.
         self.config = Config(self.get_file("biovarase.ini"))
-        # The database beside the program, wherever it is started from.
-        self.db = DBMS(self.get_file("biovarase.sl3"), log)
+        # The database: beside the program, or wherever the settings say.
+        self.db = DBMS(self.get_database(), log)
         # Styles and widget helpers.
         self.tools = Tools()
         # The statistics of a series, and the rules read on them.
@@ -85,6 +85,25 @@ class Engine:
         @rtype: string
         """
         return os.path.join(os.path.dirname(__file__), file)
+
+    def get_database(self):
+        """The database file, from the settings.
+
+        A bare name is taken beside the program, so it is found wherever the
+        program is started from; an absolute path is taken as it is, for a
+        file kept somewhere else.
+
+        @return: path
+        @rtype: string
+        """
+        written = self.config.get("database", "file")
+
+        if os.path.isabs(written):
+            path = written
+        else:
+            path = self.get_file(written)
+
+        return path
 
     def get_python_version(self):
         """The Python this is running on, for the About window."""

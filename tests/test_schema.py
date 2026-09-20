@@ -20,6 +20,8 @@ import os
 import sqlite3
 import unittest
 
+from engine import Engine
+
 SCHEMA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                       "schema.sql")
 
@@ -170,6 +172,46 @@ class TestAuditTrail(unittest.TestCase):
                          (69.4, 1))
         rows = self._audit()
         self.assertIsNone(rows[1]["log_id"])
+
+
+class TestTheDatabaseFile(unittest.TestCase):
+    """Where the database is: the settings say it, not the code.
+
+    An engine is not built here - building one opens the database - so the
+    method is called on a stand-in holding the two things it uses: the
+    setting, and where the program is.
+    """
+
+    def get_path(self, written):
+        """What the engine would use, for this setting."""
+        return Engine.get_database(_Stand(written))
+
+    def test_a_bare_name_is_taken_beside_the_program(self):
+        """So the program finds its database wherever it is started from."""
+        path = self.get_path("biovarase.sl3")
+        self.assertTrue(os.path.isabs(path))
+        self.assertTrue(path.endswith(os.sep + "biovarase.sl3"))
+
+    def test_an_absolute_path_is_taken_as_it_is(self):
+        """A database kept somewhere else: another disk, a shared folder."""
+        elsewhere = os.sep + os.path.join("var", "lib", "biovarase.sl3")
+        self.assertEqual(self.get_path(elsewhere), elsewhere)
+
+
+class _Stand:
+    """The two things get_database asks of the engine, and nothing else."""
+
+    def __init__(self, written):
+        self.written = written
+        self.config = self
+
+    def get(self, section, key):
+        """The setting, whatever is asked for."""
+        return self.written
+
+    def get_file(self, name):
+        """Beside the program, as the engine does it."""
+        return Engine.get_file(self, name)
 
 
 if __name__ == "__main__":
