@@ -18,7 +18,6 @@ one window.
 import datetime
 import os
 import subprocess
-import sys
 import webbrowser
 
 import bcrypt
@@ -37,9 +36,10 @@ from windows import Windows
 MANUAL = os.path.join("documents", "USER_MANUAL.pdf")
 MANUAL_URL = "https://github.com/1966bc/Biovarase/blob/main/documents/USER_MANUAL.md"
 
-#: The roles. The laboratory has two: whoever runs it, and whoever works in it.
+#: The laboratory has two roles - whoever runs it and whoever works in it -
+#: and one question to ask about them, which is whether this is the first.
+#: ui/user.py has the pair, as the two lines of its combo box.
 ROLE_ADMIN = 0
-ROLE_TECHNICIAN = 1
 
 
 class Engine:
@@ -131,10 +131,6 @@ class Engine:
             path = self.get_file(written)
 
         return path
-
-    def get_python_version(self):
-        """The Python this is running on, for the About window."""
-        return "Python version:\n{0}".format(".".join(map(str, sys.version_info[:3])))
 
     def get_icons(self):
         """Every size of the application icon: one base64 PNG per line.
@@ -232,11 +228,6 @@ class Engine:
         self.db.set_session_user(user["user_id"])
         self.log.trace("logged in: {0}".format(user["nickname"]))
 
-    def on_logout(self):
-        """Forget who was working, here and in the database."""
-        self.log_user = {}
-        self.db.set_session_user(None)
-
     def is_admin(self):
         """True when whoever is logged in runs the laboratory.
 
@@ -302,24 +293,6 @@ class Engine:
 
         return [row["result"] for row in reversed(rows)]
 
-    def get_test_name(self, test_id):
-        """The name of an analyte."""
-        row = self.db.get_selected("tests", "test_id", test_id)
-
-        return row["description"]
-
-    def get_control_name(self, control_id):
-        """The name of a control material."""
-        row = self.db.get_selected("controls", "control_id", control_id)
-
-        return row["description"]
-
-    def get_um(self, unit_id):
-        """The unit a result is measured in."""
-        row = self.db.get_selected("units", "unit_id", unit_id)
-
-        return row["description"]
-
     #: The periods the program offers, as (code, months). A code that is not
     #: one of these is read as a date.
     PERIODS = {"last_month": 1,
@@ -369,22 +342,6 @@ class Engine:
     def get_observations(self):
         """How many results a series needs before the rules are read on it."""
         return self.config.get_int("statistics", "observations")
-
-    def get_correlation_coefficient(self):
-        """Above this, a Youden plot says the two controls agree."""
-        return self.config.get_float("statistics", "correlation_coefficient")
-
-    def get_remember_batch(self):
-        """Open the main window on the lot it was left on."""
-        return self.config.get_int("display", "remember_batch")
-
-    def get_show_expired_batches(self):
-        """Show lots past their expiration date in the lists."""
-        return self.config.get_int("display", "show_expired_batches")
-
-    def get_show_recent_only(self):
-        """Show only the lots with a result in the last months."""
-        return self.config.get_int("display", "show_recent_only")
 
     # -------------------------------------------------------------- the dates
 

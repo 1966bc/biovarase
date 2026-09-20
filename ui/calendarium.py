@@ -27,7 +27,6 @@ dropped into another program unchanged - the reason it is worth borrowing at
 all.
 """
 
-import calendar
 import datetime
 import tkinter as tk
 from tkinter import ttk
@@ -54,11 +53,6 @@ class Calendarium(Window, ttk.Frame):
     # unusable as an argument: transient(window), wait_window(dialog) and the
     # 'in' option all fail with 'bad window path name'. It cost an afternoon
     # once. Diagnostics go in a get_ method, which nothing converts silently.
-
-    def get_state(self):
-        """What this field holds, for a log line or a debugging session."""
-        return "{0}: {1}".format(self.caption or self.__class__.__name__,
-                                 self.get_iso() or "invalid")
 
     def init_ui(self):
         frame = ttk.LabelFrame(self, style="App.TLabelframe",
@@ -89,10 +83,6 @@ class Calendarium(Window, ttk.Frame):
 
         frame.pack(fill=tk.X)
 
-    def set_focus(self):
-        """The keyboard to the first box, the day."""
-        self.spins[0].focus_set()
-
     @staticmethod
     def validate_digits(action, value_if_allowed):
         """Allow the keystroke only when the field stays digits.
@@ -102,11 +92,6 @@ class Calendarium(Window, ttk.Frame):
         keep out.
         """
         return action != "1" or value_if_allowed.isdecimal()
-
-    def set_state(self, state):
-        """tk.NORMAL or tk.DISABLED, for all three at once."""
-        for spin in self.spins:
-            spin.configure(state=state)
 
     # --- setting ------------------------------------------------------------
 
@@ -120,10 +105,6 @@ class Calendarium(Window, ttk.Frame):
 
     def set_days_ago(self, days):
         self.set_date(datetime.date.today() - datetime.timedelta(days=days))
-
-    def set_days_ahead(self, days):
-        """For a date in the future, so no caller has to say 'minus 365 ago'."""
-        self.set_date(datetime.date.today() + datetime.timedelta(days=days))
 
     # --- reading ------------------------------------------------------------
 
@@ -167,15 +148,6 @@ class Calendarium(Window, ttk.Frame):
         if value:
             end = "{0} 23:59:59".format(value.isoformat())
         return end
-
-    def get_last_day_of_month(self):
-        """Useful when a caller wants to snap a range to whole months."""
-        value = self.get_date()
-        last = None
-        if value is not None:
-            last = calendar.monthrange(value.year, value.month)[1]
-        return last
-
 
 def main():
     root = tk.Tk()

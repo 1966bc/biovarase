@@ -180,15 +180,6 @@ class QC:
         """
         return abs(round(math.sqrt(math.pow(cvw, 2) + math.pow(cvb, 2)) * 0.25, 2))
 
-    def get_cvt(self, cvw, cva):
-        """Biological and analytical variation together: sqrt(CVa^2 + CVw^2).
-
-        @param name: cvw, cva
-        @return: total cv %
-        @rtype: float
-        """
-        return round(math.sqrt(math.pow(cva, 2) + math.pow(cvw, 2)), 2)
-
     def get_te(self, target, avg, cv):
         """The total error this series shows: |bias| + k x CV.
 
@@ -209,28 +200,6 @@ class QC:
         """
         return round(self.get_allowable_bias(cvw, cvb)
                      + (self.get_zscore() * self.get_imp(cvw)), 2)
-
-    def get_tea_tes_comparison(self, avg, target, cvw, cvb, sd, cva):
-        """What the series does against what the analyte allows, and a colour.
-
-        Green below the allowable total error, yellow exactly on it, red above:
-        the method meets its goal, sits on it, or misses it.
-
-        @param name: avg, target, cvw, cvb, sd, cva
-        @return: (total error observed, colour)
-        @rtype: tuple
-        """
-        tea = self.get_tea(cvw, cvb)
-        observed = self.get_te(target, avg, cva)
-
-        if observed < tea:
-            colour = "green"
-        elif observed == tea:
-            colour = "yellow"
-        else:
-            colour = "red"
-
-        return (observed, colour)
 
     def get_sigma(self, cvw, cvb, target, series):
         """The sigma metric: (TEa - |bias|) / CV, how many CVs fit in the goal.

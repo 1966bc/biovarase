@@ -56,7 +56,10 @@ DATAS = [# The settings, read by Config at start-up. The copy that travels is
          # administrator and no results.
          ("sql/starter/biovarase.sl3", "sql/starter"),
          # Read by the About window and by the Licence window.
-         ("LICENSE", ".")]
+         ("LICENSE", "."),
+         # The manual, opened from the ? menu. It travels because a bench
+         # with no network is exactly where it gets read.
+         ("documents/USER_MANUAL.pdf", "documents")]
 
 # Imported where they are used rather than at the top of a module - openpyxl
 # only when a sheet is written, reportlab only when a form is printed - so

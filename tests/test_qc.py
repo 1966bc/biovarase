@@ -116,10 +116,6 @@ class TestTheGoals(QCTestCase):
         qc = QC(Settings(zscore=2.0))
         self.assertEqual(qc.get_tea(self.CVI, self.CVG), 33.44)
 
-    def test_total_variation_is_the_two_in_quadrature(self):
-        """CVt = sqrt(CVa^2 + CVi^2): sqrt(16 + 9) = 5."""
-        self.assertEqual(self.qc.get_cvt(3.0, 4.0), 5.0)
-
 
 class TestTheVerdict(QCTestCase):
     """What the series does, against what the analyte allows."""
@@ -127,16 +123,6 @@ class TestTheVerdict(QCTestCase):
     def test_observed_total_error_is_bias_plus_k_times_cv(self):
         """|2| + 1.65 x 4 = 8.6."""
         self.assertEqual(self.qc.get_te(100.0, 102.0, 4.0), 8.6)
-
-    def test_a_method_inside_its_goal_is_green(self):
-        observed, colour = self.qc.get_tea_tes_comparison(101.0, 100.0,
-                                                          20.9, 45.6, 1.0, 3.0)
-        self.assertEqual(colour, "green")
-
-    def test_a_method_past_its_goal_is_red(self):
-        observed, colour = self.qc.get_tea_tes_comparison(120.0, 100.0,
-                                                          20.9, 45.6, 1.0, 9.0)
-        self.assertEqual(colour, "red")
 
     def test_sigma_counts_how_many_cvs_fit_in_what_is_left(self):
         """(TEa - |bias|) / CV, with the bias taken out first."""

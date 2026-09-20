@@ -15,7 +15,6 @@ That is how the work is done at the bench: I am looking at the quality
 control of the antiepileptics this morning.
 """
 
-import datetime
 import os
 import tempfile
 import tkinter as tk

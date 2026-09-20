@@ -39,10 +39,6 @@ class Log:
     def __str__(self):
         return "class: {0}\npath: {1}".format(self.__class__.__name__, self.path)
 
-    def is_empty(self):
-        """True when nothing has been written yet: the file is born with the first entry."""
-        return not os.path.exists(self.path) or os.path.getsize(self.path) == 0
-
     def trace(self, message):
         """Print what the program is doing, when it was started with --trace.
 

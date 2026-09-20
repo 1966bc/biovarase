@@ -42,7 +42,6 @@ class TestWriting(LogTestCase):
 
     def test_nothing_is_written_until_something_happens(self):
         """The file is born with the first entry, not with the Log."""
-        self.assertTrue(self.log.is_empty())
         self.assertFalse(os.path.exists(self.path))
 
     def test_an_error_says_when_where_and_what(self):
@@ -109,7 +108,7 @@ class TestTrace(LogTestCase):
         """It prints; the file is for errors."""
         log = Log(self.path, tracing=True)
         log.trace("a row")
-        self.assertTrue(log.is_empty())
+        self.assertFalse(os.path.exists(self.path))
 
 
 if __name__ == "__main__":

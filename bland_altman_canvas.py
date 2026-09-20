@@ -52,10 +52,6 @@ class BlandAltmanCanvas(tk.Canvas):
         self.unit = ""
         self.bind("<Configure>", self.on_resize)
 
-    def get_state(self):
-        """What is drawn at the moment, for the trace: not __str__, which Tk owns."""
-        return "pairs: {0}, title: {1}".format(len(self.pairs), self.title)
-
     def draw_plot(self, pairs, title="", unit=""):
         """Draw the pairs: each one a mean and a difference.
 

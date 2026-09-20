@@ -582,7 +582,6 @@ are stored as bcrypt hashes; nothing in the database ever holds a password.
 | **Degrees of freedom** | 0 treats the series as the population, 1 as a sample. It changes every SD, CV and bias in the program |
 | **Coverage factor** | z: 1.65 for one-sided 95%, 1.96 for two-sided 95%, 2 for k=2. It changes the total error and the uncertainty |
 | **Observations** | how many results a series needs before the rules are read at all. Below it, `NED` |
-| **Correlation** | above this, a Youden plot is called agreement between the two levels |
 | **Points on the chart** | how many results the Levey-Jennings draws |
 | **Results in the list** | how many the main window loads at once |
 

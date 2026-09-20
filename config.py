@@ -110,8 +110,8 @@ class Config:
     def get_float(self, section, key):
         """The value of a key, as a number with a decimal point.
 
-        The coverage factor and the correlation coefficient are read with
-        this: 1.65 has to stay 1.65 and not become 1.
+        The coverage factor is read with this: 1.65 has to stay 1.65 and
+        not become 1.
         """
         value = self.get(section, key)
 

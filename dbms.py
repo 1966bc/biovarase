@@ -52,18 +52,6 @@ class DBMS:
         self.con.row_factory = lite.Row
         self.con.execute("PRAGMA foreign_keys = ON")
 
-    def get_background_connection(self):
-        """A second connection to the same file, for a worker thread.
-
-        SQLite hands out one connection per thread: a long export opens its own
-        and closes it when it is done. It is a DBMS like this one, on the same
-        file.
-
-        @return: a new DBMS on the same database
-        @rtype: DBMS
-        """
-        return DBMS(self.database, self.log)
-
     def close(self):
         """Close the connection. The file stays where it is."""
         self.con.close()

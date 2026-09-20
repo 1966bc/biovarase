@@ -113,7 +113,7 @@ the statistics, the rules, the exporter and the windows, and is none of them:
 `engine.db.read(...)`, `engine.qc.get_mean(...)`. A call says who does the
 work.
 
-95 tests, `unittest` from the standard library, a database in memory.
+92 tests, `unittest` from the standard library, a database in memory.
 
 [documents/USER_MANUAL.md](documents/USER_MANUAL.md) is the program as it is
 used, with a picture of every window: the day's work, the rules and what
@@ -137,7 +137,7 @@ start, a login, a chart, a result entered, an error;
 | `exporter.py`, `report.py` | the sheets, and the form that gets signed |
 | `*_canvas.py`, `ljcanvas.py` | the charts |
 | `sql/` | the schema, the queries, the sample database |
-| `tests/` | 95 of them |
+| `tests/` | 92 of them |
 | `documents/` | the manual, the analytical goals, how to build it |
 
 ## Licence

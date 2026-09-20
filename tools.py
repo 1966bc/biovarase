@@ -391,16 +391,6 @@ class Tools:
         # On a window that was never hidden this does nothing.
         container.deiconify()
 
-    def set_geometry(self, window, width, height):
-        """Give a window this size, centred on the screen and kept whole on it.
-
-        The twin of center_me, for a window whose size is decided rather
-        than asked for by its content: the main window, sized from the .ini.
-        """
-        x = max(0, (window.winfo_screenwidth() - width) // 2)
-        y = max(0, (window.winfo_screenheight() - height) // 2)
-        window.geometry("{0:d}x{1:d}+{2:d}+{3:d}".format(width, height, x, y))
-
     # --- widget factories ---------------------------------------------------
 
     def get_tree(self, container, columns, show=None):
@@ -809,10 +799,6 @@ class Tools:
         """Empty a tree of its rows, keeping its columns."""
         tree.delete(*tree.get_children())
 
-    def clear_listbox(self, listbox):
-        """Empty a listbox of its lines."""
-        listbox.delete(0, tk.END)
-
     def limit_chars(self, variable, length, *args):
         """Keep a StringVar within length characters, as the column allows.
 
@@ -822,30 +808,6 @@ class Tools:
         value = variable.get()
         if len(value) > length:
             variable.set(value[:length])
-
-    def get_database_error(self, error):
-        """A database error as a sentence to show, rather than as it is raised.
-
-        SQLite says "UNIQUE constraint failed: tests.description", which is
-        exact and unreadable. Anything not recognised is shown as it came,
-        because a message nobody understands is better than one that hides
-        what happened.
-        """
-        message = str(error)
-
-        if "UNIQUE constraint failed" in message:
-            found = "This value is already in use."
-        elif "FOREIGN KEY constraint failed" in message:
-            found = "This row is used by other rows, or points at one that is not there."
-        elif "NOT NULL constraint failed" in message:
-            found = "A required field is empty."
-        elif "CHECK constraint failed" in message:
-            found = "A value is outside what this field allows."
-        else:
-            found = message
-
-        return found
-
 
 def main():
     foo = Tools()
