@@ -45,6 +45,12 @@ class Tools:
     FIELD_CODE = 16      # a thing with a shape: a code, a quantity, a price
     FIELD_NAME = 32      # a thing with a name: a product, a supplier, a person
 
+    #: A list of rows: wide enough for the longest name a master data table
+    #: holds, tall enough that a laboratory's fifty analytes are read rather
+    #: than scrolled. Tk's own default is 20 by 10, which is a letterbox.
+    LIST_WIDTH = 42
+    LIST_HEIGHT = 20
+
     #: Every button in a button column is at least this wide. Negative, because
     #: ttk reads a negative width as a minimum: never narrower than eight
     #: characters, never wider than its own words.
@@ -436,7 +442,8 @@ class Tools:
         another widget: without it, selecting a word in the dialog opened
         from the list clears the row the dialog is about.
         """
-        listbox = tk.Listbox(container, exportselection=False)
+        listbox = tk.Listbox(container, exportselection=False,
+                             width=self.LIST_WIDTH, height=self.LIST_HEIGHT)
         scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=listbox.yview)
         listbox.configure(yscrollcommand=scrollbar.set)
 
