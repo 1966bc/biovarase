@@ -134,7 +134,7 @@ instruments are the ones on the bench and the methods are the ones written in
 its procedures — therapeutic drug monitoring, immunosuppressants, steroid
 hormones, vitamins, catecholamines, alcohol markers and drugs of abuse, on two
 mass spectrometers, a chromatograph and a gas chromatograph with a headspace
-sampler. 44 analytes, 56 methods over seven matrices, 133 lots, 8348 results
+sampler. 44 analytes, 56 methods over six matrices, 133 lots, 8348 results
 over six months, and four proficiency schemes with eight rounds of them.
 
 What is invented is the data. The concentrations are the ones those analytes
@@ -192,7 +192,7 @@ the statistics, the rules, the exporter and the windows, and is none of them:
 `engine.db.read(...)`, `engine.qc.get_mean(...)`. A call says who does the
 work.
 
-125 tests, `unittest` from the standard library, a database in memory.
+136 tests, `unittest` from the standard library, a database in memory.
 
 [documents/USER_MANUAL.md](documents/USER_MANUAL.md) is the program as it is
 used, with a picture of every window: the day's work, the rules and what
@@ -217,7 +217,7 @@ start, a login, a chart, a result entered, an error;
 | `exporter.py`, `report.py` | the sheets, and the form that gets signed |
 | `*_canvas.py`, `ljcanvas.py` | the charts |
 | `sql/` | the schema, the queries, the sample database |
-| `tests/` | 125 of them |
+| `tests/` | 136 of them |
 | `documents/` | the manual, the analytical goals, how to build it |
 
 ## Licence
