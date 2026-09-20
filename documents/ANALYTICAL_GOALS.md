@@ -43,10 +43,15 @@ and `cvb` at zero and a total error of 20%, while cortisol carries 20.9 and
 
 ## The values in the sample database
 
-Biological variation, for the endogenous analytes. The figures are the
-published ones, rounded; for a laboratory using this program in earnest, the
-EFLM database is the place to take them from, because they are revised as
-studies are appraised.
+Biological variation, for the endogenous analytes, taken from the EFLM
+Biological Variation Database and rounded. Eighteen analytes out of the
+hundreds it holds, for a sample database that is a demonstration: the
+website and its content are copyright of the EFLM, they are not
+redistributed here, and a laboratory using this program in earnest takes its
+own figures from the source. They are revised as studies are appraised, and
+each estimate there comes with its confidence interval and the grade its
+evidence was given - neither of which survives being rounded into the table
+below.
 
 | Analyte | CVi % | CVg % |
 |---|---|---|
@@ -90,7 +95,12 @@ and a method can be in control and not good enough.
 - Sandberg S. et al., *Analytical performance specifications based on
   biological variation data - considerations, strengths and limitations*,
   Clin Chem Lab Med 2024. https://doi.org/10.1515/cclm-2024-0108
-- EFLM Biological Variation Database. https://biologicalvariation.eu
+- Aarsand AK, Webster C, Fernandez-Calle P, Jonker N, Diaz-Garzon J, Coskun
+  A, Sufrate-Vergara B, Moreno-Parro I, Galior K, Topcu D, Gonzales-Lao E,
+  Carobene A, Bartlett WA, Sandberg S. *The EFLM Biological Variation
+  Database.* https://biologicalvariation.eu/ [accessed 20 September 2026].
+  This is the reference the EFLM asks for when its data is used, and it is
+  the one to quote in a laboratory's own procedure.
 - Fraser C.G., *Biological Variation: From Principles to Practice*, AACC
   Press, 2001.
 - ISO/TS 20914:2019, practical guidance for the estimation of measurement

@@ -29,8 +29,10 @@ import ui.bland_altman
 import ui.categories
 import ui.change_password
 import ui.controls
+import ui.day
 import ui.equipments
 import ui.export_day
+import ui.history
 import ui.methods
 import ui.note
 import ui.notes
@@ -181,9 +183,12 @@ class Main(Window, ttk.Frame):
         m_qc.add_command(label="Notes", underline=1, command=self.on_notes)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
+        m_qc.add_command(label="Enter a day", underline=0, command=self.on_day)
+        m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
         m_qc.add_command(label="Edit result", underline=0, command=self.on_edit_result)
         m_qc.add_command(label="Note", underline=0, command=self.on_note)
+        m_qc.add_command(label="History", underline=0, command=self.on_history)
         bar.add_cascade(label="QC", underline=0, menu=m_qc)
 
         # The master data: an administrator keeps it, everybody reads it.
@@ -434,6 +439,10 @@ class Main(Window, ttk.Frame):
         self.engine.windows.show("notes",
                                  lambda: ui.notes.UI(self, self.since))
 
+    def on_day(self, evt=None):
+        """The controls of a bench for one day, entered in one pass."""
+        self.engine.windows.show("day", lambda: ui.day.UI(self))
+
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
         self.engine.windows.show("batches", lambda: ui.batches.UI(self))
@@ -559,6 +568,8 @@ class Main(Window, ttk.Frame):
         self.menu_results = tk.Menu(self, tearoff=0)
         self.menu_results.add_command(label="Edit result", command=self.on_edit_result)
         self.menu_results.add_command(label="Note", command=self.on_note)
+        self.menu_results.add_separator()
+        self.menu_results.add_command(label="History", command=self.on_history)
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
@@ -1130,6 +1141,18 @@ class Main(Window, ttk.Frame):
         else:
             self.engine.windows.replace(
                 "result", lambda: ui.result.UI(self, self.batch, result_id))
+
+    def on_history(self, evt=None):
+        """Everything the audit trail has written about this result."""
+        result_id = self.dict_results.get(self.lst_results.focus())
+
+        if result_id is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   self.engine.no_selected,
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "history", lambda: ui.history.UI(self, result_id))
 
     def on_note(self, evt=None):
         """Write down what was seen on a result and what was done about it."""

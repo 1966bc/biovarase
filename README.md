@@ -37,6 +37,53 @@ Python 3.7 or later, Tk 8.6, and `openpyxl`, `bcrypt` and `reportlab`
 (`pip install -r requirements.txt`). To build an executable for a PC that has
 no Python, see [documents/BUILD.md](documents/BUILD.md).
 
+## Where the database lives
+
+The whole laboratory is one SQLite file, and `biovarase.ini` says which one.
+**File > Configuration file** opens that in whatever the system uses for
+text, so it can be found without hunting for the folder the program was
+installed in.
+
+```ini
+[database]
+file = sql/biovarase.sl3
+```
+
+A bare name is taken beside the program, wherever it was started from. An
+absolute path is taken as it is:
+
+```ini
+file = /home/gc/laboratory/biovarase.sl3      ; another disk
+file = /mnt/lab/qc/biovarase.sl3              ; a mounted share
+file = Z:\lab\qc\biovarase.sl3               ; a drive on Windows
+```
+
+It is read once, at start-up, so a change takes effect the next time the
+program is started. **? > About** prints the path it actually opened, which
+is the thing to check when two computers disagree about what is in the
+database.
+
+To start a laboratory of its own rather than the sample one, build an empty
+database from the schema and point the file at it:
+
+```
+sqlite3 mylab.sl3 < sql/ddl/001_schema.sql
+sqlite3 mylab.sl3 < sql/dml/001_master_data.sql
+```
+
+`sql/starter/biovarase.sl3` is that, already built: the schema and the
+master data, one administrator, and no results.
+
+**A shared folder is where this gets interesting.** A section with four
+benches wants one file all four can reach, and SQLite's own documentation
+advises against putting it on SMB or NFS: file locking over a network is not
+reliable, and two machines writing at the same moment can leave a corrupted
+file with nothing to warn either of them. It is nevertheless how a small
+laboratory works, and the program is built for it — the lamp in the status
+bar goes red within thirty seconds of the share going away, **File >
+Database > Backup** is one keystroke, and **Check** asks the database
+whether it is still sound. Take the backup every day and keep more than one.
+
 ## What it does
 
 **Watches a series.** A lot of control material on one analyte and one

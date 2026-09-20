@@ -23,11 +23,16 @@ them that, and is also how the machine with no screen runs them at all.
 """
 
 import os
+import shutil
+import tempfile
 import unittest
 
 HAS_DISPLAY = bool(os.environ.get("DISPLAY"))
 
 if HAS_DISPLAY:
+    import ui.day
+
+    from dbms import DBMS
     from log import Log
     from ui.app import App
 
@@ -141,6 +146,92 @@ class TestTheObserver(WindowTestCase):
         self.engine.events.subscribe("tests", lambda row_id: heard.append(row_id))
         self.engine.events.notify("tests", 42)
         self.assertEqual(heard, [42])
+
+
+class TestTheDay(WindowTestCase):
+    """The form that enters a bench's controls in one pass.
+
+    This one writes, and the database it would write into is the sample
+    laboratory that ships with the program: it works on a copy instead, and
+    throws it away afterwards. A test that leaves a morning's work behind in
+    a file somebody is about to clone is not a test.
+    """
+
+    def setUp(self):
+
+        super().setUp()
+        handle, self.copy = tempfile.mkstemp(suffix=".sl3")
+        os.close(handle)
+        shutil.copy(self.engine.get_database(), self.copy)
+
+        self.engine.db.close()
+        self.engine.db = DBMS(self.copy, self.engine.log)
+        self.engine.db.set_session_user(self.engine.log_user["user_id"])
+
+        self.window = ui.day.UI(self.main)
+        self.window.on_open()
+        self.app.update()
+
+    def tearDown(self):
+
+        self.window.on_cancel()
+        super().tearDown()
+        os.remove(self.copy)
+
+    def get_results(self):
+        """How many results the copy holds now."""
+        return self.engine.db.read(False,
+                                   "SELECT COUNT(*) AS n FROM results", ())["n"]
+
+    def test_every_lot_of_the_bench_gets_a_box(self):
+        """One box per lot open on the bench chosen, and none without one."""
+        self.assertTrue(self.window.boxes)
+        self.assertEqual(len(self.window.boxes), len(self.window.get_lots()))
+
+    def test_what_was_typed_is_written_and_nothing_else(self):
+        """Two boxes filled, two results: an empty box is a control not run."""
+        lots = list(self.window.boxes)
+        before = self.get_results()
+
+        self.window.boxes[lots[0]].set("12.5")
+        self.window.boxes[lots[1]].set("7.25")
+        self.window.on_save()
+
+        self.assertEqual(self.get_results(), before + 2)
+
+    def test_a_comma_is_a_decimal_point(self):
+        """It is what the keypad of this country writes."""
+        lot = list(self.window.boxes)[0]
+        self.window.boxes[lot].set("12,5")
+        self.window.on_save()
+
+        row = self.engine.db.read(
+            False, "SELECT result FROM results ORDER BY result_id DESC LIMIT 1", ())
+        self.assertEqual(row["result"], 12.5)
+
+    def test_the_audit_trail_names_whoever_typed_it(self):
+        """The triggers read the session table, which the login wrote."""
+        lot = list(self.window.boxes)[0]
+        self.window.boxes[lot].set("9.9")
+        self.window.on_save()
+
+        row = self.engine.db.read(
+            False,
+            """SELECT a.operation, a.result, a.log_id
+                 FROM audit_results a
+             ORDER BY a.audit_id DESC LIMIT 1""", ())
+        self.assertEqual(row["operation"], "INSERT")
+        self.assertEqual(row["result"], 9.9)
+        self.assertEqual(row["log_id"], self.engine.log_user["user_id"])
+
+    def test_the_boxes_are_emptied_after_saving(self):
+        """Or the next Save would write the same morning twice."""
+        lot = list(self.window.boxes)[0]
+        self.window.boxes[lot].set("1.0")
+        self.window.on_save()
+
+        self.assertEqual([value.get() for value in self.window.boxes.values()],
+                         [""] * len(self.window.boxes))
 
 
 if __name__ == "__main__":

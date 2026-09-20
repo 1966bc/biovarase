@@ -191,14 +191,43 @@ to find out.
 
 # The day's work
 
-## Entering a result
+## The controls of a bench, in one pass
+
+**QC > Enter a day**. This is the form the morning is done from.
+
+![The day](images/day.png)
+
+Choose the **bench** and the **day** - it opens on today - and every lot open
+on that instrument is listed, with what it is, what it is worth, and a box to
+type the result into. **Tab** goes down the column. **Save** writes the boxes
+that were filled in and leaves the rest alone: an empty box is a control that
+was not run, not a result of zero.
+
+**Reagent lot** at the top is written on every result saved in that pass. A
+bench that runs its controls together usually runs them on one reagent lot,
+and typing it once is the difference between recording it and not.
+
+Two columns answer the question this window is really for:
+
+**Daily** marks the lots the laboratory has said it controls every working
+day - the **Every day** box of the test method. **Today** says how many
+results that lot already has on the day chosen. The line at the bottom adds
+them up: *58 lots on this bench, 12 without a result today, 4 of them
+controlled every day.* Those four are the ones to go and do.
+
+After saving, the boxes empty and the counts are read again, so the same
+morning cannot be entered twice by pressing Save twice.
+
+## Entering a single result
 
 Choose the lot, then **double click it** in the Batches list. Or **QC > Add
-result**.
+result**. This is the way in when a result is added later, or on a lot that
+belongs to a bench other than the one being worked through.
 
 ![A result](images/result.png)
 
-**Result** is the value. A comma is accepted for the decimal point.
+**Result** is the value. A comma is accepted for the decimal point, here and
+in the day form.
 
 **Save** saves. It does not ask: pressing it is the answer, and nothing here
 is destroyed by saving - a correction keeps what the value was, in the audit
@@ -723,7 +752,27 @@ the point: they fire on any insert, update or delete, including one typed
 into `sqlite3` by hand at midnight. Nothing in the application can be made to
 skip them, and nothing has to remember to call them.
 
-To read the history of one result, with the shell of the previous chapter:
+**From the program: QC > History**, or the right button on a result. It
+shows the same thing, and it is the way to read it at the bench.
+
+![The history of a result](images/history.png)
+
+Each line is a state the result was in. **Entered** is the value as it was
+first written down; **Changed** keeps what the result was *before* that
+change, which is what the trigger stores; and the last line, on green, is
+what it is today. Who made the last change is the line above it.
+
+The lot is on every line, so a result moved from one lot to another shows as
+a move rather than as nothing having happened. **In use** says whether it
+counted at that moment.
+
+The times are the database's own, and SQLite writes them in UTC - an hour or
+two from the clock on the wall, depending on the season. They are shown as
+they are stored: a record that says when something happened must not change
+its answer depending on which side of a daylight saving change it is read
+from.
+
+**From the shell**, which shows exactly the same rows:
 
 ```
 sqlite3 -init sql/console.sql sql/biovarase.sl3
@@ -830,7 +879,7 @@ sqlite3 sql/biovarase.sl3 < sql/biovarase.sql
 |---|---|---|
 | Batches list | double click | enter a result on that lot |
 | Results list | double click | write a note on that result |
-| Results list | right button | Edit result / Note |
+| Results list | right button | Edit result / Note / History |
 | Chart | double click a point | open that result |
 | Batches window, analyte | double click | open a new lot on it |
 | Batches window, lot | double click | edit the lot |
