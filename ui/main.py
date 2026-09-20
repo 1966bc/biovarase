@@ -32,6 +32,7 @@ import ui.equipments
 import ui.export_day
 import ui.methods
 import ui.note
+import ui.performance_dashboard
 import ui.plots
 import ui.result
 import ui.samples
@@ -155,6 +156,9 @@ class Main(Window, ttk.Frame):
         m_qc.add_command(label="Total error", underline=0, command=self.on_tea)
         m_qc.add_command(label="Bland-Altman", underline=0, command=self.on_bland_altman)
         m_qc.add_command(label="Youden", underline=0, command=self.on_youden)
+        m_qc.add_separator()
+        m_qc.add_command(label="Performance", underline=0,
+                         command=self.on_performance)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
@@ -331,6 +335,12 @@ class Main(Window, ttk.Frame):
         else:
             self.engine.windows.replace(
                 "youden", lambda: ui.youden.UI(self, self.batch, self.since))
+
+    def on_performance(self, evt=None):
+        """Every lot at once: which ones are worth opening."""
+        self.engine.windows.show(
+            "performance",
+            lambda: ui.performance_dashboard.UI(self, self.since))
 
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
