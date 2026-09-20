@@ -4,7 +4,7 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-"""One sample type: added, or edited."""
+"""One analytical method: added, or edited."""
 
 import tkinter as tk
 
@@ -12,14 +12,14 @@ from ui.dialog import Dialog
 
 
 class UI(Dialog):
-    NAME = "sample"
-    TABLE = "samples"
+    NAME = "method"
+    TABLE = "methods"
 
     def init_fields(self):
 
         self.description = tk.StringVar()
 
-        self.add_field("Sample:",
+        self.add_field("Method:",
                        self.engine.tools.get_entry(self.frm_fields, self.description))
 
     def set_values(self, row):

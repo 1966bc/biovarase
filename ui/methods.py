@@ -4,8 +4,14 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-from ui.lookup import LookupUI
+"""The list of methods. Everything but the names is in ui.list_window."""
 
-class UI(LookupUI):
-    def __init__(self, parent):
-        super().__init__(parent, table="methods")
+import ui.method
+
+from ui.list_window import ListWindow
+
+
+class UI(ListWindow):
+    TABLE = "methods"
+    CAPTION = "description"
+    DIALOG = ui.method.UI

@@ -418,7 +418,6 @@ class UI(ParentView):
             self._canvas = None
             return
 
-
     def _on_destroy(self, event=None):
         """
         Unbind global mousewheel when this window is destroyed.

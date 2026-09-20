@@ -69,7 +69,6 @@ class UI(ParentView):
             tk.Label(w, bg=color, text=text, anchor=tk.W).grid(row=r, column=c, sticky=tk.W, padx=10, pady=5)
             r += 1
 
-
     def on_open(self):
         """Ensures the window is visible, in front, and focused, useful when reusing a Singleton."""
         try:

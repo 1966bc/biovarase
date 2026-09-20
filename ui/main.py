@@ -651,7 +651,6 @@ class Main(tk.Toplevel):
 
         frm_status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
-
     def on_open(self):
         #print(self.engine.current_ids)
         company = self.engine.get_company_data()
@@ -874,7 +873,6 @@ class Main(tk.Toplevel):
             style = "westgard_violation.TLabel"
 
         self.lblWestgard.configure(style=style)
-
 
     def set_categories(self):
 
@@ -1333,7 +1331,6 @@ class Main(tk.Toplevel):
 
         self.get_values(rs)
 
-
     def get_values(self, rs):
         """
         Compute statistics and update plots.
@@ -1647,7 +1644,6 @@ class Main(tk.Toplevel):
 
         except Exception as e:
             self.engine.log.exception("{0} failed".format(inspect.stack()[0][3]))
-
 
 
     def get_x_labels(self, rs):
@@ -1982,7 +1978,6 @@ class Main(tk.Toplevel):
             int(self.observations.get())
         )
 
-
     def on_youden(self):
         """Open Youden selector dialog to choose batches for Youden plot."""
         # Pre-select workstation and test if already selected in main window
@@ -2152,7 +2147,6 @@ class Main(tk.Toplevel):
             msg = "Attention please.\nBefore add 30 random results you must select a batch."
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
 
-
     def on_batch_double_button(self, evt=None):
 
         if self.lstBatches.selection():
@@ -2160,7 +2154,6 @@ class Main(tk.Toplevel):
         else:
             msg = "Attention please.\nSelect a batch."
             messagebox.showinfo(self.engine.app_title, msg, parent=self)
-
 
     def on_add_result(self):
         """Open result editor in insert mode for current batch and workstation."""
@@ -2208,7 +2201,6 @@ class Main(tk.Toplevel):
         self.selected_workstation = self.engine.db.get_selected("workstations", "workstation_id", workstation_id)
 
         ui.result.UI(self).on_open()
-
 
     def on_update_result(self, evt=None):
         """Default double–click on results list: open notes editor."""
