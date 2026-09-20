@@ -55,4 +55,4 @@ INSERT INTO "units" VALUES(4,'pg/mL',1);
 INSERT INTO "units" VALUES(5,'%',1);
 INSERT INTO "units" VALUES(6,'pg/mg',1);
 INSERT INTO "units" VALUES(7,'g/L',1);
-INSERT INTO "users" VALUES(1,'Administrator',NULL,'admin','$2b$12$Qw5.DmkgtCq9WygGF8D4Tu2W.p1.0pONXMmWEFlKzRw0l8KkCgpPi',0,1);
+INSERT INTO "users" VALUES(1,'Administrator',NULL,'admin','$2b$12$TmEHogrYLn1O3cryNkg02OWtBx.3WAdeaVsMSKvA6FBGcyuKwzegi',0,1);

@@ -1,7 +1,6 @@
 ---
 title: "Biovarase - User manual"
 subtitle: "Internal quality control for a single medical laboratory"
-author: "Giuseppe Costanzi"
 lang: en
 toc: true
 toc-depth: 2
