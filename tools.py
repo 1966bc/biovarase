@@ -359,6 +359,11 @@ class Tools:
 
         Over the parent by default, because that is where the eye is. The
         window is kept whole on the screen, title bar included.
+
+        Horizontally in the middle, vertically a third of the way down and
+        not half: a window centred by arithmetic looks low, because the eye
+        puts the centre of a thing above its middle. Every poster, every page
+        and every dialog worth looking at is set that way.
         """
         container.update_idletasks()
         width = container.winfo_reqwidth()
@@ -370,10 +375,14 @@ class Tools:
         if (parent is not None and parent.winfo_exists()
                 and parent.winfo_width() > 1):
             x = parent.winfo_rootx() + (parent.winfo_width() - width) / 2
-            y = parent.winfo_rooty() + (parent.winfo_height() - height) / 2
+            y = parent.winfo_rooty() + (parent.winfo_height() - height) / 3
         else:
             x = (container.winfo_screenwidth() - width) / 2
-            y = (container.winfo_screenheight() - height) / 2
+            # A third of the free space above and two thirds below: a window
+            # centred by arithmetic looks low, because the eye puts the
+            # centre of a thing above its middle. It is also where the task
+            # bar is not.
+            y = (container.winfo_screenheight() - height) / 3
 
         x = max(0, min(int(x), container.winfo_screenwidth() - width))
         y = max(0, min(int(y), container.winfo_screenheight() - height))

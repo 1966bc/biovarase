@@ -45,7 +45,7 @@ class ListWindow(tk.Toplevel):
         self.dict_items = {}
         self.dialog = None
         self.init_ui()
-        self.engine.tools.center_me(self)
+        self.engine.tools.center_me(self, parent.winfo_toplevel())
         # Told when a row of this table is saved, here or anywhere else.
         self.engine.events.subscribe(self.TABLE, self.on_changed)
 

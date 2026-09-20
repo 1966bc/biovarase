@@ -37,11 +37,11 @@ class UI(Window, tk.Toplevel):
         #: is open: the sheet for working on the data, the PDF for the record.
         self.format = tk.StringVar(value="xlsx")
 
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
         self.resizable(0, 0)
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
         self.init_ui()
-        self.engine.tools.center_me(self)
+        self.engine.tools.center_me(self, parent.winfo_toplevel())
 
     def init_ui(self):
 

@@ -61,11 +61,11 @@ class UI(Window, tk.Toplevel):
         self.batch_id = batch_id
         self.since = since
 
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
         self.resizable(0, 0)
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
         self.init_ui()
-        self.engine.tools.center_me(self)
+        self.engine.tools.center_me(self, parent.winfo_toplevel())
 
     def init_ui(self):
         """Two columns and a histogram, rather than four blocks in a tower.

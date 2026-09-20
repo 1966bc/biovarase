@@ -32,7 +32,7 @@ class UI(ParentView):
         super().__init__(parent, name="test_method")
         self.index = index
 
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
         self.resizable(False, False)
         self.bind("<Alt-s>", self._on_save)
         self.bind("<Return>", self._on_save)

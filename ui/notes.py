@@ -28,7 +28,7 @@ class UI(ParentView):
         if self._reusing:
             return
 
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
         self.resizable(False, False)
 
         self.table = "notes"

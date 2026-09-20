@@ -27,7 +27,7 @@ class UI(ParentView):
         self._is_init = True
 
         self.title("Analytical Goals Explained")
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
         self.resizable(0, 0)
 
         self._build_ui()

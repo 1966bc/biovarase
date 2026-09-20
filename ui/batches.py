@@ -67,7 +67,7 @@ class UI(Window, tk.Toplevel):
 
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
         self.init_ui()
-        self.engine.tools.center_me(self)
+        self.engine.tools.center_me(self, parent.winfo_toplevel())
 
         self.engine.events.subscribe("batches", self.on_batches_changed)
         self.engine.events.subscribe("results", self.on_results_changed)

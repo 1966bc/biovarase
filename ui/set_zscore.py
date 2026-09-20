@@ -30,7 +30,7 @@ class UI(ParentView):
 
         super().__init__(parent, name="zscore")
 
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
         self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.bind("<Escape>", self._on_close)

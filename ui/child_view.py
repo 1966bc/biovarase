@@ -75,7 +75,7 @@ class ChildView(tk.Toplevel):
         self._dialog_name = name
 
         # Bind to parent window
-        self.transient(parent)
+        self.transient(parent.winfo_toplevel())
 
         # Fixed size by default (subclasses can override with resizable(1,1))
         self.resizable(0, 0)
