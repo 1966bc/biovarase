@@ -22,6 +22,7 @@ class UI(tk.Toplevel):
         self.parent = parent
         self.engine = parent.engine
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.engine.tools.hide_me(self)
         self.init_ui()
         self.engine.tools.center_me(self, parent.winfo_toplevel())
 

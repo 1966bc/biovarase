@@ -44,6 +44,7 @@ class ListWindow(tk.Toplevel):
         #: Position in the list -> primary key, filled by set_values.
         self.dict_items = {}
         self.dialog = None
+        self.engine.tools.hide_me(self)
         self.init_ui()
         self.engine.tools.center_me(self, parent.winfo_toplevel())
         # Told when a row of this table is saved, here or anywhere else.

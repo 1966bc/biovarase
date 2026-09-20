@@ -40,6 +40,7 @@ class UI(Window, tk.Toplevel):
         self.transient(parent.winfo_toplevel())
         self.resizable(0, 0)
         self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.engine.tools.hide_me(self)
         self.init_ui()
         self.engine.tools.center_me(self, parent.winfo_toplevel())
 
