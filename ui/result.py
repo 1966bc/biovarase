@@ -19,7 +19,7 @@ import tkinter as tk
 from ui.child_view import ChildView
 from tkinter import ttk
 from tkinter import messagebox
-from calendarium import Calendarium
+from ui.calendarium import Calendarium
 
 # Constants
 FOCUS_DELAY_MS = 50  # Delay for event queue to settle before focusing
@@ -59,7 +59,7 @@ class UI(ChildView):
         # Store received datetime internally (not user-editable)
         self.received_datetime = None  # type: Optional[datetime]
 
-        self.float_vcmd = self.engine.get_float_vcmd(self)
+        self.float_vcmd = self.engine.get_validate_float(self)
 
         # Layout root - single column, rows expand
         self.columnconfigure(0, weight=1)
@@ -147,7 +147,7 @@ class UI(ChildView):
         # Two widgets for "Received" field:
         # 1. Calendarium (editable) - shown only when inserting new result
         bg = getattr(self.engine, "BASE_BG_RGB", self.engine.get_rgb(240, 240, 237))
-        self.calendarium_received = Calendarium(frm_content, "", base_bg_color=bg)
+        self.calendarium_received = Calendarium(frm_content, "")
         self.calendarium_received.grid(row=r, column=c, sticky=tk.W, padx=5, pady=5)
 
         # 2. Label (read-only) - shown only when editing existing result

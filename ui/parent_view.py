@@ -117,7 +117,7 @@ class ParentView(tk.Toplevel):
         Args:
             on_screen: If True, center on screen. If False (default), center on parent.
         """
-        self.engine.center_window(self, on_screen=on_screen)
+        self.engine.center_me(self, on_screen=on_screen)
         self.deiconify()
         self.lift()
         self.focus_set()

@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from ui.parent_view import ParentView
-from calendarium import Calendarium
+from ui.calendarium import Calendarium
 
 
 # SQL to get results with test method info
@@ -134,12 +134,12 @@ class UI(ParentView):
 
         # From date
         ttk.Label(frm_top, text="From:", style="App.TLabel").pack(side=tk.LEFT, **padd)
-        self.cal_from = Calendarium(frm_top, "", base_bg_color=bg)
+        self.cal_from = Calendarium(frm_top, "")
         self.cal_from.pack(side=tk.LEFT, **padd)
 
         # To date
         ttk.Label(frm_top, text="To:", style="App.TLabel").pack(side=tk.LEFT, **padd)
-        self.cal_to = Calendarium(frm_top, "", base_bg_color=bg)
+        self.cal_to = Calendarium(frm_top, "")
         self.cal_to.pack(side=tk.LEFT, **padd)
 
         # Buttons

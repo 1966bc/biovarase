@@ -353,7 +353,7 @@ class UI(ChildView):
         pk_field = self.parent.primary_key
 
         raw = self.description.get()
-        norm = self.engine.normalize_desc(raw, compress=True)
+        norm = self.engine.get_clean_text(raw, compress=True)
 
         # Empty check
         if not norm:
@@ -367,7 +367,7 @@ class UI(ChildView):
         # UPDATE mode: skip DB duplicate check if description has not changed
         if self.index is not None and self.selected_item:
             current = self.selected_item.get(desc_field, "")
-            current_norm = self.engine.normalize_desc(current, compress=True)
+            current_norm = self.engine.get_clean_text(current, compress=True)
 
             if norm.casefold() == current_norm.casefold():
                 # Same logical value, just apply normalization

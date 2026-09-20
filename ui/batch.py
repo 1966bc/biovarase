@@ -9,7 +9,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from calendarium import Calendarium
+from ui.calendarium import Calendarium
 from datetime import date, datetime
 
 from ui.child_view import ChildView
@@ -52,7 +52,7 @@ class UI(ChildView):
         self.remember_batch = tk.BooleanVar()
 
         # Numeric validators provided by engine
-        self.vcmd = self.engine.get_float_vcmd(self)
+        self.vcmd = self.engine.get_validate_float(self)
         self.vcmd_int = self.engine.get_validate_integer(self)
 
         # Auto-compute SD when lower/upper change (only if 'Computed' selected)
@@ -102,7 +102,7 @@ class UI(ChildView):
         ttk.Label(frm_left, text="Expiration:").grid(row=r, sticky=tk.N + tk.W)
         # Safe fallback: use BASE_BG_RGB if available, otherwise fallback to a known RGB
         bg = getattr(self.engine, "BASE_BG_RGB", self.engine.get_rgb(240, 240, 237))
-        self.expiration_date = Calendarium( frm_left, "", base_bg_color=bg)
+        self.expiration_date = Calendarium(frm_left, "")
         self.expiration_date.grid(row=r, column=c, sticky=tk.W)
 
         r += 1

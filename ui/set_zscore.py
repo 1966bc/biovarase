@@ -41,7 +41,7 @@ class UI(ParentView):
 
         # Form state
         self.z_score = tk.DoubleVar()
-        self.float_vcmd = self.engine.get_float_vcmd(self)
+        self.float_vcmd = self.engine.get_validate_float(self)
 
         # Root columns: form (col 0) + buttons (col 1)
         self.columnconfigure(0, weight=1)

@@ -11,7 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from calendarium import Calendarium
+from ui.calendarium import Calendarium
 from ui.parent_view import ParentView
 
 

@@ -22,6 +22,12 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 
 class Exporter:
+    """Sheets out of the data: given the engine, it asks it what it needs."""
+
+    def __init__(self, engine):
+        #: The engine, for the database, the statistics and the rules.
+        self.engine = engine
+
     """Mixin responsible for Excel export utilities (openpyxl based)."""
 
     # ------------------------------------------------------------------ #
@@ -51,7 +57,7 @@ class Exporter:
         path = tmp.name
         workbook.save(path)
         # Launcher mixin: open file with system handler
-        self.launch(path)  # type: ignore
+        self.engine.open_file(path)  # type: ignore
         return path
 
     def get_counts(self, selected_date):
@@ -91,7 +97,7 @@ class Exporter:
             """
 
             args = (self.get_lab_id(), selected_date)
-            rows = self.read(True, sql, args)
+            rows = self.engine.db.read(True, sql, args)
 
             workbook, worksheet = self.create_workbook("Biovarase")
             row_num = 1
@@ -170,7 +176,7 @@ class Exporter:
             ORDER BY notes.modified DESC;
         """
 
-        rows = self.read(True, sql, args)
+        rows = self.engine.db.read(True, sql, args)
 
         workbook, worksheet = self.create_workbook("Biovarase")
         row_num = 1
@@ -421,15 +427,15 @@ class Exporter:
 
     def _compute_series_metrics(self, series):
         """Return (avg, sd, cv) from series."""
-        avg = self.get_mean(series)  # type: ignore
-        sd = self.get_sd(series)     # type: ignore
-        cv = self.get_cv(series)     # type: ignore
+        avg = self.engine.qc.get_mean(series)  # type: ignore
+        sd = self.engine.qc.get_sd(series)     # type: ignore
+        cv = self.engine.qc.get_cv(series)     # type: ignore
         return avg, sd, cv
 
     def _westgard_rule_safe(self, target, sd, series, batch_row, tm_row):
         """Return Westgard rule or 'NED' if series length is insufficient."""
         if len(series) > 9:
-            return self.get_westgard_violation_rule(  # type: ignore
+            return self.engine.westgards.get_westgard_violation_rule(  # type: ignore
                 target,
                 sd,
                 series,
@@ -554,10 +560,10 @@ class Exporter:
 
                     try:
                         # Series and stats
-                        series = self.get_series(
+                        series = self.engine.get_series(
                             b_batch_id,
                             r_workstation_id,
-                            int(self.get_observations()),
+                            int(self.engine.get_observations()),
                             r_result_id,
                             db=db,
                         )
@@ -575,10 +581,10 @@ class Exporter:
                         target = float(b_target)
                         sd_set = float(b_sd)
                         res = float(r_result_rounded)
-                        bias = self.get_bias(avg, target)
+                        bias = self.engine.qc.get_bias(avg, target)
 
                         # Uncertainty (absolute, same unit as result)
-                        uncertainty = self.get_uncertainty(cv, bias)
+                        uncertainty = self.engine.qc.get_uncertainty(cv, bias)
 
                         # Colors by SD bands
                         r_color = self._result_color(res, target, sd_set)
@@ -631,7 +637,7 @@ class Exporter:
                         # Minimal debug without breaking the loop
                         print("result:", (r_result_id, r_result_rounded, r_received_str, r_ws_serial, r_workstation_id))
                         try:
-                            print("series/metrics:", (self.get_cv(series), self.get_sd(series), self.get_mean(series)))
+                            print("series/metrics:", (self.engine.qc.get_cv(series), self.engine.qc.get_sd(series), self.engine.qc.get_mean(series)))
                         except Exception as e:
                             print("series/metrics:", None)
                         print("target/sd:", (b_target, b_sd))
@@ -716,12 +722,12 @@ class Exporter:
             workstation_id = row["workstation_id"]
 
             # series for this batch/workstation
-            series = self.get_series(batch_id, workstation_id, limit)
+            series = self.engine.get_series(batch_id, workstation_id, limit)
 
             if len(series) > 5:
-                cva = self.get_cv(series)
-                sd = self.get_sd(series)
-                avg = self.get_mean(series)
+                cva = self.engine.qc.get_cv(series)
+                sd = self.engine.qc.get_sd(series)
+                avg = self.engine.qc.get_mean(series)
                 cvw = row["cvw"]
                 cvb = row["cvb"]
                 target = float(row["target"])
@@ -734,13 +740,13 @@ class Exporter:
                 formula_k_bias_res = self.get_formula_k_bias(
                     avg, target, cvw, cva, row_num
                 )
-                tea_tes_comparison_res = self.get_tea_tes_comparison(
+                tea_tes_comparison_res = self.engine.qc.get_tea_tes_comparison(
                     avg, target, cvw, cvb, sd, cva
                 )
                 formula_drc = self.get_formula_drc(row_num)
 
                 # Workstation description (use read_dict + dict access)
-                ws_row = self.read(
+                ws_row = self.engine.db.read(
                     False,
                     "SELECT description FROM workstations WHERE workstation_id = ?",
                     (workstation_id,),
@@ -771,7 +777,7 @@ class Exporter:
                 worksheet.append(row_data)
 
                 # blue color for cva
-                if cva is not None and cva > self.get_imp(cvw):
+                if cva is not None and cva > self.engine.qc.get_imp(cvw):
                     cell = worksheet.cell(row=row_num, column=7)
                     cell.fill = PatternFill(
                         start_color='FF0000FF',
@@ -810,7 +816,7 @@ class Exporter:
 
     def get_formula_eta(self, row):
         """TEa% formula."""
-        return "ROUND(({0} * J{1}) + K{1}, 2)".format(self.get_zscore(), row)  # type: ignore
+        return "ROUND(({0} * J{1}) + K{1}, 2)".format(self.engine.qc.get_zscore(), row)  # type: ignore
 
     def get_formula_cvt(self, row):
         """CVt formula."""
@@ -853,11 +859,11 @@ class Exporter:
             red:    k > 0.375
         """
         try:
-            cvt = self.get_cvt(float(cva), float(cvw))
+            cvt = self.engine.qc.get_cvt(float(cva), float(cvw))
             if cvt == 0:
                 return None, None
             k = round(
-                self.get_bias(float(avg), float(target)) / cvt,
+                self.engine.qc.get_bias(float(avg), float(target)) / cvt,
                 2,
             )
 

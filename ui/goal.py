@@ -51,7 +51,7 @@ class UI(ChildView):
         self.selected_goal = None
 
         # Float validation provided by engine
-        self.float_vcmd = self.engine.get_float_vcmd(self)
+        self.float_vcmd = self.engine.get_validate_float(self)
 
         # Global key bindings
         self.bind("<Alt-c>", self.on_cancel)

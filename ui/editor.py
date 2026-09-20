@@ -297,7 +297,7 @@ class Editor(ChildView):
         - Updates field with normalized value on success
         """
         raw = self.description.get()
-        norm = self._normalize_desc(raw, compress=True)
+        norm = self._get_clean_text(raw, compress=True)
 
         # Check if empty
         if not norm:
@@ -311,7 +311,7 @@ class Editor(ChildView):
         # In UPDATE mode: skip duplicate check if description has not changed
         if self.index is not None:
             current = self.selected_item.get(self.desc_field, "")
-            current_norm = self._normalize_desc(current, compress=True)
+            current_norm = self._get_clean_text(current, compress=True)
             if norm.casefold() == current_norm.casefold():
                 # Same as original, just apply normalization
                 self.description.set(norm)
@@ -355,7 +355,7 @@ class Editor(ChildView):
         self.description.set(norm)
         return 1
 
-    def _normalize_desc(self, s, *, compress=False):
+    def _get_clean_text(self, s, *, compress=False):
         """
         Normalize description string.
 

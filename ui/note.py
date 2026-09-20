@@ -17,7 +17,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from calendarium import Calendarium
+from ui.calendarium import Calendarium
 from ui.child_view import ChildView
 
 # Role constants
@@ -100,7 +100,7 @@ class UI(ChildView):
         except Exception as e:
             bg = "#d9d9d9"
 
-        self.modified = Calendarium(frm_left, "", base_bg_color=bg)
+        self.modified = Calendarium(frm_left, "")
         self.modified.grid(row=r, column=c, sticky=tk.W)
 
         r += 1

@@ -236,7 +236,7 @@ class UI(ChildView):
         """
 
         raw = self.description.get()
-        norm = self._normalize_desc(raw, compress=True)
+        norm = self._get_clean_text(raw, compress=True)
 
         # Must contain something
         if not norm:
@@ -250,7 +250,7 @@ class UI(ChildView):
         # If UPDATE → allow same record with same normalized description
         if self.index is not None and isinstance(self.selected_item, dict):
             current = self.selected_item.get("description") or ""
-            current_norm = self._normalize_desc(current, compress=True)
+            current_norm = self._get_clean_text(current, compress=True)
 
             if norm.casefold() == current_norm.casefold():
                 self.description.set(norm)
@@ -298,7 +298,7 @@ class UI(ChildView):
         return 1
 
 
-    def _normalize_desc(self, s, *, compress = False):
+    def _get_clean_text(self, s, *, compress = False):
         s = (s or "").strip()
         return " ".join(s.split()) if compress else s
 

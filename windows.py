@@ -86,6 +86,18 @@ class Windows:
 
         return window
 
+    def close_all(self, keep=None):
+        """Close every open window, except the one named keep.
+
+        Changing user closes what was left open: the lists and the charts
+        belong to whoever was working before. Each window is closed through
+        its own on_cancel, which unsubscribes it from the events - a window
+        destroyed without that would still be called when something changes.
+        """
+        for name in list(self.dict_instances):
+            if name != keep:
+                self.dict_instances[name].on_cancel()
+
     def forget(self, name, window, evt):
         """Take a destroyed window out of the register.
 
