@@ -430,9 +430,14 @@ class Main(Window, ttk.Frame):
         A control chart is read to answer when something started going wrong,
         and a series numbered 1 to 30 cannot answer that.
         """
-        sql = """SELECT r.result_id, ROUND(r.result, 2) AS result, r.received
+        # Excluded results are drawn too, in grey and without a line through
+        # them: a point taken out of the statistics is still a run that was
+        # made, and it is the only way back to it - double clicking it is how
+        # a result is opened again.
+        sql = """SELECT r.result_id, ROUND(r.result, 2) AS result, r.received,
+                        r.status
                    FROM results r
-                  WHERE r.batch_id = ? AND r.status = 1
+                  WHERE r.batch_id = ?
                ORDER BY r.received DESC
                   LIMIT ?"""
         rows = list(reversed(self.engine.db.read(True, sql,
@@ -450,27 +455,28 @@ class Main(Window, ttk.Frame):
                               lot["sd"],
                               title=title,
                               dates=[row["received"] for row in rows],
+                              status=[row["status"] for row in rows],
                               y_axis_caption=self.unit,
-                              bottom_text=self.get_bottom_text(len(series)))
+                              bottom_text=self.get_bottom_text(rows))
+
+        # The bias bar is about the statistics, so it sees what they see.
+        series = [row["result"] for row in rows if row["status"] == 1]
 
         self.bias_chart.draw_bias(series, lot["target"], unit=self.unit)
 
-    def get_bottom_text(self, drawn):
-        """How many results the chart is drawn on, and how many were left out.
+    def get_bottom_text(self, rows):
+        """How many results the statistics were computed on, of those drawn.
 
         A series of thirty points where two were excluded is not a series of
         thirty, and whoever reads the mean has a right to know first.
         """
-        row = self.engine.db.read(False,
-                                  "SELECT COUNT(*) AS excluded FROM results"
-                                  " WHERE batch_id = ? AND status = 0",
-                                  (self.batch,))
+        counted = len([row for row in rows if row["status"] == 1])
 
-        if row["excluded"]:
-            found = "Computed on {0} results, {1} excluded".format(drawn,
-                                                                    row["excluded"])
+        if counted == len(rows):
+            found = "Computed on {0} results".format(counted)
         else:
-            found = "Computed on {0} results".format(drawn)
+            found = "Computed on {0} of {1} results, {2} excluded".format(
+                counted, len(rows), len(rows) - counted)
 
         return found
 
