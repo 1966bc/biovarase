@@ -111,7 +111,6 @@ class Main(Window, ttk.Frame):
 
         m_qc = tk.Menu(bar, tearoff=0)
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
-        m_qc.add_command(label="Edit result", underline=0, command=self.on_edit_result)
         m_qc.add_command(label="Note", underline=0, command=self.on_note)
         bar.add_cascade(label="QC", underline=0, menu=m_qc)
 
@@ -202,6 +201,9 @@ class Main(Window, ttk.Frame):
         self.lst_batches.configure(height=4)
         self.lst_batches.tag_configure("expired", foreground="#c0392b")
         self.lst_batches.bind("<<TreeviewSelect>>", self.on_selected_batch)
+        # Double clicking a lot enters a result on it: the gesture is on the
+        # thing it is about, which is why there are no buttons here.
+        self.lst_batches.bind("<Double-Button-1>", self.on_add_result)
 
         frm.pack(side=tk.TOP, fill=tk.X, pady=(0, 4))
 
@@ -241,13 +243,10 @@ class Main(Window, ttk.Frame):
         self.lst_results.tag_configure("violation", foreground="#c0392b")
         self.lst_results.tag_configure("excluded", foreground="gray")
         self.lst_results.tag_configure("noted", background="#fff2cc")
-        self.lst_results.bind("<Double-Button-1>", self.on_edit_result)
-
-        buttons = self.engine.tools.get_button_column(frm,
-                                                      (("Add", self.on_add_result),
-                                                       ("Edit", self.on_edit_result),
-                                                       ("Note", self.on_note)))
-        buttons.pack(side=tk.RIGHT, fill=tk.Y)
+        # Double clicking a result opens its note: what is usually wanted of
+        # a result already entered is to say what was done about it. The
+        # result itself is opened from the chart, by double clicking its point.
+        self.lst_results.bind("<Double-Button-1>", self.on_note)
 
         frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
