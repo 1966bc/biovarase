@@ -105,14 +105,18 @@ class App(tk.Tk):
         """
         self.engine.log.trace("{0}: {1}".format(exc.__name__, val))
         self.engine.log.exception("{0}: {1}".format(exc.__name__, val))
-        messagebox.showerror(self.title(),
+        messagebox.showerror(self.engine.app_title,
                              "{0}\n\n{1}".format(val, self.engine.log.path),
                              parent=self)
 
     def on_exit(self, evt=None):
-        """Close the database and go, once the question has been answered."""
-        msg = "Do you want to quit {app_name}?".format(app_name=self.title())
-        if messagebox.askokcancel(self.title(), msg, parent=self):
+        """Close the database and go, once the question has been answered.
+
+        The title bar carries the laboratory, the site and the name of the
+        program, which is right where it is; a box asking one question does
+        not need any of it. It asks the question.
+        """
+        if messagebox.askokcancel(self.engine.app_title, "Quit?", parent=self):
             self.engine.db.close()
             self.engine.log.trace("database closed: goodbye")
             self.destroy()

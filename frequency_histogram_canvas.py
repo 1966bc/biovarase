@@ -4,411 +4,257 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
+"""The shape of a series: how often each value came up.
+
+The Levey-Jennings chart draws the results in the order they were run, which
+is what a control chart is for. This drops the order and stacks them, which
+answers a different question: what does this method's spread actually look
+like.
+
+The arithmetic assumes one hump, roughly symmetrical, centred near the
+target. When the picture shows something else it is saying so before any
+rule does. Two humps is a series that shifted in the middle - two methods,
+really, one before the calibration and one after, and a mean computed across
+both describes neither. A long tail on one side is a series being pulled by
+something that happens occasionally. A block of bars all the same height is
+not a distribution at all.
+
+The target is drawn in orange and the mean in blue: the gap between the two
+lines is the bias, seen rather than computed.
+
+How many bars: the square root of the number of results, between three and
+ten. Too few hides the shape, too many turns thirty results into thirty bars
+of height one.
+"""
+
+import math
 import tkinter as tk
 
 
 class FrequencyHistogramCanvas(tk.Canvas):
-    """
-    Simple frequency histogram using pure Tkinter Canvas.
+    """The results of a series in bars, with the target and the mean on them."""
 
-    It is designed as a companion to LeveyJenningsCanvas and is focused
-    on QC-style distributions:
-
-        - X axis: result values (binned)
-        - Y axis: frequency (count) per bin
-        - Vertical lines: target and mean
-
-    This widget is intentionally minimalistic and not a general plotting library.
-    """
-
-    LEFT_MARGIN   = 60
-    RIGHT_MARGIN  = 20
-    TOP_MARGIN    = 30
+    LEFT_MARGIN = 60
+    RIGHT_MARGIN = 20
+    TOP_MARGIN = 30
     BOTTOM_MARGIN = 40
 
-    AXIS_COLOR   = "#000000"
-    GRID_COLOR   = "#dddddd"
-    BAR_COLOR    = "#cccccc"
-    TARGET_COLOR = "#ff8800"   # orange
-    MEAN_COLOR   = "#0000cc"   # blue
+    AXIS_COLOUR = "#000000"
+    GRID_COLOUR = "#dddddd"
+    BAR_COLOUR = "#cccccc"
+    TARGET_COLOUR = "#ff8800"
+    MEAN_COLOUR = "#0000cc"
 
     FONT_LABEL = ("TkDefaultFont", 9)
     FONT_TITLE = ("TkDefaultFont", 8, "bold")
 
-    def __init__(self, parent, **kwargs):
-        """
-        Create a frequency histogram canvas.
+    #: How many bars the square root is allowed to ask for.
+    LEAST_BINS = 3
+    MOST_BINS = 10
 
-        kwargs are passed directly to tk.Canvas.
-        """
+    #: The share of its slot a bar fills: the rest is the gap that makes two
+    #: bars read as two.
+    BAR_SHARE = 0.9
+
+    #: Lines across the drawing, and the same number of counts up the side.
+    GRID_STEPS = 4
+
+    def __init__(self, parent, **kwargs):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._values = []
-        self._target = None
-        self._mean = None
-        self._title = None
-        self._x_label = "Result"
-        self._y_label = "Frequency"
-        self._bottom_text = ""
+        self.values = []
+        self.target = None
+        self.mean = None
+        self.x_label = "Result"
+        self.y_label = "Frequency"
 
-        self.bind("<Configure>", self._on_resize)
+        self.bind("<Configure>", self.on_resize)
 
-    # ------------------------------------------------------------------ #
-    # Public API                                                         #
-    # ------------------------------------------------------------------ #
+    def draw_histogram(self, values, target=None, mean=None,
+                       x_label="Result", y_label="Frequency"):
+        """The series as bars, with the target and the mean drawn on it.
 
-    def draw_histogram(
-        self,
-        values,
-        target=None,
-        mean=None,
-        *,
-        title=None,
-        x_label = "Result",
-        y_label = "Frequency",
-        bottom_text=None,
-        max_bins=10,
-    ):
+        @param name: values, target, mean, x_label, y_label
         """
-        Draw histogram for the given values.
+        self.values = [float(value) for value in values]
+        self.target = None
+        self.mean = None
 
-        Args:
-            values: numeric results used to compute the histogram.
-            target: target value (will be drawn as vertical orange line).
-            mean:   computed mean (will be drawn as vertical blue line).
-            title:  optional title.
-            x_label: X axis label.
-            y_label: Y axis label.
-            bottom_text: optional small string shown below the chart
-                         (e.g. "Computed 28 on 30 results").
-            max_bins: maximum number of bins to use.
-        """
-        self._values = [float(v) for v in values]
-        self._target = float(target) if target is not None else None
-        self._mean = float(mean) if mean is not None else None
-        self._title = ""
-        self._x_label = x_label
-        self._y_label = y_label
-        self._bottom_text = bottom_text or ""
+        if target is not None:
+            self.target = float(target)
+        if mean is not None:
+            self.mean = float(mean)
 
-        self._max_bins = max_bins
-        self._redraw()
+        self.x_label = x_label
+        self.y_label = y_label
+        self.redraw()
 
     def clear(self):
-        """Clear the canvas content."""
+        """Nothing drawn, and nothing remembered."""
         self.delete("all")
+        self.values = []
 
-    # ------------------------------------------------------------------ #
-    # Internal helpers                                                   #
-    # ------------------------------------------------------------------ #
+    def on_resize(self, evt=None):
+        """The drawing follows the window: it is redrawn, not stretched."""
+        if self.values:
+            self.redraw()
 
-    def _on_resize(self, event):
-        if self._values:
-            self._redraw()
-
-    def _redraw(self):
+    def redraw(self):
+        """What there is room for: the drawing, a word, or nothing."""
         self.delete("all")
-
-        if not self._values:
-            self._draw_no_data()
-            return
-
         width = self.winfo_width()
         height = self.winfo_height()
-        if width < 10 or height < 10:
-            return
 
-        x0 = self.LEFT_MARGIN
-        y0 = self.TOP_MARGIN
-        x1 = width - self.RIGHT_MARGIN
-        y1 = height - self.BOTTOM_MARGIN
+        if not self.values:
+            self.create_text(width / 2, height / 2, text="No data",
+                             font=self.FONT_TITLE, fill="gray")
+        elif width < 10 or height < 10:
+            pass
+        else:
+            self.draw_all(width, height)
 
-        # Compute histogram bins
-        bins, counts = self._compute_histogram(self._values, self._max_bins)
-        if not bins or not counts:
-            self._draw_no_data()
-            return
+    def draw_all(self, width, height):
+        """The axes, the grid, the bars, the two lines and the labels."""
+        left = self.LEFT_MARGIN
+        top = self.TOP_MARGIN
+        right = width - self.RIGHT_MARGIN
+        bottom = height - self.BOTTOM_MARGIN
 
-        # Determine Y max (counts)
-        max_count = max(counts) if counts else 1
+        bins, counts = self.get_bins()
+        tallest = max(counts)
 
-        # Draw axes, grid, bars, lines
-        self._draw_axes(x0, y0, x1, y1)
-        self._draw_grid_y(x0, y0, x1, y1, max_count)
-        self._draw_bars(x0, y0, x1, y1, bins, counts, max_count)
-        self._draw_vertical_lines(x0, y0, x1, y1, bins)
+        self.create_line(left, top, left, bottom, fill=self.AXIS_COLOUR, width=1)
+        self.create_line(left, bottom, right, bottom, fill=self.AXIS_COLOUR, width=1)
 
-        # Labels and title
-        self._draw_y_labels(x0, y0, y1, max_count)
-        self._draw_x_labels(x0, y0, x1, y1, bins)
-        self._draw_title(width)
-        self._draw_bottom_text(x0, x1, y1)
+        for step in range(1, self.GRID_STEPS + 1):
+            y = bottom - step / self.GRID_STEPS * (bottom - top)
+            self.create_line(left, y, right, y, fill=self.GRID_COLOUR, width=1)
 
-    def _draw_no_data(self):
-        w = self.winfo_width()
-        h = self.winfo_height()
-        self.create_text(
-            w / 2,
-            h / 2,
-            text="No data",
-            font=self.FONT_TITLE,
-            fill="gray",
-        )
+        self.draw_bars(left, top, right, bottom, counts, tallest)
+        self.draw_lines(left, top, right, bottom, bins)
+        self.draw_counts(left, top, bottom, tallest)
+        self.draw_values(left, right, bottom, bins)
 
-    # ---------------------------- Histogram ---------------------------- #
+    def draw_bars(self, left, top, right, bottom, counts, tallest):
+        """One bar per bin, as tall as the count in it."""
+        slot = (right - left) / len(counts)
 
-    @staticmethod
-    def _compute_histogram(values, max_bins):
+        for index, count in enumerate(counts):
+            if count:
+                start = left + index * slot
+                top_of_bar = bottom - count / tallest * (bottom - top)
+                self.create_rectangle(start, top_of_bar,
+                                      start + slot * self.BAR_SHARE, bottom,
+                                      fill=self.BAR_COLOUR,
+                                      outline=self.AXIS_COLOUR, width=1)
+
+    def draw_lines(self, left, top, right, bottom, bins):
+        """The target and the mean, standing on the bars they fall among."""
+        low = bins[0][0]
+        high = bins[-1][1]
+
+        for value, colour, caption in ((self.target, self.TARGET_COLOUR, "Target"),
+                                       (self.mean, self.MEAN_COLOUR, "Mean")):
+            if value is not None:
+                x = self.get_x(value, low, high, left, right)
+                self.create_line(x, top, x, bottom, fill=colour, width=2)
+                self.create_text(x, top - 5, text=caption, anchor=tk.S,
+                                 font=self.FONT_LABEL, fill=colour)
+
+    def draw_counts(self, left, top, bottom, tallest):
+        """How many results each height stands for, up the side."""
+        for step in range(self.GRID_STEPS + 1):
+            y = bottom - step / self.GRID_STEPS * (bottom - top)
+            count = int(round(tallest * step / self.GRID_STEPS))
+            self.create_line(left - 4, y, left, y, fill=self.AXIS_COLOUR, width=1)
+            self.create_text(left - 6, y, text=str(count), anchor=tk.E,
+                             font=self.FONT_LABEL, fill=self.AXIS_COLOUR)
+
+        if self.y_label:
+            # One letter per line: see the note in youden_canvas.py.
+            self.create_text(left - 35, (top + bottom) / 2.0,
+                             text="\n".join(list(self.y_label)),
+                             anchor=tk.CENTER, font=self.FONT_LABEL,
+                             fill=self.AXIS_COLOUR)
+
+    def draw_values(self, left, right, bottom, bins):
+        """What each bar covers, written at its middle."""
+        slot = (right - left) / len(bins)
+
+        for index, (start, end) in enumerate(bins):
+            x = left + (index + 0.5) * slot
+            self.create_text(x, bottom + 10,
+                             text="{0:.2f}".format((start + end) / 2.0),
+                             anchor=tk.N, font=self.FONT_LABEL,
+                             fill=self.AXIS_COLOUR)
+
+        if self.x_label:
+            self.create_text((left + right) / 2.0, bottom + 26, text=self.x_label,
+                             anchor=tk.N, font=self.FONT_LABEL,
+                             fill=self.AXIS_COLOUR)
+
+    def get_bins(self):
+        """The bars and what fell in each: equal widths across the series.
+
+        A series where every result is the same number has no width to
+        divide, and is one bar.
+
+        @return: the bins as (start, end), and the count in each
+        @rtype: tuple of two lists
         """
-        Compute simple histogram bins and counts.
+        lowest = min(self.values)
+        highest = max(self.values)
 
-        Returns:
-            bins: list of (start, end) for each bin
-            counts: list of counts per bin
+        if highest == lowest:
+            found = ([(lowest - 0.5, highest + 0.5)], [len(self.values)])
+        else:
+            how_many = self.get_how_many()
+            width = (highest - lowest) / how_many
+            bins = [(lowest + step * width, lowest + (step + 1) * width)
+                    for step in range(how_many)]
+            found = (bins, self.get_counts(bins))
+
+        return found
+
+    def get_counts(self, bins):
+        """How many results fall in each bin.
+
+        The last bin takes its right edge as well, which is where the
+        highest result sits: without that it would fall outside every bin
+        and the tallest value of the series would not be drawn at all.
+
+        @param name: bins
+        @return: the count in each bin
+        @rtype: list
         """
-        if not values:
-            return [], []
+        counts = [0] * len(bins)
 
-        v_min = min(values)
-        v_max = max(values)
-
-        if v_max == v_min:
-            # All values identical: single bin
-            return [(v_min - 0.5, v_max + 0.5)], [len(values)]
-
-        # Number of bins: approx sqrt(N), limited to [3..max_bins]
-        import math
-
-        n = len(values)
-        nb = int(round(math.sqrt(n)))
-        nb = max(3, min(nb, max_bins))
-
-        bin_width = (v_max - v_min) / nb
-
-        bins = []
-        start = v_min
-        for _ in range(nb):
-            end = start + bin_width
-            bins.append((start, end))
-            start = end
-
-        counts = [0 for _ in range(nb)]
-        for v in values:
-            # Last bin is inclusive on the right
-            if v >= bins[-1][1]:
+        for value in self.values:
+            if value >= bins[-1][1]:
                 counts[-1] += 1
             else:
-                for i, (b_start, b_end) in enumerate(bins):
-                    if b_start <= v < b_end:
-                        counts[i] += 1
-                        break
+                for index, (start, end) in enumerate(bins):
+                    if start <= value < end:
+                        counts[index] += 1
 
-        return bins, counts
+        return counts
 
-    # ------------------------------ Axes ------------------------------- #
+    def get_how_many(self):
+        """How many bars: the square root of the results, within bounds.
 
-    def _draw_axes(self, x0, y0, x1, y1):
-        # Y axis
-        self.create_line(x0, y0, x0, y1, fill=self.AXIS_COLOR, width=1)
-        # X axis
-        self.create_line(x0, y1, x1, y1, fill=self.AXIS_COLOR, width=1)
+        @return: the number of bins
+        @rtype: integer
+        """
+        wanted = int(round(math.sqrt(len(self.values))))
 
-    def _draw_grid_y(self, x0, y0, x1, y1, max_count):
-        # Simple grid: 4 horizontal lines
-        steps = 4
-        for i in range(1, steps + 1):
-            t = i / steps
-            y = y1 - t * (y1 - y0)
-            self.create_line(x0, y, x1, y, fill=self.GRID_COLOR, width=1)
+        return max(self.LEAST_BINS, min(wanted, self.MOST_BINS))
 
-    # ------------------------------ Bars ------------------------------- #
+    def get_x(self, value, low, high, left, right):
+        """Where a value falls across the drawing."""
+        if high == low:
+            span = 1.0
+        else:
+            span = high - low
 
-    def _draw_bars(
-        self,
-        x0,
-        y0,
-        x1,
-        y1,
-        bins,
-        counts,
-        max_count,
-    ):
-        n_bins = len(bins)
-        if n_bins == 0 or max_count <= 0:
-            return
-
-        # Map bin index to X coordinate
-        total_width = x1 - x0
-        bin_pixel_width = total_width / n_bins
-
-        for i, ((b_start, b_end), cnt) in enumerate(zip(bins, counts)):
-            if cnt == 0:
-                continue
-
-            # Bin rectangle coordinates
-            x_left = x0 + i * bin_pixel_width
-            x_right = x_left + bin_pixel_width * 0.9  # small gap between bars
-
-            height_ratio = cnt / max_count
-            y_top = y1 - height_ratio * (y1 - y0)
-
-            self.create_rectangle(
-                x_left,
-                y_top,
-                x_right,
-                y1,
-                fill=self.BAR_COLOR,
-                outline=self.AXIS_COLOR,
-                width=1,
-            )
-
-    # -------------------------- Target / Mean -------------------------- #
-
-    def _draw_vertical_lines(
-        self,
-        x0,
-        y0,
-        x1,
-        y1,
-        bins,
-    ):
-        if not bins:
-            return
-
-        v_min = bins[0][0]
-        v_max = bins[-1][1]
-        span = v_max - v_min if v_max != v_min else 1.0
-
-        def value_to_x(value):
-            t = (value - v_min) / span
-            return x0 + t * (x1 - x0)
-
-        # Target
-        if self._target is not None:
-            x = value_to_x(self._target)
-            self.create_line(
-                x, y0, x, y1,
-                fill=self.TARGET_COLOR,
-                width=2,
-            )
-            self.create_text(
-                x,
-                y0 - 5,
-                text="Target",
-                anchor="s",
-                font=self.FONT_LABEL,
-                fill=self.TARGET_COLOR,
-            )
-
-        # Mean
-        if self._mean is not None:
-            x = value_to_x(self._mean)
-            self.create_line(
-                x, y0, x, y1,
-                fill=self.MEAN_COLOR,
-                width=2,
-            )
-            self.create_text(
-                x,
-                y0 - 5,
-                text="Mean",
-                anchor="s",
-                font=self.FONT_LABEL,
-                fill=self.MEAN_COLOR,
-            )
-
-    # --------------------------- Labels / title ------------------------ #
-
-    def _draw_y_labels(self, x0, y0, y1, max_count):
-        steps = 4
-        for i in range(0, steps + 1):
-            value = int(round(max_count * i / steps))
-            t = i / steps
-            y = y1 - t * (y1 - y0)
-
-            self.create_line(
-                x0 - 4,
-                y,
-                x0,
-                y,
-                fill=self.AXIS_COLOR,
-                width=1,
-            )
-
-            self.create_text(
-                x0 - 6,
-                y,
-                text=str(value),
-                anchor="e",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
-
-        # Y axis label (simple vertical text using newlines)
-        if self._y_label:
-            vertical = "\n".join(list(self._y_label))
-            self.create_text(
-                x0 - 35,
-                (y0 + y1) / 2.0,
-                text=vertical,
-                anchor="center",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
-
-    def _draw_x_labels(self, x0, y0, x1, y1, bins):
-        n_bins = len(bins)
-        if n_bins == 0:
-            return
-
-        total_width = x1 - x0
-        bin_pixel_width = total_width / n_bins
-
-        # Label each bin with its center value (rounded)
-        for i, (b_start, b_end) in enumerate(bins):
-            center = (b_start + b_end) / 2.0
-            x = x0 + (i + 0.5) * bin_pixel_width
-            self.create_text(
-                x,
-                y1 + 10,
-                text=f"{center:.2f}",
-                anchor="n",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
-
-        # X axis caption
-        if self._x_label:
-            self.create_text(
-                (x0 + x1) / 2.0,
-                y1 + 26,
-                text=self._x_label,
-                anchor="n",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
-
-    def _draw_title(self, width):
-        if not self._title:
-            return
-        self.create_text(
-            width / 2.0,
-            self.TOP_MARGIN / 2.0,
-            text=self._title,
-            anchor="center",
-            font=self.FONT_TITLE,
-            fill=self.AXIS_COLOR,
-        )
-
-    def _draw_bottom_text(self, x0, x1, y1):
-        if not self._bottom_text:
-            return
-        self.create_text(
-            x1,
-            y1 + 42,
-            text=self._bottom_text,
-            anchor="e",
-            font=self.FONT_LABEL,
-            fill="#444444",
-        )
+        return left + (value - low) / span * (right - left)

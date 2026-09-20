@@ -103,7 +103,7 @@ class UI(ListWindow):
         row_id = self.get_selected()
 
         if row_id is None:
-            messagebox.showwarning(self.nametowidget(".").title(),
+            messagebox.showwarning(self.engine.app_title,
                                    self.engine.no_selected, parent=self)
         else:
             self.dialog = self.engine.windows.replace(

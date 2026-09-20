@@ -599,8 +599,26 @@ a number without them.
 
 # The database
 
-Everything is in one file. Where it is: **?** menu, **About**. Which file it
-is: `biovarase.ini`, section `[database]`.
+Everything is in one file. Where it is: **?** menu, **About**, which prints
+the path the program actually opened.
+
+Which file it opens is decided in `biovarase.ini`, and **File > Configuration
+file** opens that in whatever the system uses for text, so it can be found
+without hunting for the folder the program was installed in:
+
+```
+[database]
+file = sql/biovarase.sl3
+```
+
+A bare name is taken beside the program; an absolute path is taken as it is,
+which is how the file comes to live on a shared folder or on another disk.
+The program reads it once, at start-up, so a change takes effect the next
+time it is started.
+
+The same file holds whose laboratory this is - the `[laboratory]` section,
+which is what the title bar and the status bar read - and the six settings
+the Settings window also edits. Everything in it is commented.
 
 ## Backup
 
@@ -650,6 +668,45 @@ the program is built to be used that way. If you do:
 One computer with the file on its own disk is safer. It is also less
 convenient, and that is the trade the laboratory makes, not the program.
 
+# Looking inside the database
+
+Everything the program knows is in one SQLite file, and SQLite ships with a
+shell that reads it. Nothing in this chapter is needed for the daily work;
+it is here because a laboratory that cannot look at its own data is trusting
+a program it cannot check.
+
+```
+sqlite3 -init sql/console.sql sql/biovarase.sl3
+```
+
+`-init` takes the place of the machine's own `~/.sqliterc` for that session,
+so the shell behaves the same everywhere: foreign keys on, as the program
+runs them, headers and columns on, and a first line that counts what is in
+the file. It never writes anything.
+
+Four queries worth keeping live in `sql/dql/`, one to a file, each with a
+comment saying what it answers and what it takes:
+
+| File | What it answers |
+|---|---|
+| `lots_in_use.sql` | which lots are open, on what, with how many results |
+| `series_of_lot.sql` | the results of one lot, in order |
+| `out_of_control.sql` | the results beyond the limits over a period |
+| `history_of_result.sql` | everything that happened to one result |
+
+They are run with `.read`:
+
+```
+.read sql/dql/lots_in_use.sql
+```
+
+`sql/statement.sql` is the scratch pad - the statement being worked on right
+now. When one earns its keep it moves to `sql/dql/` and gets a name.
+
+The schema itself is `sql/ddl/001_schema.sql`, and it is meant to be read:
+eighteen tables, the six triggers of the audit trail, and a comment over
+every decision that is not obvious.
+
 # The audit trail
 
 Every result and every lot is written twice: once into its own table, and
@@ -660,6 +717,26 @@ It is done by six triggers inside the database, not by the program. That is
 the point: they fire on any insert, update or delete, including one typed
 into `sqlite3` by hand at midnight. Nothing in the application can be made to
 skip them, and nothing has to remember to call them.
+
+To read the history of one result, with the shell of the previous chapter:
+
+```
+sqlite3 -init sql/console.sql sql/biovarase.sl3
+.read sql/dql/history_of_result.sql
+```
+
+which gives, oldest first, what the result was at each step, what was done
+to it and by whom:
+
+```
+log_time             operation  result  status  by_whom
+2026-09-14 07:05:11  INSERT     20.8    1       Krebs
+2026-09-14 09:20:43  UPDATE     20.4    1       Krebs
+2026-09-15 08:02:17  UPDATE     20.4    0       Aston
+```
+
+A value corrected the same morning, and the result excluded the next day by
+somebody else.
 
 SQLite has no `CURRENT_USER`, so the login writes who is working into a
 one-row `session` table and the triggers read it from there. It is in the
@@ -703,16 +780,16 @@ python3 biovarase.py --trace
 
 # Appendix A: the sample laboratory
 
-The program ships with a real laboratory that has invented numbers in it:
-the mass spectrometry section of a hospital clinical biochemistry
-department, set up the way it actually is. The panels are the ones it
-reports, the matrices are the ones it receives, the instruments are the ones
-on the bench and the methods are the ones in its procedures - therapeutic
-drug monitoring, immunosuppressants, steroid hormones, vitamins,
-catecholamines, alcohol markers and drugs of abuse, on two mass
-spectrometers, a chromatograph and a gas chromatograph with a headspace
-sampler. 44 analytes, 56 methods over seven matrices, 133 lots, 8348 results
-over six months.
+The program ships with a real laboratory that has invented numbers in it: the
+mass spectrometry section of the Clinical Biochemistry and Molecular Biology
+Unit at Sant'Andrea University Hospital in Rome, set up the way it actually
+is. The panels are the ones it reports, the matrices are the ones it
+receives, the instruments are the ones on the bench and the methods are the
+ones written in its procedures - therapeutic drug monitoring,
+immunosuppressants, steroid hormones, vitamins, catecholamines, alcohol
+markers and drugs of abuse, on two mass spectrometers, a chromatograph and a
+gas chromatograph with a headspace sampler. 44 analytes, 56 methods over
+seven matrices, 133 lots, 8348 results over six months.
 
 The data is what is invented. The concentrations are the ones those analytes
 are really controlled at, and the lots behave as lots do, but nothing in
@@ -789,4 +866,4 @@ replace the procedure that says so.
 ---
 
 Biovarase is free software under the GNU GPL, version 3 or later.
-Source: <https://github.com/1966bc/Biovarase>
+Source: <https://github.com/1966bc/biovarase>

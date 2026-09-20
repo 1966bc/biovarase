@@ -68,15 +68,16 @@ total error. See [documents/ANALYTICAL_GOALS.md](documents/ANALYTICAL_GOALS.md).
 
 ## The sample data
 
-`sql/biovarase.sl3` is a real laboratory with invented numbers in it: the
-mass spectrometry section of a hospital clinical biochemistry department,
-as it is actually set up. The panels are the ones it reports, the matrices
-are the ones it receives, the instruments are the ones on the bench and the
-methods are the ones written in its procedures — therapeutic drug
-monitoring, immunosuppressants, steroid hormones, vitamins, catecholamines,
-alcohol markers and drugs of abuse, on two mass spectrometers, a
-chromatograph and a gas chromatograph with a headspace sampler. 44 analytes,
-56 methods over seven matrices, 133 lots, 8348 results over six months.
+`sql/biovarase.sl3` is a real laboratory with invented numbers in it: the mass
+spectrometry section of the Clinical Biochemistry and Molecular Biology Unit
+at Sant'Andrea University Hospital in Rome, as it is actually set up. The
+panels are the ones it reports, the matrices are the ones it receives, the
+instruments are the ones on the bench and the methods are the ones written in
+its procedures — therapeutic drug monitoring, immunosuppressants, steroid
+hormones, vitamins, catecholamines, alcohol markers and drugs of abuse, on two
+mass spectrometers, a chromatograph and a gas chromatograph with a headspace
+sampler. 44 analytes, 56 methods over seven matrices, 133 lots, 8348 results
+over six months.
 
 What is invented is the data. The concentrations are the ones those analytes
 are actually controlled at and the lots behave as lots behave, but no result
@@ -102,11 +103,16 @@ sqlite3 -init sql/console.sql sql/biovarase.sl3   # look inside it
 
 ## What is worth reading
 
-**The charts are drawn by hand.** Six canvases, no plotting library:
-Levey-Jennings with the bands and the points beyond four standard deviations
+**Her Majesty `tk.Canvas`.** Six charts and not one plotting library:
+Levey-Jennings with its bands and its points beyond four standard deviations
 clipped as triangles, Youden, total error, Bland-Altman, the bias bar, the
-frequency histogram. Each one is a few hundred lines of lines, arcs and text
-on a `tk.Canvas`.
+frequency histogram. Lines, rectangles, polygons and text, on a widget that
+has been in the standard library since Tk itself and will draw anything at
+all for anyone willing to work out the coordinates. Working them out is the
+interesting part: a chart is a scale, a margin and two axes, and once those
+are written down the picture is twenty lines. What it costs is three
+dependencies instead of thirty, and a program that opens instantly on a slow
+machine.
 
 **The audit trail is triggers.** Six of them, in
 [sql/ddl/001_schema.sql](sql/ddl/001_schema.sql). SQLite has no

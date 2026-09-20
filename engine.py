@@ -34,7 +34,7 @@ from windows import Windows
 
 #: The user manual, beside the program, and where it is read if it is not.
 MANUAL = os.path.join("documents", "USER_MANUAL.pdf")
-MANUAL_URL = "https://github.com/1966bc/Biovarase/blob/main/documents/USER_MANUAL.md"
+MANUAL_URL = "https://github.com/1966bc/biovarase/blob/main/documents/USER_MANUAL.md"
 
 #: The laboratory has two roles - whoever runs it and whoever works in it -
 #: and one question to ask about them, which is whether this is the first.
@@ -78,7 +78,6 @@ class Engine:
         self.no_selected = "Attention!\nNo record selected!"
         self.ask_to_delete = "Delete data?"
         self.ask_to_save = "Save data?"
-        self.abort = "Operation aborted!"
         self.user_not_enable = "You are not allowed to do this."
 
     def __str__(self):
@@ -191,6 +190,17 @@ class Engine:
             self.open_file(path)
         else:
             self.open_url(MANUAL_URL)
+
+    def open_settings_file(self):
+        """Open biovarase.ini with the program the system uses for text.
+
+        Six of the settings have a window; the rest - whose laboratory this
+        is, and above all where the database file lives - are read once at
+        start-up and belong in a file that can be edited before the program
+        will even open. This is how it is reached without hunting for the
+        folder it was installed in.
+        """
+        self.open_file(self.config.path)
 
     def open_log(self):
         """Open the log file with the program the system uses for text."""

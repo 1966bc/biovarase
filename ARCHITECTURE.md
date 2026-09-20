@@ -153,4 +153,14 @@ library, which is why the program has three dependencies and starts instantly
 on a slow machine — and why a reader can see how a control chart is built,
 from the scale to the clipping of points beyond four standard deviations.
 
-Each one takes numbers and knows nothing about the database.
+`tk.Canvas` deserves its reputation. It is a retained-mode surface: every
+line, rectangle, polygon and string is an item it remembers and can be asked
+about afterwards, which is what makes a double click on a point find the
+result behind it without any hit-testing code worth the name. It has been
+there, unchanged, since Tk — and everything above it here is arithmetic that
+a reader can check.
+
+Each one has the same shape: a `draw_*` method that takes numbers, a
+`redraw` that decides whether there is room for a chart, an empty grid or
+nothing, and a handful of `get_x` / `get_y` that turn a value into a
+coordinate. None of them knows the database exists.

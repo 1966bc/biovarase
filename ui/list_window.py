@@ -111,7 +111,7 @@ class ListWindow(tk.Toplevel):
             self.dialog = self.engine.windows.replace(self.DIALOG.NAME,
                                                       lambda: self.DIALOG(self, row_id))
         else:
-            messagebox.showwarning(self.nametowidget(".").title(),
+            messagebox.showwarning(self.engine.app_title,
                                    self.engine.no_selected,
                                    parent=self)
 

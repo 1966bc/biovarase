@@ -24,22 +24,32 @@ from one instrument to the other would still mean the same thing.
 
 import tkinter as tk
 
-#: What is left around the drawing, in pixels: room for the labels.
-MARGIN_LEFT = 62
-MARGIN_RIGHT = 74
-MARGIN_TOP = 34
-MARGIN_BOTTOM = 46
-
-#: The colours, the same the rest of the program uses.
-POINT = "#2e6da4"
-MEAN_LINE = "#1e3a5f"
-LIMIT_LINE = "#e67e22"
-ZERO_LINE = "#999999"
-TEXT = "#333333"
-
 
 class BlandAltmanCanvas(tk.Canvas):
     """Differences against means, with the mean difference and its limits."""
+
+    #: What is left around the drawing, in pixels: room for the labels, and
+    #: more on the right, where the three lines are named.
+    MARGIN_LEFT = 62
+    MARGIN_RIGHT = 74
+    MARGIN_TOP = 34
+    MARGIN_BOTTOM = 46
+
+    POINT = "#2e6da4"
+    MEAN_LINE = "#1e3a5f"
+    LIMIT_LINE = "#e67e22"
+    ZERO_LINE = "#999999"
+    TEXT = "#333333"
+
+    #: How far from the mean difference the limits of agreement are drawn:
+    #: the interval that holds 95 per cent of a normal distribution.
+    LIMIT = 1.96
+
+    #: Room left around the points, as a share of what they span.
+    SPARE = 0.12
+
+    #: Values written along each axis, ends included.
+    TICKS = 5
 
     def __init__(self, parent, **kwargs):
         kwargs.setdefault("background", "white")
@@ -83,7 +93,7 @@ class BlandAltmanCanvas(tk.Canvas):
             pass
         elif not self.pairs:
             self.create_text(width / 2, height / 2, text="No paired results",
-                             fill=TEXT, font=("TkDefaultFont", 10))
+                             fill=self.TEXT, font=("TkDefaultFont", 10))
         else:
             self.draw_all(width, height)
 
@@ -92,11 +102,11 @@ class BlandAltmanCanvas(tk.Canvas):
         differences = [difference for mean, difference in self.pairs]
         bias = sum(differences) / len(differences)
         deviation = self.get_deviation(differences, bias)
-        upper = bias + 1.96 * deviation
-        lower = bias - 1.96 * deviation
+        upper = bias + self.LIMIT * deviation
+        lower = bias - self.LIMIT * deviation
 
-        left, right = MARGIN_LEFT, width - MARGIN_RIGHT
-        top, bottom = MARGIN_TOP, height - MARGIN_BOTTOM
+        left, right = self.MARGIN_LEFT, width - self.MARGIN_RIGHT
+        top, bottom = self.MARGIN_TOP, height - self.MARGIN_BOTTOM
 
         means = [mean for mean, difference in self.pairs]
         low_x, high_x = self.get_span(min(means), max(means))
@@ -105,13 +115,15 @@ class BlandAltmanCanvas(tk.Canvas):
 
         self.draw_frame(left, top, right, bottom, low_x, high_x, low_y, high_y)
 
-        for value, colour, caption, dashed in ((0.0, ZERO_LINE, "", True),
-                                               (bias, MEAN_LINE,
+        for value, colour, caption, dashed in ((0.0, self.ZERO_LINE, "", True),
+                                               (bias, self.MEAN_LINE,
                                                 "mean {0:.3g}".format(bias), False),
-                                               (upper, LIMIT_LINE,
-                                                "+1.96 SD {0:.3g}".format(upper), True),
-                                               (lower, LIMIT_LINE,
-                                                "-1.96 SD {0:.3g}".format(lower), True)):
+                                               (upper, self.LIMIT_LINE,
+                                                "+{0} SD {1:.3g}".format(self.LIMIT,
+                                                                         upper), True),
+                                               (lower, self.LIMIT_LINE,
+                                                "-{0} SD {1:.3g}".format(self.LIMIT,
+                                                                         lower), True)):
             y = self.get_y(value, low_y, high_y, top, bottom)
             if dashed:
                 self.create_line(left, y, right, y, fill=colour, dash=(4, 3))
@@ -124,40 +136,49 @@ class BlandAltmanCanvas(tk.Canvas):
         for mean, difference in self.pairs:
             x = self.get_x(mean, low_x, high_x, left, right)
             y = self.get_y(difference, low_y, high_y, top, bottom)
-            self.create_oval(x - 3, y - 3, x + 3, y + 3, fill=POINT, outline="white")
+            self.create_oval(x - 3, y - 3, x + 3, y + 3, fill=self.POINT, outline="white")
 
-        self.create_text(width / 2, 16, text=self.title, fill=TEXT,
+        self.create_text(width / 2, 16, text=self.title, fill=self.TEXT,
                          font=("TkDefaultFont", 10, "bold"))
-        self.create_text(width / 2, height - 12,
-                         text="Mean of the two instruments{0}".format(
-                             " ({0})".format(self.unit) if self.unit else ""),
-                         fill=TEXT, font=("TkDefaultFont", 8))
+        self.create_text(width / 2, height - 12, text=self.get_caption(),
+                         fill=self.TEXT, font=("TkDefaultFont", 8))
         self.create_text(12, height / 2, text="Difference", angle=90,
-                         fill=TEXT, font=("TkDefaultFont", 8))
+                         fill=self.TEXT, font=("TkDefaultFont", 8))
         self.create_text(left, height - 26,
                          text="{0} pairs".format(len(self.pairs)),
-                         anchor=tk.W, fill=TEXT, font=("TkDefaultFont", 7))
+                         anchor=tk.W, fill=self.TEXT, font=("TkDefaultFont", 7))
+
+    def get_caption(self):
+        """What the axis along the bottom is, with the unit when there is one.
+
+        @return: the caption
+        @rtype: string
+        """
+        found = "Mean of the two instruments"
+
+        if self.unit:
+            found = "{0} ({1})".format(found, self.unit)
+
+        return found
 
     def draw_frame(self, left, top, right, bottom, low_x, high_x, low_y, high_y):
         """The two axes and the values along them."""
-        self.create_line(left, bottom, right, bottom, fill=TEXT)
-        self.create_line(left, top, left, bottom, fill=TEXT)
+        self.create_line(left, bottom, right, bottom, fill=self.TEXT)
+        self.create_line(left, top, left, bottom, fill=self.TEXT)
 
-        for step in range(5):
-            value = low_y + (high_y - low_y) * step / 4.0
+        for step in range(self.TICKS):
+            value = low_y + (high_y - low_y) * step / (self.TICKS - 1)
             y = self.get_y(value, low_y, high_y, top, bottom)
             self.create_text(left - 6, y, text="{0:.3g}".format(value), anchor=tk.E,
-                             fill=TEXT, font=("TkDefaultFont", 7))
+                             fill=self.TEXT, font=("TkDefaultFont", 7))
             if step:
                 self.create_line(left, y, right, y, fill="#eeeeee")
 
-        for step in range(5):
-            value = low_x + (high_x - low_x) * step / 4.0
+        for step in range(self.TICKS):
+            value = low_x + (high_x - low_x) * step / (self.TICKS - 1)
             x = self.get_x(value, low_x, high_x, left, right)
             self.create_text(x, bottom + 8, text="{0:.4g}".format(value),
-                             fill=TEXT, font=("TkDefaultFont", 7))
-
-    # ------------------------------------------------------------- the maths
+                             fill=self.TEXT, font=("TkDefaultFont", 7))
 
     def get_deviation(self, values, mean):
         """The standard deviation of the differences, as a sample.
@@ -177,7 +198,7 @@ class BlandAltmanCanvas(tk.Canvas):
         if highest == lowest:
             spare = abs(highest) * 0.1 or 1.0
         else:
-            spare = (highest - lowest) * 0.12
+            spare = (highest - lowest) * self.SPARE
 
         return (lowest - spare, highest + spare)
 

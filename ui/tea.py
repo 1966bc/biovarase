@@ -64,15 +64,15 @@ class UI(Window, tk.Toplevel):
 
         self.title("Total error - {0} - lot {1}".format(test["description"],
                                                         lot["lot_number"]))
-        self.chart.draw_tea(title="{0} - {1}".format(test["description"],
-                                                     lot["description"]),
-                            te=self.engine.qc.get_te(lot["target"], mean, cv),
-                            tea=method["teap005"],
-                            bias=bias,
-                            cv=cv,
-                            z_score=self.engine.qc.get_zscore(),
-                            n_results=len(series),
-                            unit=unit["description"])
+        self.chart.draw_tea("{0} - {1}".format(test["description"],
+                                              lot["description"]),
+                            self.engine.qc.get_te(lot["target"], mean, cv),
+                            method["teap005"],
+                            bias,
+                            cv,
+                            self.engine.qc.get_zscore(),
+                            len(series),
+                            unit["description"])
 
     def on_cancel(self, evt=None):
         self.destroy()

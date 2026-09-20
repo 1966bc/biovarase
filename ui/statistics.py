@@ -184,10 +184,10 @@ class UI(Window, tk.Toplevel):
     def set_shape(self, lot, series):
         """The histogram of the series, with the target and the mean on it."""
         self.histogram.draw_histogram(series,
-                                      target=lot["target"],
-                                      mean=self.engine.qc.get_mean(series),
-                                      x_label="Result",
-                                      y_label="N")
+                                      lot["target"],
+                                      self.engine.qc.get_mean(series),
+                                      "Result",
+                                      "N")
 
     def get_inside(self, lot, series, deviations):
         """How many results fall within so many standard deviations."""

@@ -102,12 +102,12 @@ class UI(Window, tk.Toplevel):
                 self.chart.draw_youden(low, high,
                                        lot["target"], other["target"],
                                        lot["sd"], other["sd"],
-                                       title="{0} - lots {1} and {2}".format(
+                                       "{0} - lots {1} and {2}".format(
                                            test["description"],
                                            lot["lot_number"],
                                            other["lot_number"]),
-                                       x_label=lot["description"],
-                                       y_label=other["description"])
+                                       lot["description"],
+                                       other["description"])
 
     def get_summary(self, low, high):
         """The line above the plot: how many days, and what r says about them.

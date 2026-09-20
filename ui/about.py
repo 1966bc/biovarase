@@ -16,7 +16,7 @@ class UI(tk.Toplevel):
     """A small window with the icon, the name, and a few facts."""
 
     #: Where the source lives. Opened with webbrowser, from the standard library.
-    SOURCE = "https://github.com/1966bc/Biovarase"
+    SOURCE = "https://github.com/1966bc/biovarase"
 
     def __init__(self, parent, info):
         super().__init__(name="about")

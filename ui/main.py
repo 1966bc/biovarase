@@ -159,6 +159,8 @@ class Main(Window, ttk.Frame):
         m_file.add_cascade(label="Database", underline=0, menu=m_database)
 
         m_file.add_separator()
+        m_file.add_command(label="Configuration file", underline=0,
+                           command=self.engine.open_settings_file)
         m_file.add_command(label="Log", underline=0, command=self.engine.open_log)
         m_file.add_separator()
         m_file.add_command(label="Settings", underline=0, command=self.on_settings)

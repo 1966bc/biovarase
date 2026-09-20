@@ -113,16 +113,18 @@ class Dialog(tk.Toplevel):
         return self.engine.db.get_selected(self.TABLE, key, self.row_id)
 
     def on_save(self, evt=None):
+        """Check the fields, ask, and write.
 
-        if self.engine.tools.on_fields_control(self.frm_fields, self.nametowidget(".").title()):
-            if messagebox.askyesno(self.nametowidget(".").title(),
+        Nothing is said when the answer is no: the person just said it, and
+        a box telling them what they have this moment decided is a click
+        asked for no reason.
+        """
+        if self.engine.tools.on_fields_control(self.frm_fields,
+                                               self.engine.app_title):
+            if messagebox.askyesno(self.engine.app_title,
                                    self.engine.ask_to_save,
                                    parent=self):
                 self.save()
-            else:
-                messagebox.showinfo(self.nametowidget(".").title(),
-                                    self.engine.abort,
-                                    parent=self)
 
     def save(self):
         """Write the row, close, and tell whoever shows this table which row.

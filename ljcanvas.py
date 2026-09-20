@@ -4,851 +4,499 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
+"""The Levey-Jennings chart: the one picture this program is for.
+
+A lot of control material on one analyte and one instrument, run day after
+day. The target comes printed on the box, the standard deviation with it,
+and the results are drawn against them: inside one deviation is where most
+of them belong, past two is worth a look, past three is a run that does not
+go out.
+
+Three things here are decisions rather than drawing, and each of them is a
+way of not lying to the person reading.
+
+**The scale is fixed at four standard deviations either side of the target,
+whatever the results do.** A chart that fits itself to its data redraws the
+same laboratory as a disaster or as perfection depending on the morning: the
+bands move, the points stay where they are, and the eye reads the bands. At
+a fixed scale two charts of two analytes can be put side by side and mean
+the same thing. A result past four deviations is drawn as a triangle at the
+edge, pointing the way it went - it is off the chart, and saying so is more
+honest than moving the chart.
+
+**The bottom is dated, not numbered.** A control chart is read to answer
+when something started, and a series numbered 1 to 30 cannot answer that.
+
+**An excluded result is still drawn**, in grey, with the line broken either
+side of it. It was measured, it happened, and it is out of the statistics
+and not out of the record. Double clicking it is also the only way back to
+it.
+"""
+
+import datetime
 import tkinter as tk
-import datetime as _dt
 
 
 class LeveyJenningsCanvas(tk.Canvas):
-    """
-    Simple Levey-Jennings chart using pure Tkinter Canvas.
+    """A control series against its target, with the bands it is judged by."""
 
-    Features:
-        - X axis: observation index or dates
-        - Y axis: numeric values
-        - Horizontal lines: target, +/-1SD, +/-2SD, +/-3SD
-        - Points colored by SD distance:
-            green  -> |value - target| < 2SD
-            yellow -> 2SD <= |value - target| < 3SD
-            red    -> |value - target| >= 3SD
-
-    This widget is *not* a generic plotting library.
-    It is intentionally focused on QC / Levey-Jennings style charts.
-    """
-
-    # Layout margins (pixels)
-    LEFT_MARGIN   = 70
-    RIGHT_MARGIN  = 20
-    TOP_MARGIN    = 40
+    LEFT_MARGIN = 70
+    RIGHT_MARGIN = 20
+    TOP_MARGIN = 40
     BOTTOM_MARGIN = 60
 
-    
-    # Basic colors
-    GRID_COLOR    = "#d0d0d0"
-    AXIS_COLOR    = "#000000"
+    GRID_COLOUR = "#d0d0d0"
+    AXIS_COLOUR = "#000000"
+    LINE_COLOUR = "#444444"
+    TEXT_COLOUR = "#333333"
+    BOTTOM_COLOUR = "#444444"
 
-    TARGET_COLOR  = "#00008b"   # deep blue
-    SD1_COLOR     = "#006400"   # dark green (+/-1 SD)
-    SD2_COLOR     = "#ff9800"   # saturated orange (+/-2 SD)
-    SD3_COLOR     = "#e74c3c"   # technical red (+/-3 SD)
+    TARGET_COLOUR = "#00008b"
+    SD1_COLOUR = "#006400"
+    SD2_COLOUR = "#ff9800"
+    SD3_COLOUR = "#e74c3c"
 
-    # Shaded bands between SD lines
-    BAND_1_FILL   = "#e6f4e6"   # very light green  (Target +/-1SD)
-    BAND_2_FILL   = "#fff6cc"   # very light yellow (Target +/-2SD)
+    #: The two bands behind the points: within one deviation, within two.
+    BAND_1_FILL = "#e6f4e6"
+    BAND_2_FILL = "#fff6cc"
 
+    #: A point, by how far from the target it sits, and grey when excluded.
+    INSIDE_COLOUR = "#00aa00"
+    WARNING_COLOUR = "#ffcc00"
+    VIOLATION_COLOUR = "#ff0000"
+    EXCLUDED_COLOUR = "#999999"
 
+    POINT_RADIUS = 4
 
-    POINT_RADIUS  = 4
+    FONT_LABEL = ("TkDefaultFont", 6)
+    FONT_TITLE = ("TkDefaultFont", 10, "bold")
 
-    FONT_LABEL    = ("TkDefaultFont", 6)
-    FONT_TITLE    = ("TkDefaultFont", 10, "bold")
+    #: Where the chart ends, in standard deviations, and the room left over
+    #: so the outermost line is not drawn on the frame.
+    EDGE = 4
+    SPARE = 0.05
+
+    #: Lines of the grid, each way.
+    GRID_STEPS = 6
+
+    #: Past this many points the values stop being written on them: thirty
+    #: numbers over a chart is a chart with numbers on it, sixty is a wall.
+    MOST_VALUES = 30
+
+    #: How many dates fit along the bottom before they run into each other.
+    MOST_DATES = 8
+
+    #: How a date is written on the axis. Short on purpose: the year is the
+    #: same for every point of a series, and would be read once and
+    #: thirty times.
+    DATE_FORMAT = "%d-%m"
+
+    #: How close a double click has to land to count as being on a point.
+    REACH = 3
 
     def __init__(self, parent, **kwargs):
-        """
-        Create a Levey-Jennings canvas.
-
-        Typical usage:
-            self.chart = LeveyJenningsCanvas(parent, bg="white", height=300)
-            self.chart.pack(fill=tk.BOTH, expand=True)
-        """
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
 
-        self._series = []
-        self._target = 0.0
-        self._sd = 0.0
-        self._title = None
-        # Stored as label strings (already formatted)
-        self._x_labels = None
-        # Status list: 1 = enabled, 0 = disabled (same length as series)
-        self._status = None
+        self.series = []
+        self.target = 0.0
+        self.sd = 0.0
+        self.title = ""
+        self.status = []
+        #: The dates as they are written under the points, already formatted.
+        self.labels = []
+        self.x_caption = "Observation"
+        self.y_caption = "Value"
+        self.bottom_text = ""
 
-        # Optional axis captions
-        self._x_axis_caption = "Observation"
-        self._y_axis_caption = "Value"
+        #: Every point drawn, for the double click to find again.
+        self.points = []
+        self.on_point_click = None
 
-        # Hit-test data for points
-        self._points_info = []
-        self._on_point_click = None  # callback esterna
+        self.bind("<Configure>", self.on_resize)
+        self.bind("<Double-Button-1>", self.on_double_click)
 
-        # Redraw on resize
-        self.bind("<Configure>", self._on_resize)
+    def draw_chart(self, series, target, sd, title="", dates=None, status=None,
+                   y_axis_caption="Value", bottom_text=""):
+        """Draw a series against its target.
 
-        # Double-click on point
-        self.bind("<Double-Button-1>", self._on_double_click)
-
-        self._show_values = True
-        self.FONT_VALUES = ("TkDefaultFont", 8)
-        self._bottom_text = ""
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def draw_chart(
-        self,
-        series,
-        target,
-        sd,
-        *,
-        title=None,
-        dates=None,
-        status=None,
-        x_axis_caption=None,
-        y_axis_caption=None,
-        date_format = "%d-%m",
-        show_values=True,
-        bottom_text=None,
-    ):
+        @param name: series, target, sd, title, dates, status,
+                     y_axis_caption, bottom_text
         """
-        Draw a Levey-Jennings chart.
+        self.series = [float(value) for value in series]
+        self.target = float(target)
+        self.sd = float(sd)
+        self.title = title or ""
+        self.y_caption = y_axis_caption or "Value"
+        self.bottom_text = bottom_text or ""
 
-        Args:
-            series: iterable of numeric QC results (chronological order).
-            target: target value of the control.
-            sd:     standard deviation used for SD bands.
-            title:  optional chart title (e.g. "QC - Control L1").
-            dates:  optional sequence (same length as series) used for X labels.
-                    Elements can be:
-                        - datetime.date / datetime.datetime
-                        - any object accepted by str()
-            status: optional sequence (same length as series) of status values.
-                    1 = enabled (normal display with connecting lines)
-                    0 = disabled (gray color, no connecting lines)
-            x_axis_caption: optional caption for X axis (default "Observation"
-                            or "Date" if dates are provided).
-            y_axis_caption: optional caption for Y axis (default "Value").
-            date_format:    strftime format if dates are datetime objects.
-        """
-        # Store numeric data
-        self._series = [float(v) for v in series]
-        self._target = float(target)
-        self._sd = float(sd)
-        self._title = title
-
-        # Store status (1=enabled, 0=disabled)
-        if status is not None:
-            self._status = [int(s) for s in status]
+        if status is None:
+            self.status = [1] * len(self.series)
         else:
-            # Default: all enabled
-            self._status = [1] * len(self._series)
+            self.status = [int(value) for value in status]
 
-        # Axis captions
-        if y_axis_caption is not None:
-            self._y_axis_caption = y_axis_caption
+        if dates is None:
+            self.labels = []
+            self.x_caption = "Observation"
         else:
-            self._y_axis_caption = "Value"
+            self.labels = [self.get_label(day) for day in dates]
+            self.x_caption = "Date"
 
-        # Prepare X labels
-        if dates is not None:
-            labels = []
-            for d in dates:
-                if isinstance(d, (_dt.date, _dt.datetime)):
-                    labels.append(d.strftime(date_format))
-                else:
-                    labels.append(str(d))
-            self._x_labels = labels
-            # If no explicit caption is given, use "Date"
-            self._x_axis_caption = x_axis_caption or "Date"
-        else:
-            # No dates -> we will show index (1..N)
-            self._x_labels = None
-            self._x_axis_caption = x_axis_caption or "Observation"
-
-        self._show_values = show_values
-        self._bottom_text = bottom_text or ""
-        self._redraw()
+        self.redraw()
 
     def clear(self):
-        """
-        Clear the canvas and reset internal data.
-        """
+        """Nothing drawn but the empty grid, and nothing remembered."""
         self.delete("all")
-
-        self._series = []
-        self._target = 0.0
-        self._sd = 0.0
-        self._title = None
-        self._x_labels = None
-        self._status = None
-        self._x_axis_caption = "Observation"
-        self._y_axis_caption = "Value"
-
-        # Draw placeholder grid
-        self._draw_no_data()
+        self.series = []
+        self.target = 0.0
+        self.sd = 0.0
+        self.title = ""
+        self.status = []
+        self.labels = []
+        self.points = []
+        self.x_caption = "Observation"
+        self.y_caption = "Value"
+        self.redraw()
 
     def set_point_click_callback(self, callback):
+        """Who to tell when a point is double clicked.
+
+        The callback is handed the point: its index in the series, its
+        value, where it was drawn and the date written under it. The index
+        is what the main window uses to find the result behind it.
+
+        @param name: callback
         """
-        Register a callback called when the user double-clicks on a point.
+        self.on_point_click = callback
 
-        callback signature:
-            callback(info: dict)
+    def on_resize(self, evt=None):
+        """The drawing follows the window: it is redrawn, not stretched."""
+        self.redraw()
 
-        Where info contains at least:
-            - index  (0-based index in series)
-            - value  (float)
-            - x, y   (canvas coordinates)
-            - label  (optional X label, e.g. date)
+    def on_double_click(self, evt):
+        """A double click near a point opens whatever the callback opens.
+
+        Near, and not on: a dot of four pixels is not something a hand
+        lands on exactly, so the whole circle plus a little counts.
         """
-        self._on_point_click = callback
+        if self.on_point_click is not None:
+            reach = self.POINT_RADIUS + self.REACH
+            for point in self.points:
+                across = evt.x - point["x"]
+                up = evt.y - point["y"]
+                if across * across + up * up <= reach * reach:
+                    self.on_point_click(point)
+                    break
 
+    def redraw(self):
+        """What there is room for: the chart, the empty grid, or nothing.
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _on_resize(self, event):
-        """Redraw chart (or placeholder) when the widget is resized."""
-        self._redraw()
-
-
-    def _redraw(self):
-        """Clear the canvas and draw the full chart."""
+        A standard deviation of zero is not a lot that is perfect, it is a
+        lot whose limits were never entered: there is nothing to draw the
+        bands against, and the grid says so without pretending.
+        """
         self.delete("all")
-
-        self._points_info = []
-
-        if not self._series or self._sd == 0:
-            self._draw_no_data()
-            return
-
+        self.points = []
         width = self.winfo_width()
         height = self.winfo_height()
 
         if width < 10 or height < 10:
-            return
+            pass
+        elif not self.series or self.sd == 0:
+            self.draw_grid(self.LEFT_MARGIN, self.TOP_MARGIN,
+                           width - self.RIGHT_MARGIN, height - self.BOTTOM_MARGIN)
+        else:
+            self.draw_all(width, height)
 
-        x0 = self.LEFT_MARGIN
-        y0 = self.TOP_MARGIN
-        x1 = width - self.RIGHT_MARGIN
-        y1 = height - self.BOTTOM_MARGIN
+    def draw_all(self, width, height):
+        """The bands, the grid over them, the axes, the series, the labels.
 
-        # Compute Y-axis limits
-        y_min, y_max = self._compute_y_limits()
-
-        # Draw SD bands and axes
-        # Draw grid first (background)
-        self._draw_grid(x0, y0, x1, y1)
-
-
-        # SD bands (shading + horizontal lines)
-        self._draw_y_bands(x0, y0, x1, y1, y_min, y_max)
-
-        # Grid on top of shading
-        self._draw_grid(x0, y0, x1, y1)
-
-        # Axes on top of grid
-        self._draw_axes(x0, y0, x1, y1)
-
-
-
-        # Draw series
-        self._draw_series(x0, y0, x1, y1, y_min, y_max)
-
-        # Labels and title
-        self._draw_y_labels(x0, y0, y1, y_min, y_max)
-        self._draw_x_labels(x0, y0, x1, y1)
-        self._draw_title(width)
-        self._draw_bottom_text(x0, x1, y1)
-
-
-    def _draw_bottom_text(self, x0, x1, y1):
+        In that order, because each one is drawn over the last: the bands
+        are filled rectangles and would bury a grid drawn first.
         """
-        Draw a small information string in the bottom-right area
-        (e.g. 'Computed 28 on 30 results').
+        left = self.LEFT_MARGIN
+        top = self.TOP_MARGIN
+        right = width - self.RIGHT_MARGIN
+        bottom = height - self.BOTTOM_MARGIN
+        low, high = self.get_limits()
+
+        self.draw_bands(left, top, right, bottom, low, high)
+        self.draw_grid(left, top, right, bottom)
+
+        self.create_line(left, top, left, bottom, fill=self.AXIS_COLOUR, width=1)
+        self.create_line(left, bottom, right, bottom, fill=self.AXIS_COLOUR, width=1)
+
+        self.set_points(left, top, right, bottom, low, high)
+        self.draw_line()
+        self.draw_points()
+        self.draw_values()
+
+        self.draw_y_labels(left, top, bottom, low, high)
+        self.draw_x_labels(left, right, bottom)
+
+        if self.title:
+            self.create_text(width / 2.0, self.TOP_MARGIN / 2.0, text=self.title,
+                             anchor=tk.CENTER, font=self.FONT_TITLE,
+                             fill=self.AXIS_COLOUR)
+
+        if self.bottom_text:
+            self.create_text(right, bottom + 42, text=self.bottom_text,
+                             anchor=tk.E, font=self.FONT_LABEL,
+                             fill=self.BOTTOM_COLOUR)
+
+    def draw_bands(self, left, top, right, bottom, low, high):
+        """The two shaded bands, and the seven lines across the chart.
+
+        Each line has its own weight and its own dash, so which one a point
+        has crossed can be read without counting from the middle.
         """
-        if not self._bottom_text:
-            return
+        for deviations, fill in ((2, self.BAND_2_FILL), (1, self.BAND_1_FILL)):
+            top_of_band = self.get_y(self.target + deviations * self.sd,
+                                     top, bottom, low, high)
+            bottom_of_band = self.get_y(self.target - deviations * self.sd,
+                                        top, bottom, low, high)
+            self.create_rectangle(left, top_of_band, right, bottom_of_band,
+                                  fill=fill, outline="")
 
-        self.create_text(
-            x1,
-            y1 + 42,  # under X axis caption
-            text=self._bottom_text,
-            anchor="e",
-            font=self.FONT_LABEL,
-            fill="#444444",
-        )
+        for value, colour, width, dash in self.get_levels():
+            y = self.get_y(value, top, bottom, low, high)
+            self.create_line(left, y, right, y, fill=colour, width=width, dash=dash)
 
-    def _draw_no_data(self):
+    def get_levels(self):
+        """The lines the chart is read against: the target and six bands.
+
+        @return: value, colour, width and dash of each
+        @rtype: list of tuples
         """
-        Show a faint grid placeholder when no data or invalid SD.
+        found = [(self.target, self.TARGET_COLOUR, 2, None)]
+
+        for deviations, colour, width, dash in ((1, self.SD1_COLOUR, 2, (2, 4)),
+                                                (2, self.SD2_COLOUR, 2, (4, 4)),
+                                                (3, self.SD3_COLOUR, 3, (6, 4))):
+            for side in (-1, 1):
+                found.append((self.target + side * deviations * self.sd,
+                              colour, width, dash))
+
+        return found
+
+    def draw_grid(self, left, top, right, bottom):
+        """A faint dotted grid, to carry the eye across a wide chart."""
+        for step in range(1, self.GRID_STEPS):
+            x = left + step * (right - left) / self.GRID_STEPS
+            y = top + step * (bottom - top) / self.GRID_STEPS
+            self.create_line(x, top, x, bottom, fill=self.GRID_COLOUR, dash=(2, 4))
+            self.create_line(left, y, right, y, fill=self.GRID_COLOUR, dash=(2, 4))
+
+    def set_points(self, left, top, right, bottom, low, high):
+        """Work out where every result goes, once, before anything is drawn.
+
+        The line, the dots and the values are three passes over the same
+        points and have to agree about where they are. A result past the
+        edge of the chart is kept at its own value and drawn at the edge:
+        what is clipped is the picture, never the number.
         """
-        w = self.winfo_width()
-        h = self.winfo_height()
-        if w < 10 or h < 10:
-            return
+        self.points = []
+        highest = self.target + self.EDGE * self.sd
+        lowest = self.target - self.EDGE * self.sd
 
-        x0 = self.LEFT_MARGIN
-        y0 = self.TOP_MARGIN
-        x1 = w - self.RIGHT_MARGIN
-        y1 = h - self.BOTTOM_MARGIN
+        for index, value in enumerate(self.series):
+            beyond = 0
+            drawn = value
+            if value > highest:
+                beyond = 1
+                drawn = highest
+            elif value < lowest:
+                beyond = -1
+                drawn = lowest
 
-        self._draw_grid(x0, y0, x1, y1)
-
-
-
-
-    # --------------------------- Y / scaling ---------------------------
-
-    def _compute_y_limits(self):
-        """
-        Compute Y-axis limits using target +/- 4SD (Westgard recommendation).
-
-        Values beyond +/-4SD will be clipped to the edge of the chart
-        and displayed with a triangle marker to indicate "out of range".
-        """
-        target = self._target
-        sd = self._sd
-
-        # Fixed scale at +/-4SD per Westgard best practices
-        y_min = target - 4 * sd
-        y_max = target + 4 * sd
-
-        # Small margin for visual clarity
-        span = y_max - y_min if y_max != y_min else 1.0
-        margin = span * 0.05
-        return y_min - margin, y_max + margin
-
-    @staticmethod
-    def _value_to_y(
-        value, y0, y1, y_min, y_max
-    ):
-        """
-        Map a data value to canvas Y coordinate (inverted axis).
-        """
-        if y_max == y_min:
-            return (y0 + y1) / 2.0
-
-        t = (value - y_min) / (y_max - y_min)
-        return y1 - t * (y1 - y0)
-
-    @staticmethod
-    def _index_to_x(idx, n, x0, x1):
-        """
-        Map series index (0..n-1) to canvas X coordinate.
-        """
-        if n <= 1:
-            return (x0 + x1) / 2.0
-        step = (x1 - x0) / max(1, (n - 1))
-        return x0 + idx * step
-
-    # ----------------------------- Bands -------------------------------
-
-    def _draw_y_bands(
-        self,
-        x0,
-        y0,
-        x1,
-        y1,
-        y_min,
-        y_max,
-    ):
-        """
-        Draw shaded bands for +/-1SD and +/-2SD and the horizontal SD/target lines.
-        """
-        target = self._target
-        sd = self._sd
-
-        if sd <= 0:
-            return
-
-        # First compute all Y positions
-        levels = {
-            "target": target,
-            "+1sd": target + sd,
-            "-1sd": target - sd,
-            "+2sd": target + 2 * sd,
-            "-2sd": target - 2 * sd,
-            "+3sd": target + 3 * sd,
-            "-3sd": target - 3 * sd,
-        }
-
-        y_pos = {
-            name: self._value_to_y(value, y0, y1, y_min, y_max)
-            for name, value in levels.items()
-        }
-
-        # ------------------------------------------------------------------
-        # Shaded bands (drawn first)
-        # ------------------------------------------------------------------
-        # Target +/-2SD (background band)
-        y_top_2 = y_pos["+2sd"]
-        y_bot_2 = y_pos["-2sd"]
-        if y_top_2 > y_bot_2:
-            y_top_2, y_bot_2 = y_bot_2, y_top_2
-
-        self.create_rectangle(
-            x0,
-            y_top_2,
-            x1,
-            y_bot_2,
-            fill=self.BAND_2_FILL,
-            outline="",
-        )
-
-        # Target +/-1SD (inner band, overrides colour inside)
-        y_top_1 = y_pos["+1sd"]
-        y_bot_1 = y_pos["-1sd"]
-        if y_top_1 > y_bot_1:
-            y_top_1, y_bot_1 = y_bot_1, y_top_1
-
-        self.create_rectangle(
-            x0,
-            y_top_1,
-            x1,
-            y_bot_1,
-            fill=self.BAND_1_FILL,
-            outline="",
-        )
-
-        # ------------------------------------------------------------------
-        # Horizontal lines (target, +/-1/2/3 SD)
-        # ------------------------------------------------------------------
-        level_styles = {
-            "target": ("Target", self.TARGET_COLOR),
-            "+1sd": ("+1 SD", self.SD1_COLOR),
-            "-1sd": ("-1 SD", self.SD1_COLOR),
-            "+2sd": ("+2 SD", self.SD2_COLOR),
-            "-2sd": ("-2 SD", self.SD2_COLOR),
-            "+3sd": ("+3 SD", self.SD3_COLOR),
-            "-3sd": ("-3 SD", self.SD3_COLOR),
-        }
-
-        for name, (label, color) in level_styles.items():
-            y = y_pos[name]
-            width = 1
-            dash = None
-
-            if name == "target":
-                width = 2
-            elif "1sd" in name:
-                width = 2
-                dash = (2, 4)
-            elif "2sd" in name:
-                width = 2
-                dash = (4, 4)
-            elif "3sd" in name:
-                width = 3
-                dash = (6, 4)
-
-            self.create_line(
-                x0,
-                y,
-                x1,
-                y,
-                fill=color,
-                width=width,
-                dash=dash,
-            )
-
-
-    # ------------------------------ Axes -------------------------------
-
-    def _draw_axes(self, x0, y0, x1, y1):
-        """Draw X and Y axes."""
-        # Y axis
-        self.create_line(
-            x0,
-            y0,
-            x0,
-            y1,
-            fill=self.AXIS_COLOR,
-            width=1,
-        )
-
-        # X axis
-        self.create_line(
-            x0,
-            y1,
-            x1,
-            y1,
-            fill=self.AXIS_COLOR,
-            width=1,
-        )
-
-           # ----------------------------- Grid -------------------------------
-
-        # ----------------------------- Grid -------------------------------
-
-    def _draw_grid(self, x0, y0, x1, y1):
-        """
-        Draw a faint dotted grid behind the Levey-Jennings chart.
-        """
-        grid_color = self.GRID_COLOR
-        rows = 6
-        cols = 6
-
-        dx = (x1 - x0) / cols
-        dy = (y1 - y0) / rows
-
-        # Vertical dotted lines
-        for i in range(1, cols):
-            x = x0 + i * dx
-            self.create_line(
-                x,
-                y0,
-                x,
-                y1,
-                fill=grid_color,
-                dash=(2, 4),
-            )
-
-        # Horizontal dotted lines
-        for i in range(1, rows):
-            y = y0 + i * dy
-            self.create_line(
-                x0,
-                y,
-                x1,
-                y,
-                fill=grid_color,
-                dash=(2, 4),
-            )
-
-
- 
-
-    # ---------------------------- Series -------------------------------
-
-    def _draw_series(
-        self,
-        x0,
-        y0,
-        x1,
-        y1,
-        y_min,
-        y_max,
-    ):
-        """Draw series as line + colored points (respecting enabled/disabled status).
-
-        Points beyond +/-4SD are clipped to the chart edge and displayed
-        as triangles pointing in the direction of the actual value.
-        """
-        n = len(self._series)
-        if n == 0:
-            return
-
-        target = self._target
-        sd = self._sd
-
-        # Clip threshold at +/-4SD
-        clip_high = target + 4 * sd
-        clip_low = target - 4 * sd
-
-        # Build points with status and clipping info
-        # (x, y, value, status, is_clipped, clip_direction)
-        # clip_direction: 1 = above, -1 = below, 0 = not clipped
-        points = []
-        for idx, value in enumerate(self._series):
-            v = float(value)
-            x = self._index_to_x(idx, n, x0, x1)
-
-            # Check if value needs clipping
-            is_clipped = False
-            clip_direction = 0
-            display_value = v
-
-            if v > clip_high:
-                is_clipped = True
-                clip_direction = 1  # pointing up (value is above)
-                display_value = clip_high
-            elif v < clip_low:
-                is_clipped = True
-                clip_direction = -1  # pointing down (value is below)
-                display_value = clip_low
-
-            y = self._value_to_y(display_value, y0, y1, y_min, y_max)
-
-            # Get status (default to enabled if not provided)
-            status = 1
-            if self._status is not None and idx < len(self._status):
-                status = self._status[idx]
-
-            points.append((x, y, v, status, is_clipped, clip_direction))
-
-            # Save info for hit-test
             label = None
-            if self._x_labels is not None and idx < len(self._x_labels):
-                label = self._x_labels[idx]
+            if index < len(self.labels):
+                label = self.labels[index]
 
-            self._points_info.append(
-                {
-                    "index": idx,
-                    "value": v,
-                    "x": x,
-                    "y": y,
-                    "label": label,
-                }
-            )
+            status = 1
+            if index < len(self.status):
+                status = self.status[index]
 
-        # Connecting lines ONLY between consecutive enabled points
-        if n > 1:
-            line_coords = []
-            for idx, (x, y, _, status, _, _) in enumerate(points):
-                if status == 1:  # Enabled point
-                    line_coords.extend((x, y))
-                else:
-                    # Disabled point - finish current line segment if any
-                    if len(line_coords) >= 4:  # At least 2 points
-                        self.create_line(
-                            *line_coords,
-                            fill="#444444",
-                            width=1,
-                        )
-                    line_coords = []  # Start new segment
+            self.points.append({"index": index,
+                                "value": value,
+                                "x": self.get_x(index, left, right),
+                                "y": self.get_y(drawn, top, bottom, low, high),
+                                "label": label,
+                                "status": status,
+                                "beyond": beyond})
 
-            # Draw final segment if any
-            if len(line_coords) >= 4:
-                self.create_line(
-                    *line_coords,
-                    fill="#444444",
-                    width=1,
-                )
+    def draw_line(self):
+        """The line through the points, broken around the excluded ones.
 
-        # Points with color based on status
-        for x, y, value, status, is_clipped, clip_direction in points:
-            if status == 1:
-                # Enabled: normal color (green/yellow/red based on SD)
-                color = self._get_point_color(value)
+        A line drawn straight through a result that was taken out would say
+        the series went that way, and it did not: that run is not part of
+        it any more.
+        """
+        run = []
+
+        for point in self.points:
+            if point["status"] == 1:
+                run.extend((point["x"], point["y"]))
             else:
-                # Disabled: gray color to indicate it's not active
-                color = "#999999"
+                self.draw_run(run)
+                run = []
 
-            r = self.POINT_RADIUS
+        self.draw_run(run)
 
-            if is_clipped:
-                # Draw triangle for clipped points
-                if clip_direction == 1:
-                    # Triangle pointing UP (value is above chart)
-                    self.create_polygon(
-                        x, y - r - 2,      # top vertex
-                        x - r - 1, y + r,  # bottom left
-                        x + r + 1, y + r,  # bottom right
-                        fill=color,
-                        outline="#000000",
-                        width=1,
-                    )
-                else:
-                    # Triangle pointing DOWN (value is below chart)
-                    self.create_polygon(
-                        x, y + r + 2,      # bottom vertex
-                        x - r - 1, y - r,  # top left
-                        x + r + 1, y - r,  # top right
-                        fill=color,
-                        outline="#000000",
-                        width=1,
-                    )
+    def draw_run(self, run):
+        """One unbroken stretch of the series, if it is long enough to be one."""
+        if len(run) >= 4:
+            self.create_line(*run, fill=self.LINE_COLOUR, width=1)
+
+    def draw_points(self):
+        """A dot per result, or a triangle where the chart ran out."""
+        radius = self.POINT_RADIUS
+
+        for point in self.points:
+            colour = self.get_colour(point)
+            x, y = point["x"], point["y"]
+
+            if point["beyond"] > 0:
+                self.create_polygon(x, y - radius - 2,
+                                    x - radius - 1, y + radius,
+                                    x + radius + 1, y + radius,
+                                    fill=colour, outline=self.AXIS_COLOUR, width=1)
+            elif point["beyond"] < 0:
+                self.create_polygon(x, y + radius + 2,
+                                    x - radius - 1, y - radius,
+                                    x + radius + 1, y - radius,
+                                    fill=colour, outline=self.AXIS_COLOUR, width=1)
             else:
-                # Normal circle for non-clipped points
-                self.create_oval(
-                    x - r,
-                    y - r,
-                    x + r,
-                    y + r,
-                    fill=color,
-                    outline="#000000",
-                    width=1,
-                )
+                self.create_oval(x - radius, y - radius, x + radius, y + radius,
+                                 fill=colour, outline=self.AXIS_COLOUR, width=1)
 
-        # Etichette opzionali dei valori (se abilitate altrove)
-        if getattr(self, "_show_values", False) and len(points) <= 30:
-            for x, y, value, status, is_clipped, clip_direction in points:
-                # Only show values for enabled points
-                if status == 1:
-                    # Position label above or below based on clipping
-                    if is_clipped and clip_direction == 1:
-                        # Clipped above: put label below the triangle
-                        label_y = y + 12
-                        anchor = "n"
-                    elif is_clipped and clip_direction == -1:
-                        # Clipped below: put label above the triangle
-                        label_y = y - 12
-                        anchor = "s"
+    def draw_values(self):
+        """The number over each point, while there are few enough to read.
+
+        Not over the excluded ones: they are out of the statistics, and a
+        number written on the chart is read as one of them.
+        """
+        if len(self.points) <= self.MOST_VALUES:
+            for point in self.points:
+                if point["status"] == 1:
+                    if point["beyond"] > 0:
+                        y, anchor = point["y"] + 12, tk.N
+                    elif point["beyond"] < 0:
+                        y, anchor = point["y"] - 12, tk.S
                     else:
-                        # Normal: label above the point
-                        label_y = y - 8
-                        anchor = "s"
+                        y, anchor = point["y"] - 8, tk.S
 
-                    self.create_text(
-                        x,
-                        label_y,
-                        text=f"{value:.2f}",
-                        anchor=anchor,
-                        font=self.FONT_LABEL,
-                        fill="#333333",
-                    )
+                    self.create_text(point["x"], y,
+                                     text="{0:.2f}".format(point["value"]),
+                                     anchor=anchor, font=self.FONT_LABEL,
+                                     fill=self.TEXT_COLOUR)
 
-
-
-    def _get_point_color(self, value):
-        """
-        Return color based on SD distance:
-
-            |z| < 2  -> green
-            2 <= |z| < 3 -> yellow
-            |z| >= 3 -> red
-        """
-        if self._sd == 0:
-            return "#00aa00"
-
-        z = (value - self._target) / self._sd
-        az = abs(z)
-        if az < 2.0:
-            return "#00aa00"   # green
-        elif az < 3.0:
-            return "#ffcc00"   # yellow
-        else:
-            return "#ff0000"   # red
-
-    # --------------------------- Labels / title ------------------------
-
-    def _draw_y_labels(
-        self, x0, y0, y1, y_min, y_max
-    ):
-        """
-        Draw Y axis tick labels (5 ticks: min..max).
-        """
+    def draw_y_labels(self, left, top, bottom, low, high):
+        """Five values up the side, and what they are measured in."""
         ticks = 5
-        span = y_max - y_min if y_max != y_min else 1.0
-        step = span / max(1, (ticks - 1))
+        step = (high - low) / (ticks - 1)
 
-        for i in range(ticks):
-            value = y_min + i * step
-            y = self._value_to_y(value, y0, y1, y_min, y_max)
+        for tick in range(ticks):
+            value = low + tick * step
+            y = self.get_y(value, top, bottom, low, high)
+            self.create_line(left - 4, y, left, y, fill=self.AXIS_COLOUR, width=1)
+            self.create_text(left - 6, y, text="{0:.2f}".format(value),
+                             anchor=tk.E, font=self.FONT_LABEL,
+                             fill=self.AXIS_COLOUR)
 
-            # Tick mark
-            self.create_line(
-                x0 - 4,
-                y,
-                x0,
-                y,
-                fill=self.AXIS_COLOR,
-                width=1,
-            )
+        if self.y_caption:
+            # One letter per line: Tk can rotate text, and rotated text on a
+            # canvas redrawn at every resize is measured differently by
+            # every font. Stacked letters are the same everywhere.
+            self.create_text(left - 40, (top + bottom) / 2.0,
+                             text="\n".join(list(self.y_caption)),
+                             anchor=tk.CENTER, font=self.FONT_LABEL,
+                             fill=self.AXIS_COLOUR)
 
-            # Label
-            text = f"{value:.2f}"
-            self.create_text(
-                x0 - 6,
-                y,
-                text=text,
-                anchor="e",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
+    def draw_x_labels(self, left, right, bottom):
+        """The days along the bottom, as many as fit without touching."""
+        how_many = len(self.series)
+        every = max(1, int(round(how_many / self.MOST_DATES)))
 
-        # Y axis caption (rotated)
-        caption = self._y_axis_caption
-        if caption:
-            # Tkinter Canvas has no native text rotation.
-            # A simple approach is to place it vertically using newlines.
-            vertical = "\n".join(list(caption))
-            self.create_text(
-                x0 - 40,
-                (y0 + y1) / 2.0,
-                text=vertical,
-                anchor="center",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
+        for index in range(0, how_many, every):
+            if index < len(self.labels):
+                label = self.labels[index]
+            else:
+                label = str(index + 1)
 
-    def _draw_x_labels(self, x0, y0, x1, y1):
+            self.create_text(self.get_x(index, left, right), bottom + 10,
+                             text=label, anchor=tk.N, font=self.FONT_LABEL,
+                             fill=self.AXIS_COLOUR)
+
+        if self.x_caption:
+            self.create_text((left + right) / 2.0, bottom + 28,
+                             text=self.x_caption, anchor=tk.N,
+                             font=self.FONT_LABEL, fill=self.AXIS_COLOUR)
+
+    def get_label(self, day):
+        """A date as it is written under a point, or whatever it was.
+
+        @param name: day
+        @return: the label
+        @rtype: string
         """
-        Draw X axis tick labels.
-
-        If self._x_labels is defined and has the same length of the series,
-        use those (dates or custom labels). Otherwise use 1..N.
-
-        To avoid cluttered labels, only a limited number of them is shown.
-        """
-        n = len(self._series)
-        if n == 0:
-            return
-
-        # Decide labels
-        if self._x_labels is not None and len(self._x_labels) == n:
-            labels = list(self._x_labels)
+        if isinstance(day, (datetime.date, datetime.datetime)):
+            found = day.strftime(self.DATE_FORMAT)
         else:
-            labels = [str(i + 1) for i in range(n)]
+            found = str(day)
 
-        # Keep labels compact (defensive: truncate very long strings)
-        truncated = []
-        for text in labels:
-            s = str(text)
-            if len(s) > 8:
-                s = s[:8]
-            truncated.append(s)
-        labels = truncated
+        return found
 
-        # Limit the number of visible labels
-        max_labels = 8                       # <= circa 8 etichette al massimo
-        step = max(1, int(round(n / max_labels)))
+    def get_colour(self, point):
+        """A point: green inside two deviations, orange past two, red past three.
 
-        for idx in range(0, n, step):
-            x = self._index_to_x(idx, n, x0, x1)
-            label = labels[idx]
-            self.create_text(
-                x,
-                y1 + 10,
-                text=label,
-                anchor="n",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
+        Grey when the result was excluded, whatever it is worth: a point
+        that is out of the statistics must not be coloured as though it
+        were in them.
 
-        # X axis caption
-        caption = self._x_axis_caption
-        if caption:
-            self.create_text(
-                (x0 + x1) / 2.0,
-                y1 + 28,
-                text=caption,
-                anchor="n",
-                font=self.FONT_LABEL,
-                fill=self.AXIS_COLOR,
-            )
-
-    def _draw_title(self, width):
-        """Draw chart title, if any."""
-        if not self._title:
-            return
-        self.create_text(
-            width / 2.0,
-            self.TOP_MARGIN / 2.0,
-            text=self._title,
-            anchor="center",
-            font=self.FONT_TITLE,
-            fill=self.AXIS_COLOR,
-        )
-
-    def _on_double_click(self, event):
+        @param name: point
+        @return: colour
+        @rtype: string
         """
-        Handle double-clicks on the canvas.
+        if point["status"] != 1:
+            found = self.EXCLUDED_COLOUR
+        else:
+            away = abs(point["value"] - self.target) / self.sd
+            if away < 2.0:
+                found = self.INSIDE_COLOUR
+            elif away < 3.0:
+                found = self.WARNING_COLOUR
+            else:
+                found = self.VIOLATION_COLOUR
 
-        If the click is close to a point, call the registered callback
-        with the point info.
+        return found
+
+    def get_limits(self):
+        """The ends of the axis: four standard deviations either side, and room.
+
+        @return: lowest, highest
+        @rtype: tuple
         """
-        if not self._on_point_click or not self._points_info:
-            return
+        lowest = self.target - self.EDGE * self.sd
+        highest = self.target + self.EDGE * self.sd
+        spare = (highest - lowest) * self.SPARE
 
-        x_click = event.x
-        y_click = event.y
-        hit_radius = self.POINT_RADIUS + 3
+        return (lowest - spare, highest + spare)
 
-        for info in self._points_info:
-            dx = x_click - info["x"]
-            dy = y_click - info["y"]
-            if dx * dx + dy * dy <= hit_radius * hit_radius:
-                # The point was found: call back
-                self._on_point_click(info)
-                break
+    def get_x(self, index, left, right):
+        """Where the result at this position falls across the chart."""
+        if len(self.series) <= 1:
+            found = (left + right) / 2.0
+        else:
+            found = left + index * (right - left) / (len(self.series) - 1)
 
+        return found
+
+    def get_y(self, value, top, bottom, low, high):
+        """Where a value falls up the chart."""
+        if high == low:
+            found = (top + bottom) / 2.0
+        else:
+            found = bottom - (value - low) / (high - low) * (bottom - top)
+
+        return found
