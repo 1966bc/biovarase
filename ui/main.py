@@ -129,6 +129,8 @@ class Main(Window, ttk.Frame):
 
         self.init_menu()
         self.init_ui()
+        self.init_shortcuts()
+        self.set_menu_state()
         # A window that is told about changes after it is gone raises from
         # inside the callback of whoever saved. <Destroy> arrives however
         # this window ends - a change of user, the application closing - so
@@ -173,27 +175,60 @@ class Main(Window, ttk.Frame):
         m_file.add_command(label="Exit", underline=1, command=self.parent.on_exit)
         bar.add_cascade(label="File", underline=0, menu=m_file)
 
-        m_qc = tk.Menu(bar, tearoff=0)
-        m_qc.add_command(label="Levey-Jennings", underline=0, command=self.on_plots)
-        m_qc.add_command(label="Statistics", underline=0, command=self.on_statistics)
-        m_qc.add_command(label="Total error", underline=0, command=self.on_tea)
-        m_qc.add_command(label="Bland-Altman", underline=0, command=self.on_bland_altman)
-        m_qc.add_command(label="Youden", underline=0, command=self.on_youden)
-        m_qc.add_separator()
-        m_qc.add_command(label="Performance", underline=0,
-                         command=self.on_performance)
-        m_qc.add_command(label="External quality", underline=0,
-                         command=self.on_eqa)
-        m_qc.add_command(label="Notes", underline=1, command=self.on_notes)
-        m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
-        m_qc.add_separator()
-        m_qc.add_command(label="Enter a day", underline=0, command=self.on_day)
-        m_qc.add_separator()
-        m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
-        m_qc.add_command(label="Edit result", underline=0, command=self.on_edit_result)
-        m_qc.add_command(label="Note", underline=0, command=self.on_note)
-        m_qc.add_command(label="History", underline=0, command=self.on_history)
-        bar.add_cascade(label="QC", underline=0, menu=m_qc)
+        # The lots, on the bar itself and not inside a menu: it is what this
+        # program is opened to do, and a window reached in one click is a
+        # window reached in one click every morning.
+        bar.add_command(label="Batches", underline=0, command=self.on_batches)
+
+        # What is done to the results of the lot on the screen: the pass of
+        # the morning first, then the one result already in the list.
+        m_results = tk.Menu(bar, tearoff=0)
+        m_results.add_command(label="Enter a day", underline=8,
+                              accelerator="Ctrl+D", command=self.on_day)
+        m_results.add_separator()
+        m_results.add_command(label="Add result", underline=0,
+                              accelerator="Ctrl+N", command=self.on_add_result)
+        m_results.add_command(label="Edit result", underline=0,
+                              command=self.on_edit_result)
+        m_results.add_command(label="Note", underline=0, command=self.on_note)
+        m_results.add_command(label="History", underline=0, command=self.on_history)
+        bar.add_cascade(label="Results", underline=0, menu=m_results)
+
+        # The five windows that draw the series chosen, in the order they are
+        # read in: the chart first, what it does not show after it.
+        m_charts = tk.Menu(bar, tearoff=0)
+        m_charts.add_command(label="Levey-Jennings", underline=0,
+                             accelerator="Ctrl+L", command=self.on_plots)
+        m_charts.add_command(label="Statistics", underline=0, command=self.on_statistics)
+        m_charts.add_command(label="Total error", underline=0, command=self.on_tea)
+        m_charts.add_command(label="Bland-Altman", underline=0,
+                             command=self.on_bland_altman)
+        m_charts.add_command(label="Youden", underline=0, command=self.on_youden)
+        bar.add_cascade(label="Charts", underline=0, menu=m_charts)
+
+        # The laboratory rather than the series: these three look at every lot
+        # at once, and none of them asks anything of what is chosen here.
+        m_review = tk.Menu(bar, tearoff=0)
+        m_review.add_command(label="Performance", underline=0,
+                             command=self.on_performance)
+        m_review.add_command(label="External quality", underline=0,
+                             command=self.on_eqa)
+        m_review.add_command(label="Notes", underline=1, command=self.on_notes)
+        bar.add_cascade(label="Review", underline=2, menu=m_review)
+
+        # What each entry needs chosen before it can do anything. A window
+        # opened without it can only answer with a box saying no; the menu
+        # says it first, in grey, and the box stays for the ways in that are
+        # not the menu - a double click, a shortcut, the chart.
+        self.menu_entries = ((m_charts, "Levey-Jennings", "test"),
+                             (m_charts, "Statistics", "batch"),
+                             (m_charts, "Total error", "batch"),
+                             (m_charts, "Bland-Altman", "batch"),
+                             (m_charts, "Youden", "batch"),
+                             (m_results, "Add result", "batch"),
+                             (m_results, "Edit result", "result"),
+                             (m_results, "Note", "result"),
+                             (m_results, "History", "result"))
 
         # The master data: an administrator keeps it, everybody reads it.
         if self.engine.is_admin():
@@ -248,6 +283,50 @@ class Main(Window, ttk.Frame):
         bar.add_cascade(label="?", menu=m_help)
 
         self.parent.config(menu=bar)
+
+    #: The four things done oftenest, on the keys the rest of the desktop
+    #: uses for them. Written beside the entry in the menu and bound here:
+    #: `accelerator` only draws the words, it binds nothing.
+    SHORTCUTS = (("<Control-b>", "on_batches"),
+                 ("<Control-d>", "on_day"),
+                 ("<Control-n>", "on_add_result"),
+                 ("<Control-l>", "on_plots"))
+
+    def init_shortcuts(self):
+        """Bind the shortcuts on the window, where every key passes."""
+        for sequence, name in self.SHORTCUTS:
+            self.parent.bind(sequence, getattr(self, name))
+
+    def get_selected_result(self):
+        """The result chosen in the list, or None.
+
+        The row the keyboard is on and the highlighted one are the same as
+        soon as somebody clicks. They part when the list is driven from the
+        program, which sets one without the other, and then the menu and the
+        command it opens would disagree about whether anything is chosen.
+        """
+        item = self.lst_results.focus()
+
+        if item not in self.dict_results:
+            selected = self.lst_results.selection()
+            item = selected[0] if selected else ""
+
+        return self.dict_results.get(item)
+
+    def set_menu_state(self, evt=None):
+        """Grey what cannot be done with what is chosen now.
+
+        Nine entries want an analyte, a lot or a result before they have
+        anything to open. They are read from self.menu_entries, which says
+        what each one waits for, and are put back as soon as it is there.
+        """
+        chosen = {"test": self.test_method is not None,
+                  "batch": self.batch is not None,
+                  "result": self.get_selected_result() is not None}
+
+        for menu, label, needs in self.menu_entries:
+            menu.entryconfigure(label,
+                                state=tk.NORMAL if chosen[needs] else tk.DISABLED)
 
     def on_export_day(self, evt=None):
         """The controls of a day, as a sheet: what was run and how it came out."""
@@ -573,6 +652,8 @@ class Main(Window, ttk.Frame):
         # the points drawn, and above all an excluded one, which has to be
         # opened again to be put back.
         self.lst_results.bind("<Button-3>", self.on_result_menu)
+        # What is done to one result is greyed until there is one chosen.
+        self.lst_results.bind("<<TreeviewSelect>>", self.set_menu_state)
 
         self.menu_results = tk.Menu(self, tearoff=0)
         self.menu_results.add_command(label="Edit result", command=self.on_edit_result)
@@ -1059,6 +1140,7 @@ class Main(Window, ttk.Frame):
             self.workstation = None
             self.on_reset()
             self.set_workstations()
+            self.set_menu_state()
 
     def on_selected_workstation(self, evt=None):
         """An instrument chosen: the lots open on it."""
@@ -1074,6 +1156,7 @@ class Main(Window, ttk.Frame):
 
         if self.batch is not None:
             self.set_results()
+        self.set_menu_state()
 
     def on_reset(self):
         """Empty everything that hangs off the choice just abandoned.
@@ -1092,6 +1175,7 @@ class Main(Window, ttk.Frame):
         self.profile.clear()
         for value in self.values.values():
             value.set("")
+        self.set_menu_state()
 
     def on_results_changed(self, row_id=None):
         """A result or a note was saved: read the lot again."""
@@ -1110,6 +1194,12 @@ class Main(Window, ttk.Frame):
         only its own counts.
         """
         if str(evt.widget) == str(self):
+            # The shortcuts are bound on the root window, which outlives this
+            # one: left there, they would open windows for a main window that
+            # is no longer on the screen.
+            for sequence, name in self.SHORTCUTS:
+                self.parent.unbind(sequence)
+
             for event, callback in (("results", self.on_results_changed),
                                     ("notes", self.on_results_changed),
                                     ("batches", self.on_batches_changed),
@@ -1184,7 +1274,7 @@ class Main(Window, ttk.Frame):
 
     def on_edit_result(self, evt=None):
         """Correct the result chosen; what it was stays in the audit trail."""
-        result_id = self.dict_results.get(self.lst_results.focus())
+        result_id = self.get_selected_result()
 
         if result_id is None:
             messagebox.showwarning(self.engine.app_title,
@@ -1196,7 +1286,7 @@ class Main(Window, ttk.Frame):
 
     def on_history(self, evt=None):
         """Everything the audit trail has written about this result."""
-        result_id = self.dict_results.get(self.lst_results.focus())
+        result_id = self.get_selected_result()
 
         if result_id is None:
             messagebox.showwarning(self.engine.app_title,
@@ -1208,7 +1298,7 @@ class Main(Window, ttk.Frame):
 
     def on_note(self, evt=None):
         """Write down what was seen on a result and what was done about it."""
-        result_id = self.dict_results.get(self.lst_results.focus())
+        result_id = self.get_selected_result()
 
         if result_id is None:
             messagebox.showwarning(self.engine.app_title,

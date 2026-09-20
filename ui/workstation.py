@@ -30,8 +30,13 @@ class UI(Dialog):
         self.add_field("Model:", combo)
         self.add_field("Serial:",
                        self.engine.tools.get_entry(self.frm_fields, self.serial))
+        # Anchored west: the grid stretches every field to the width of the
+        # widest one, and the order an instrument is listed in is one figure
+        # next to the name of a mass spectrometer.
         self.add_field("Rank:",
-                       self.engine.tools.get_entry(self.frm_fields, self.rank, "integer"))
+                       self.engine.tools.get_entry(self.frm_fields, self.rank,
+                                                   "integer"),
+                       tk.W)
 
     def set_values(self, row):
 

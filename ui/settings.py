@@ -66,7 +66,6 @@ class UI(Window, tk.Toplevel):
                       text="{0}:".format(caption)).grid(row=row, column=0,
                                                         sticky=tk.W, pady=2)
             entry = self.engine.tools.get_entry(frm_fields, self.values[key], "float")
-            entry.configure(width=8)
             entry.grid(row=row, column=1, sticky=tk.W, padx=8, pady=2)
             ttk.Label(frm_fields, style="App.TLabel",
                       text=what).grid(row=row, column=2, sticky=tk.W, pady=2)

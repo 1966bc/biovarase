@@ -61,9 +61,10 @@ class UI(Dialog):
         # Fields as wide as what goes in them, and anchored west: a grid
         # stretches every field to the width of the widest one, and a control
         # value is five figures next to a lot number that is twenty.
-        entry = self.engine.tools.get_entry(self.frm_fields, self.result, "float")
-        entry.configure(width=10)
-        self.add_field("Result:", entry, tk.W)
+        self.add_field("Result:",
+                       self.engine.tools.get_entry(self.frm_fields, self.result,
+                                                   "float"),
+                       tk.W)
 
         self.add_field("Received:", self.received, tk.W)
 

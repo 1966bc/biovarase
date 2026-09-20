@@ -42,7 +42,9 @@ class Tools:
     # --- field widths -------------------------------------------------------
     # Named for what the field holds, in characters, which is what ttk asks
     # for. A width written once per form is a width decided once per form.
-    FIELD_CODE = 16      # a thing with a shape: a code, a quantity, a price
+    FIELD_COUNT = 6      # a whole number that counts or orders: a rank
+    FIELD_NUMBER = 10    # a number that was measured: a target, an SD, a CV%
+    FIELD_CODE = 16      # a thing with a shape: a code, a lot number, a nickname
     FIELD_NAME = 32      # a thing with a name: a product, a supplier, a person
 
     #: A list of rows: wide enough for the longest name a master data table
@@ -456,17 +458,20 @@ class Tools:
 
         kind is "text", "integer" or "float". A number field refuses the key
         that would not leave a number behind, so nothing else can be typed;
-        it is narrower, and centred.
+        it is centred, and as wide as the number it holds and no wider - a
+        rank is one figure, a concentration is a handful, and neither is a
+        name. A form that wants another width says so; the widths here are
+        what the three kinds are worth when nobody says anything.
         """
         entry = ttk.Entry(container, textvariable=variable)
 
         if kind == "text":
             entry.configure(width=self.FIELD_NAME)
         elif kind == "integer":
-            entry.configure(width=self.FIELD_CODE, justify=tk.CENTER, validate="key",
+            entry.configure(width=self.FIELD_COUNT, justify=tk.CENTER, validate="key",
                             validatecommand=self.get_validate_integer(entry))
         elif kind == "float":
-            entry.configure(width=self.FIELD_CODE, justify=tk.CENTER, validate="key",
+            entry.configure(width=self.FIELD_NUMBER, justify=tk.CENTER, validate="key",
                             validatecommand=self.get_validate_float(entry))
         else:
             raise ValueError("unknown kind of entry: {0}".format(kind))

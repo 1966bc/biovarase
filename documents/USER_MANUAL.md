@@ -211,7 +211,7 @@ to find out.
 
 ## The controls of a bench, in one pass
 
-**QC > Enter a day**. This is the form the morning is done from.
+**Results > Enter a day**, or **Ctrl+D**. This is the form the morning is done from.
 
 ![The day](images/day.png)
 
@@ -238,7 +238,7 @@ morning cannot be entered twice by pressing Save twice.
 
 ## Entering a single result
 
-Choose the lot, then **double click it** in the Batches list. Or **QC > Add
+Choose the lot, then **double click it** in the Batches list. Or **Results > Add
 result**. This is the way in when a result is added later, or on a lot that
 belongs to a bench other than the one being worked through.
 
@@ -308,7 +308,7 @@ control, non conformity opened. **Note** is the sentence that says it in
 words.
 
 A noted result shows with a yellow background in the results list, and the
-note appears in **QC > Notes** and in the day's record.
+note appears in **Review > Notes** and in the day's record.
 
 This is what a rule broken is supposed to produce. The chart says the
 control is out; the note says what was found and what was done, and that is
@@ -316,7 +316,7 @@ the part an assessor reads.
 
 # Opening a new lot
 
-**QC > Batches**. The left list is every analyte in use, narrowed by panel;
+**Batches** on the menu bar, or **Ctrl+B**. The left list is every analyte in use, narrowed by panel;
 the right list is the lots of the one selected, with target, SD, expiration
 and how many results each holds.
 
@@ -375,12 +375,12 @@ yet, because it has not been anything yet.
 ## What kind of wrong
 
 A rule is broken and the next question is what sort of error it is. Four
-windows answer it, all under the **QC** menu and all about the series on
+windows answer it, all under the **Charts** menu and all about the series on
 screen.
 
 ### Statistics
 
-**QC > Statistics** shows what the main window has no room for.
+**Charts > Statistics** shows what the main window has no room for.
 
 ![The statistics](images/statistics.png)
 
@@ -405,7 +405,7 @@ reports the first rule broken; this says whether it was the only one.
 
 ### Every lot of the analyte
 
-**QC > Levey-Jennings** draws all the lots of the analyte chosen, one chart
+**Charts > Levey-Jennings**, or **Ctrl+L**, draws all the lots of the analyte chosen, one chart
 under the other, with the mean and CV of each.
 
 ![The charts](images/plots.png)
@@ -415,7 +415,7 @@ level and not the other is one thing; the same drift on both is another.
 
 ### Total error
 
-**QC > Total error** puts what the method does against what the analyte
+**Charts > Total error** puts what the method does against what the analyte
 allows.
 
 ![The total error](images/tea.png)
@@ -429,7 +429,7 @@ the next reagent lot, the next calibration, and it will be over.
 
 ### Youden
 
-**QC > Youden** puts the two levels of the same control against each other,
+**Charts > Youden** puts the two levels of the same control against each other,
 one point per day on which both were run.
 
 ![The Youden plot](images/youden.png)
@@ -450,7 +450,7 @@ say the same thing, and the number is the one that can be written down.
 
 ### Bland-Altman
 
-**QC > Bland-Altman** compares two instruments on the same control material:
+**Charts > Bland-Altman** compares two instruments on the same control material:
 the mean of the two against their difference, with the mean difference and
 the limits of agreement at ±1.96 SD.
 
@@ -465,7 +465,7 @@ The box at the top chooses which instrument to compare with.
 
 ## Everything at once
 
-**QC > Performance** is the whole laboratory in one list: every lot with
+**Review > Performance** is the whole laboratory in one list: every lot with
 results in the period, worst first.
 
 ![The performance](images/performance.png)
@@ -481,7 +481,7 @@ opening.
 
 ## The notes
 
-**QC > Notes** is the log of everything written about the results over the
+**Review > Notes** is the log of everything written about the results over the
 period: the date, the analyte, the bench, the level, the value, the action
 taken, the note and who wrote it.
 
@@ -504,7 +504,7 @@ A proficiency scheme is the other half, and ISO 15189 asks for both. The same
 material goes to every participant, the value is assigned from outside, and
 what comes back says how far this laboratory fell from it.
 
-**QC > External quality.**
+**Review > External quality.**
 
 ![The proficiency rounds](images/eqa.png)
 
@@ -883,7 +883,7 @@ the point: they fire on any insert, update or delete, including one typed
 into `sqlite3` by hand at midnight. Nothing in the application can be made to
 skip them, and nothing has to remember to call them.
 
-**From the program: QC > History**, or the right button on a result. It
+**From the program: Results > History**, or the right button on a result. It
 shows the same thing, and it is the way to read it at the bench.
 
 ![The history of a result](images/history.png)
@@ -995,7 +995,7 @@ quality control whose sample data is all in control teaches nothing:
 | Valproic acid | one bad morning | `1:2S` |
 
 Three results were corrected and one was withdrawn as a duplicate, so
-**QC > History** has something to show; and of the four proficiency schemes
+**Results > History** has something to show; and of the four proficiency schemes
 and their eight rounds, one has every analyte satisfactory and a laboratory
 bias the analytes cannot show.
 

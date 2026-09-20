@@ -52,8 +52,10 @@ class App(tk.Tk):
         # the title also carries whose laboratory this is, and the About
         # window wants the name alone.
         self.name = title
-        site, lab, section = self.engine.get_laboratory()
-        self.title("{0} - {1} - {2}".format(title, site, lab))
+        # The login is not anybody's laboratory yet: until a user is through,
+        # the title carries the name of the program alone. The site and the
+        # laboratory arrive with the main window, in show_main().
+        self.title(title)
         self.resizable(0, 0)
         self.engine.tools.set_style(self.engine.config.get("window", "theme"))
         self.set_icon()
@@ -72,6 +74,8 @@ class App(tk.Tk):
         """
         self.resizable(1, 1)
         self.minsize(MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT)
+        site, lab, section = self.engine.get_laboratory()
+        self.title("{0} - {1} - {2}".format(self.name, site, lab))
         main = Main(self)
         main.on_open()
         main.pack(fill=tk.BOTH, expand=1)
@@ -107,7 +111,20 @@ class App(tk.Tk):
         self.engine.log.exception("{0}: {1}".format(exc.__name__, val))
         messagebox.showerror(self.engine.app_title,
                              "{0}\n\n{1}".format(val, self.engine.log.path),
-                             parent=self)
+                             parent=self.get_active_window())
+
+    def get_active_window(self):
+        """The window on top, to hang a box on.
+
+        A box whose parent is the root window opens behind any dialog that is
+        transient of it, and takes the keyboard with it while it waits: the
+        program looks as though it had stopped. Asked of the window with the
+        focus, the box opens over what the user was doing.
+        """
+        widget = self.focus_displayof()
+        if widget is None:
+            return self
+        return widget.winfo_toplevel()
 
     def on_exit(self, evt=None):
         """Close the database and go, once the question has been answered.

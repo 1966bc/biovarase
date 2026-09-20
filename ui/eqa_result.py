@@ -51,10 +51,7 @@ class UI(Dialog):
 
     def get_entry(self, variable):
         """A number, as wide as a concentration and no wider."""
-        entry = self.engine.tools.get_entry(self.frm_fields, variable, "float")
-        entry.configure(width=12)
-
-        return entry
+        return self.engine.tools.get_entry(self.frm_fields, variable, "float")
 
     def set_methods(self):
         """The analytes this laboratory measures, with the matrix in brackets.

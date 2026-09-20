@@ -14,7 +14,9 @@ once.
 Inheritance where it belongs: a form for a unit *is a* dialog.
 """
 
+import sqlite3 as lite
 import tkinter as tk
+from tkinter import messagebox
 from tkinter import ttk
 
 
@@ -139,16 +141,46 @@ class Dialog(tk.Toplevel):
         values["status"] = int(self.status.get())
         self.engine.log.trace("row_id = {0}, values = {1}".format(self.row_id, values))
 
-        if self.row_id is not None:
-            sql, args = self.engine.db.get_update(self.TABLE, self.row_id, values)
-            self.engine.db.write(sql, args)
-            saved_id = self.row_id
-        else:
-            sql, args = self.engine.db.get_insert(self.TABLE, values)
-            saved_id = self.engine.db.write(sql, args)
+        try:
+            if self.row_id is not None:
+                sql, args = self.engine.db.get_update(self.TABLE, self.row_id, values)
+                self.engine.db.write(sql, args)
+                saved_id = self.row_id
+            else:
+                sql, args = self.engine.db.get_insert(self.TABLE, values)
+                saved_id = self.engine.db.write(sql, args)
+        except lite.IntegrityError as err:
+            # A name the table already holds is a typing matter, not a fault:
+            # it is said here, over the form, and the form stays open with the
+            # value still in it. Left to rise, it would reach the handler on
+            # the root window, whose box opens behind this one and takes the
+            # keyboard with it.
+            messagebox.showwarning(self.engine.app_title,
+                                   self.get_constraint_message(err),
+                                   parent=self)
+            if self.first_field is not None:
+                self.first_field.focus()
+            return
 
         self.on_cancel()
         self.engine.events.notify(self.TABLE, saved_id)
+
+    def get_constraint_message(self, err):
+        """What a refused write says to whoever typed it.
+
+        SQLite words a broken UNIQUE constraint as 'UNIQUE constraint failed:
+        tests.description', which names the table and the column. That is
+        turned into the sentence the case actually is; anything else is
+        shown as it came, because it is not a case this form knows.
+        """
+        text = str(err)
+        if text.startswith("UNIQUE constraint failed:"):
+            columns = text.split(":", 1)[1]
+            fields = [column.strip().split(".")[-1].replace("_", " ")
+                      for column in columns.split(",")]
+            return "There is already a {0} with that {1}.".format(self.get_caption(),
+                                                                  " and ".join(fields))
+        return text
 
     def on_cancel(self, evt=None):
         self.destroy()

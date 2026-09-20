@@ -71,17 +71,22 @@ class UI(Dialog):
                               onvalue=1, offvalue=0, variable=self.is_mandatory)
         self.add_field("Every day:", chk, tk.W)
 
-        self.add_field("CVi%:", self.get_entry(self.cvw, 10, "float"), tk.W)
-        self.add_field("CVg%:", self.get_entry(self.cvb, 10, "float"), tk.W)
-        self.add_field("Imprecision%:", self.get_entry(self.imp, 10, "float"), tk.W)
-        self.add_field("Bias%:", self.get_entry(self.bias, 10, "float"), tk.W)
-        self.add_field("TEa% (95):", self.get_entry(self.teap005, 10, "float"), tk.W)
-        self.add_field("TEa% (99):", self.get_entry(self.teap001, 10, "float"), tk.W)
+        self.add_field("CVi%:", self.get_entry(self.cvw, kind="float"), tk.W)
+        self.add_field("CVg%:", self.get_entry(self.cvb, kind="float"), tk.W)
+        self.add_field("Imprecision%:", self.get_entry(self.imp, kind="float"), tk.W)
+        self.add_field("Bias%:", self.get_entry(self.bias, kind="float"), tk.W)
+        self.add_field("TEa% (95):", self.get_entry(self.teap005, kind="float"), tk.W)
+        self.add_field("TEa% (99):", self.get_entry(self.teap001, kind="float"), tk.W)
 
-    def get_entry(self, variable, width, kind="text"):
-        """A field of the width its column allows, and no wider."""
+    def get_entry(self, variable, width=None, kind="text"):
+        """A field of the width its column allows, and no wider.
+
+        The code is given a width of its own; a per cent is left the one its
+        kind carries.
+        """
         entry = self.engine.tools.get_entry(self.frm_fields, variable, kind)
-        entry.configure(width=width)
+        if width is not None:
+            entry.configure(width=width)
 
         return entry
 

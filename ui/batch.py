@@ -77,17 +77,23 @@ class UI(Dialog):
                                                      LOT_NUMBER_MAX_LENGTH), tk.W)
         self.add_field("Level:", self.get_entry(self.description,
                                                 BATCH_DESCRIPTION_MAX_LENGTH), tk.W)
-        self.add_field("Rank:", self.get_entry(self.rank, 4, "integer"), tk.W)
+        self.add_field("Rank:", self.get_entry(self.rank, kind="integer"), tk.W)
         self.add_field("Expiration:", self.expiration, tk.W)
-        self.add_field("Target:", self.get_entry(self.target, 12, "float"), tk.W)
-        self.add_field("SD:", self.get_entry(self.sd, 12, "float"), tk.W)
-        self.add_field("Lower:", self.get_entry(self.lower, 12, "float"), tk.W)
-        self.add_field("Upper:", self.get_entry(self.upper, 12, "float"), tk.W)
+        self.add_field("Target:", self.get_entry(self.target, kind="float"), tk.W)
+        self.add_field("SD:", self.get_entry(self.sd, kind="float"), tk.W)
+        self.add_field("Lower:", self.get_entry(self.lower, kind="float"), tk.W)
+        self.add_field("Upper:", self.get_entry(self.upper, kind="float"), tk.W)
 
-    def get_entry(self, variable, width, kind="text"):
-        """A field of the width its column allows, and no wider."""
+    def get_entry(self, variable, width=None, kind="text"):
+        """A field of the width its column allows, and no wider.
+
+        A width is given for what a column limits - a lot number is twenty
+        characters because that is what it is stored in. A number is left
+        the width its kind carries.
+        """
         entry = self.engine.tools.get_entry(self.frm_fields, variable, kind)
-        entry.configure(width=width)
+        if width is not None:
+            entry.configure(width=width)
 
         return entry
 
