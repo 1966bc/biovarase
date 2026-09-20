@@ -784,31 +784,6 @@ class Tools:
         return widgets
 
 
-def main():
-    foo = Tools()
-    root = tk.Tk()
-    root.title("Tools")
-    foo.set_style("clam")
-
-    frame = ttk.Frame(root, style="App.TFrame", padding=8)
-    columns = (("#0", "id", tk.W, False, 0, 0),
-               ("#1", "Product", tk.W, True, 160, 200),
-               ("#2", "Stock", tk.CENTER, True, 60, 60),
-               ("#3", "Price", tk.CENTER, True, 60, 60))
-    tree = foo.get_tree(frame, columns)
-    tree.insert("", tk.END, iid="1", text="1",
-                values=("Chai", "39", "18.0"))
-    tree.insert("", tk.END, iid="2", text="2",
-                values=("Chang", "17", "19.0"), tags=foo.get_enable_tags(0))
-    frame.pack(fill=tk.BOTH, expand=1)
-
-    foo.center_me(root)
-    root.mainloop()
-
-
-if __name__ == "__main__":
-    main()
-
     def clear_treeview(self, tree):
         """Empty a tree of its rows, keeping its columns."""
         tree.delete(*tree.get_children())
@@ -849,3 +824,29 @@ if __name__ == "__main__":
             found = message
 
         return found
+
+
+def main():
+    foo = Tools()
+    root = tk.Tk()
+    root.title("Tools")
+    foo.set_style("clam")
+
+    frame = ttk.Frame(root, style="App.TFrame", padding=8)
+    columns = (("#0", "id", tk.W, False, 0, 0),
+               ("#1", "Product", tk.W, True, 160, 200),
+               ("#2", "Stock", tk.CENTER, True, 60, 60),
+               ("#3", "Price", tk.CENTER, True, 60, 60))
+    tree = foo.get_tree(frame, columns)
+    tree.insert("", tk.END, iid="1", text="1",
+                values=("Chai", "39", "18.0"))
+    tree.insert("", tk.END, iid="2", text="2",
+                values=("Chang", "17", "19.0"), tags=foo.get_enable_tags(0))
+    frame.pack(fill=tk.BOTH, expand=1)
+
+    foo.center_me(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

@@ -16,8 +16,11 @@ Universe, and Everything.
 import tkinter as tk
 from tkinter import messagebox
 
+from app_config import MAIN_WINDOW_MIN_HEIGHT, MAIN_WINDOW_MIN_WIDTH
+
 from engine import Engine
 from ui.login import Login
+from ui.main import Main
 
 __author__ = "Giuseppe Costanzi (1966bc)"
 __copyright__ = "Copyleft"
@@ -42,13 +45,27 @@ class App(tk.Tk):
         name, site = self.engine.get_laboratory()
         self.title("{0} - {1}".format(title, name))
         self.resizable(0, 0)
-        self.engine.tools.set_style()
+        self.engine.tools.set_style(self.engine.config.get("window", "theme"))
         self.set_icon()
         self.set_info()
 
         login = Login(self)
         login.on_open()
         self.engine.log.trace("ready; the engine holds log, config, db, tools, events, windows")
+
+    def show_main(self):
+        """The main window takes the place of the login, once it is passed.
+
+        The root window grows and becomes resizable here and not before: the
+        login is a small fixed form, the main window is a chart beside a
+        table and wants the room.
+        """
+        self.resizable(1, 1)
+        self.minsize(MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT)
+        main = Main(self)
+        main.on_open()
+        main.pack(fill=tk.BOTH, expand=1)
+        self.engine.tools.center_me(self)
 
     def set_icon(self):
         """The icon, in every size the window manager may ask for.
