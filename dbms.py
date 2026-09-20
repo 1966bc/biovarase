@@ -31,11 +31,55 @@ class DBMS:
         #: table -> its columns as get_table_info returns them, remembered
         #: after the first time they are asked of the schema.
         self.dict_tables = {}
+        self.set_types()
         self.set_connection()
 
     def __str__(self):
         return "class: {0}\nMRO: {1}".format(self.__class__.__name__,
                                              [x.__name__ for x in DBMS.__mro__],)
+
+    def set_types(self):
+        """Teach sqlite3 the two conversions it is handing back.
+
+        SQLite has no type for a date: a date is text in a column that says
+        DATE, and sqlite3 turned that text into a datetime.date on the way
+        out and back into text on the way in. Both default conversions are
+        deprecated as of Python 3.12 and will be removed, and the day they go
+        every date this program reads comes back a string. That does not fail
+        where it happens. It fails later, in a comparison that answers a
+        question about a period and answers it wrongly.
+
+        These are the same conversions, written down here where they can be
+        read. The database holds ISO throughout - 2027-07-12 for a day,
+        2026-03-24 07:05:00 for a moment - which is what isoformat() writes
+        and fromisoformat() reads back. A registration is for the module and
+        not for one connection; doing it again does no harm.
+        """
+        lite.register_adapter(datetime.date, self.adapt_date)
+        lite.register_adapter(datetime.datetime, self.adapt_datetime)
+        lite.register_converter("DATE", self.convert_date)
+        lite.register_converter("TIMESTAMP", self.convert_timestamp)
+
+    def adapt_date(self, value):
+        """A day on its way into the database: 2027-07-12."""
+        return value.isoformat()
+
+    def adapt_datetime(self, value):
+        """A moment on its way in: 2026-03-24 07:05:00.
+
+        A space between the day and the hour, which is what SQLite's own
+        CURRENT_TIMESTAMP writes in the columns that have a default, and so
+        what the rest of the table already looks like.
+        """
+        return value.isoformat(" ")
+
+    def convert_date(self, value):
+        """A DATE column on its way out, as a datetime.date."""
+        return datetime.date.fromisoformat(value.decode())
+
+    def convert_timestamp(self, value):
+        """A TIMESTAMP column on its way out, as a datetime.datetime."""
+        return datetime.datetime.fromisoformat(value.decode())
 
     def set_connection(self):
         """Open the database and say how rows come back.

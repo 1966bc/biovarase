@@ -14,6 +14,7 @@ Run them from the project directory:
     python3 -m unittest discover -s tests -v
 """
 
+import datetime
 import os
 import sqlite3
 import tempfile
@@ -207,6 +208,73 @@ class TestStatementsFromTheSchema(DBMSTestCase):
                   "created_at": None, "operator_code": "ALCI-1"}
         with self.assertRaises(ValueError):
             self.db.get_insert("results", values)
+
+
+class TestDates(DBMSTestCase):
+    """Dates come back as dates, and go in as the text the schema holds.
+
+    sqlite3 did both conversions itself until Python 3.12 deprecated them.
+    DBMS registers its own, and what these tests watch is the type: a date
+    that comes back a string does not fail where it is read, it fails in a
+    comparison somewhere else, quietly and wrongly.
+    """
+
+    def test_a_day_comes_back_a_date(self):
+        """An expiration is a datetime.date and can be compared with one."""
+        self.db.write("UPDATE batches SET expiration = ? WHERE batch_id = ?",
+                      (datetime.date(2027, 7, 12), 1))
+        row = self.db.read(False, "SELECT expiration FROM batches WHERE batch_id = 1")
+        self.assertEqual(row["expiration"], datetime.date(2027, 7, 12))
+
+    def test_a_moment_comes_back_a_datetime(self):
+        """A result is received at an hour, not only on a day."""
+        received = datetime.datetime(2026, 3, 24, 7, 5, 0)
+        self.db.write("INSERT INTO results (batch_id, result, received) VALUES (?, ?, ?)",
+                      (1, 95.0, received))
+        row = self.db.read(False, "SELECT received FROM results")
+        self.assertEqual(row["received"], received)
+
+    def test_a_day_is_stored_as_the_text_the_database_holds(self):
+        """2027-07-12: what is in the file, and what SQLite can compare."""
+        self.db.write("UPDATE batches SET expiration = ? WHERE batch_id = ?",
+                      (datetime.date(2027, 7, 12), 1))
+        row = self.db.read(False,
+                           "SELECT CAST(expiration AS TEXT) AS text FROM batches")
+        self.assertEqual(row["text"], "2027-07-12")
+
+    def test_a_moment_is_stored_with_a_space_in_it(self):
+        """As CURRENT_TIMESTAMP writes it, so one column holds one shape."""
+        self.db.write("INSERT INTO results (batch_id, result, received) VALUES (?, ?, ?)",
+                      (1, 95.0, datetime.datetime(2026, 3, 24, 7, 5, 0)))
+        row = self.db.read(False, "SELECT CAST(received AS TEXT) AS text FROM results")
+        self.assertEqual(row["text"], "2026-03-24 07:05:00")
+
+    def test_the_default_of_the_schema_comes_back_a_datetime(self):
+        """CURRENT_TIMESTAMP is written by SQLite and read by the converter."""
+        self.db.write("INSERT INTO results (batch_id, result) VALUES (?, ?)", (1, 95.0))
+        row = self.db.read(False, "SELECT created_at FROM results")
+        self.assertIsInstance(row["created_at"], datetime.datetime)
+
+    def test_the_conversions_are_the_ones_written_here(self):
+        """And not the ones sqlite3 is giving up.
+
+        Those still work on the Python of today, which is exactly why no
+        other test in this class would notice if the registrations were
+        taken out - until the version that removes them, on somebody's
+        machine, in a laboratory.
+        """
+        self.assertEqual(sqlite3.converters["DATE"], self.db.convert_date)
+        self.assertEqual(sqlite3.converters["TIMESTAMP"], self.db.convert_timestamp)
+        adapters = sqlite3.adapters
+        self.assertEqual(adapters[(datetime.date, sqlite3.PrepareProtocol)],
+                         self.db.adapt_date)
+        self.assertEqual(adapters[(datetime.datetime, sqlite3.PrepareProtocol)],
+                         self.db.adapt_datetime)
+
+    def test_nothing_stays_nothing(self):
+        """A column that is empty comes back None, not a date of some kind."""
+        row = self.db.read(False, "SELECT expiration FROM batches WHERE batch_id = 1")
+        self.assertIsNone(row["expiration"])
 
 
 class TestSession(DBMSTestCase):
