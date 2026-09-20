@@ -43,7 +43,7 @@ class UI(tk.Toplevel):
         ttk.Label(frm_main, style="Title.TLabel",
                   text=self.info["name"]).grid(row=0, column=1, sticky=tk.W)
         ttk.Label(frm_main, style="App.TLabel",
-                  text="Internal quality control for one laboratory.").grid(row=1,
+                  text="One lab, one chart.").grid(row=1,
                                                                                   column=1,
                                                                                   sticky=tk.W)
 
