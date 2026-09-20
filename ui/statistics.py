@@ -103,11 +103,10 @@ class UI(Window, tk.Toplevel):
         self.frm_rules = ttk.LabelFrame(self.frm_main, text="Westgard rules")
         self.frm_rules.pack(side=tk.TOP, fill=tk.X, pady=(6, 0))
 
-        buttons = self.engine.tools.get_button_column(self.frm_main,
-                                                      (("Close", self.on_cancel),),
-                                                      window=self)
-        buttons.pack(side=tk.TOP, anchor=tk.E, pady=(6, 0))
-
+        # No Close button: nothing is decided here and nothing is saved, so
+        # the window closes the way every window closes, from its title bar.
+        # A button that repeats what the title bar already does is a button
+        # to read and a row of pixels to spend.
         self.frm_main.pack(fill=tk.BOTH, expand=1)
 
     def on_open(self):
