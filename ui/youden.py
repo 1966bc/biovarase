@@ -4,173 +4,158 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-"""Youden module of Biovarase — rewritten to use pure Tkinter Canvas."""
+"""The two levels of a control against each other: systematic or random.
+
+A Levey-Jennings chart shows one level at a time, and a point outside the
+limits on it does not say what kind of error put it there. The Youden plot
+answers that, and it answers it with the material already on the bench: the
+low level of the day on one axis, the high level of the same day on the
+other, one point per day.
+
+What the picture says is read from where the points fall. Along the diagonal
+through the two targets, up and to the right or down and to the left, is
+systematic error: both levels moved the same way, which is a calibration.
+Scattered around the crossing of the two targets with no direction is random
+error: imprecision, and a different morning's work. A point far out on one
+axis only is something that happened to one level - a bad pipetting, a
+bubble - and not to the method.
+
+The pairs are made by day, like the Bland-Altman ones, and for the same
+reason: it is as close to simultaneous as a laboratory gets.
+"""
 
 import tkinter as tk
-
-from ui.parent_view import ParentView
 from tkinter import ttk
 
+from ui.window import Window
 from youden_canvas import YoudenPlotCanvas
 
+#: Fewer pairs than this and the picture shows a handful of dots that mean
+#: nothing: the eye reads a direction into any three points.
+MINIMUM = 8
 
-class UI(ParentView):
-    """
-    Youden plot window.
-    Uses YoudenPlotCanvas instead of Matplotlib.
-    """
 
-    def __init__(self, parent):
-        super().__init__(parent, name="youden")
-        if self._reusing:
-            return
+class UI(Window, tk.Toplevel):
+    """The low level against the high level of one control, day by day."""
 
-        self.engine = self.nametowidget(".").engine
+    def __init__(self, parent, batch_id, since=None):
+        super().__init__(name="youden")
 
-        self.title("Youden Plot")
-        
-        self.batches = []
-        self.um = None
-        self._cached_args = None
+        self.parent = parent
+        self.batch_id = batch_id
+        self.since = since
+        self.summary = tk.StringVar()
 
-        self.test_name_var = tk.StringVar(value="")
-        self.ws_name_var   = tk.StringVar(value="")
-        self.ws_serial_var = tk.StringVar(value="")
+        self.transient(parent.winfo_toplevel())
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.engine.tools.hide_me(self)
+        self.init_ui()
+        self.engine.tools.center_me(self, parent.winfo_toplevel())
 
-        self.show_labels_var = tk.BooleanVar(value=False)
+    def init_ui(self):
 
-        self._build_ui()
-        # Set initial size BEFORE centering
-        self.geometry("700x500")
-        self.minsize(600, 400)
-        self.show()
-        
-    # ----------------------------------------------------------------------
-    # UI builder
-    # ----------------------------------------------------------------------
-    def _build_ui(self):
-        
+        frm_main = ttk.Frame(self, style="App.TFrame", padding=6)
 
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(0, weight=0)
-        self.rowconfigure(1, weight=1)
-        self.rowconfigure(2, weight=0)
+        ttk.Label(frm_main, style="App.TLabel",
+                  textvariable=self.summary).pack(side=tk.TOP, anchor=tk.W,
+                                                  pady=(0, 4))
 
-        # ---------------- HEADER ----------------
-        hdr = ttk.Frame(self, style="App.TFrame", padding=(8, 6))
-        hdr.grid(row=0, column=0, sticky="ew")
-        hdr.columnconfigure(1, weight=1)
+        self.chart = YoudenPlotCanvas(frm_main, width=560, height=520)
+        self.chart.pack(fill=tk.BOTH, expand=1)
 
-        ttk.Label(hdr, text="Test:", style="App.TLabel")\
-            .grid(row=0, column=0, sticky="w")
-        ttk.Label(hdr, textvariable=self.test_name_var)\
-            .grid(row=0, column=1, sticky="w")
+        frm_main.pack(fill=tk.BOTH, expand=1)
 
-        ttk.Label(hdr, text="Workstation:", style="App.TLabel")\
-            .grid(row=0, column=2, sticky="w", padx=(16, 6))
-        ttk.Label(hdr, textvariable=self.ws_name_var)\
-            .grid(row=0, column=3, sticky="w")
+    def on_open(self):
 
-        ttk.Label(hdr, text="Serial:", style="App.TLabel")\
-            .grid(row=0, column=4, sticky="w", padx=(16, 6))
-        ttk.Label(hdr, textvariable=self.ws_serial_var)\
-            .grid(row=0, column=5, sticky="w")
+        lot = self.engine.db.get_selected("batches", "batch_id", self.batch_id)
+        method = self.engine.db.get_selected("test_methods", "test_method_id",
+                                             lot["test_method_id"])
+        test = self.engine.db.get_selected("tests", "test_id", method["test_id"])
 
-        # ---------------- CONTENT ----------------
-        content = ttk.Frame(self, style="App.TFrame", padding=8)
-        content.grid(row=1, column=0, sticky="nsew")
-        content.columnconfigure(0, weight=1)
-        content.rowconfigure(0, weight=1)
+        self.title("Youden - {0}".format(test["description"]))
+        self.set_plot(lot, test)
 
-        # >>> This replaces FigureCanvasTkAgg
-        self.canvas = YoudenPlotCanvas(content, bg="white")
-        self.canvas.grid(row=0, column=0, sticky="nsew")
+    def set_plot(self, lot, test):
+        """Find the other level of the same control, pair the days, draw."""
+        other = self.get_other_level(lot)
 
-        # Sizegrip
-        ttk.Sizegrip(self).grid(row=2, column=0, sticky="se")
+        if other is None:
+            self.summary.set("This control has one level only:"
+                             " a Youden plot needs two.")
+            self.chart.clear()
+        else:
+            # The lower level goes on the x axis whichever of the two was
+            # chosen in the main window: the plot is read the same way every
+            # time, and a picture that swaps its axes is a picture that has
+            # to be read twice.
+            if lot["rank"] > other["rank"]:
+                lot, other = other, lot
 
-        # Redraw on resize
-        self.bind("<Configure>", lambda e: self._refresh_plot())
+            low, high = self.get_pairs(lot, other)
+            if len(low) < MINIMUM:
+                self.summary.set(
+                    "{0} days with both levels: {1} are wanted.".format(len(low),
+                                                                        MINIMUM))
+                self.chart.clear()
+            else:
+                self.summary.set("{0} days with both levels run.".format(len(low)))
+                self.chart.draw_youden(low, high,
+                                       lot["target"], other["target"],
+                                       lot["sd"], other["sd"],
+                                       title="{0} - lots {1} and {2}".format(
+                                           test["description"],
+                                           lot["lot_number"],
+                                           other["lot_number"]),
+                                       x_label=lot["description"],
+                                       y_label=other["description"])
 
-        
-    # ----------------------------------------------------------------------
-    def on_open(self, selected_test_method, selected_workstation, batches, data):
+    def get_other_level(self, lot):
+        """The other level of the same control, on the same instrument.
+
+        The same analyte, the same bench, the same control material and a
+        different level - and not the same lot number, because a bilevel
+        control is often sold as two vials with two numbers on them. What
+        makes them a pair is the material and the run, not the print on the
+        label.
+
+        @param name: lot
+        @return: the other lot, or None
+        @rtype: dictionary
         """
-        Entry point from main window.
+        sql = """SELECT * FROM batches
+                  WHERE test_method_id = ? AND workstation_id = ?
+                    AND control_id = ? AND rank <> ?
+                    AND batch_id <> ? AND status = 1
+               ORDER BY rank, expiration DESC
+                  LIMIT 1"""
+        row = self.engine.db.read(False, sql, (lot["test_method_id"],
+                                                lot["workstation_id"],
+                                                lot["control_id"],
+                                                lot["rank"],
+                                                lot["batch_id"]))
+
+        return self.engine.db.get_dict(row)
+
+    def get_pairs(self, lot, other):
+        """The days both levels were run, as two lists in the same order.
+
+        @param name: lot, other
+        @return: the low level, the high level
+        @rtype: tuple
         """
-        self._cached_args = (selected_test_method, selected_workstation, batches, data)
+        sql = """SELECT ROUND(AVG(low.result), 4) AS low,
+                        ROUND(AVG(high.result), 4) AS high
+                   FROM results low
+                   JOIN results high ON DATE(high.received) = DATE(low.received)
+                  WHERE low.batch_id = ? AND high.batch_id = ?
+                    AND low.status = 1 AND high.status = 1
+                    AND (? IS NULL OR low.received >= ?)
+               GROUP BY DATE(low.received)
+               ORDER BY DATE(low.received)"""
+        rows = self.engine.db.read(True, sql, (lot["batch_id"], other["batch_id"],
+                                                self.since, self.since))
 
-        test_name = self.engine.get_test_name(selected_test_method[1])
-        self.test_name_var.set(test_name)
-        self.ws_name_var.set(selected_workstation[3])
-        self.ws_serial_var.set(selected_workstation[4])
+        return ([row["low"] for row in rows], [row["high"] for row in rows])
 
-        # Units
-        self.um = self.engine.get_um(selected_test_method[5])
-
-        self.batches = list(batches) if batches else []
-        self.title(f"{test_name} — Youden Plot")
-
-        self._draw_youden(data)
-
-    # ----------------------------------------------------------------------
-    def _refresh_plot(self):
-        if not self._cached_args:
-            return
-        st, ws, batches, data = self._cached_args
-        self._draw_youden(data)
-
-    # ----------------------------------------------------------------------
-    def _draw_youden(self, data):
-        self.canvas.clear()
-
-        if not self.batches or len(self.batches) < 2:
-            return
-
-        if not data or len(data) < 2:
-            return
-
-        # Batches (target, sd)
-        b1, b2 = self.batches[0], self.batches[1]
-        target_x = float(b1[7])
-        sd_x     = float(b1[8])
-        target_y = float(b2[7])
-        sd_y     = float(b2[8])
-
-        # Paired results
-        x_vals, y_vals = data
-        n = min(len(x_vals), len(y_vals))
-        x_vals, y_vals = x_vals[:n], y_vals[:n]
-
-        test_name = self.test_name_var.get()
-        ws_name   = self.ws_name_var.get()
-
-        title = f"{test_name} — {ws_name}"
-        bottom_text = f"Computed {n} paired results"
-
-        # Units on axes
-        um_txt = self.um.get("description") if self.um else ""
-        x_label = f"L1 ({um_txt})" if um_txt else "Level 1"
-        y_label = f"L2 ({um_txt})" if um_txt else "Level 2"
-
-        self.canvas.draw_youden(
-            level1=x_vals,
-            level2=y_vals,
-            target_x=target_x,
-            target_y=target_y,
-            sd_x=sd_x,
-            sd_y=sd_y,
-            title=title,
-            x_label=x_label,
-            y_label=y_label,
-            bottom_text=bottom_text,
-            show_indices=self.show_labels_var.get(),
-        )
-
-    # ----------------------------------------------------------------------
-    def _on_close(self, evt=None):
-        type(self)._instance = None
-        try:
-            super().destroy()
-        except Exception as e:
-            pass
+    def on_cancel(self, evt=None):
+        self.destroy()

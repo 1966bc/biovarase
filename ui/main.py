@@ -18,7 +18,6 @@ control of the antiepileptics this morning.
 import datetime
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import simpledialog
 from tkinter import ttk
 
 import ui.about
@@ -35,6 +34,7 @@ import ui.methods
 import ui.note
 import ui.result
 import ui.samples
+import ui.since
 import ui.statistics
 import ui.suppliers
 import ui.tea
@@ -42,6 +42,7 @@ import ui.tests
 import ui.units
 import ui.users
 import ui.workstations
+import ui.youden
 
 from bias_canvas import BiasCanvas
 from ljcanvas import LeveyJenningsCanvas
@@ -151,6 +152,7 @@ class Main(Window, ttk.Frame):
         m_qc.add_command(label="Statistics", underline=0, command=self.on_statistics)
         m_qc.add_command(label="Total error", underline=0, command=self.on_tea)
         m_qc.add_command(label="Bland-Altman", underline=0, command=self.on_bland_altman)
+        m_qc.add_command(label="Youden", underline=0, command=self.on_youden)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
         m_qc.add_command(label="Add result", underline=0, command=self.on_add_result)
@@ -307,6 +309,16 @@ class Main(Window, ttk.Frame):
             self.engine.windows.replace(
                 "bland_altman",
                 lambda: ui.bland_altman.UI(self, self.batch, self.since))
+
+    def on_youden(self, evt=None):
+        """The two levels of this control against each other."""
+        if self.batch is None:
+            messagebox.showwarning(self.engine.app_title,
+                                   "Choose a batch first.",
+                                   parent=self)
+        else:
+            self.engine.windows.replace(
+                "youden", lambda: ui.youden.UI(self, self.batch, self.since))
 
     def on_batches(self, evt=None):
         """The lots and the results on them: where the material is administered."""
@@ -822,25 +834,21 @@ class Main(Window, ttk.Frame):
                 self.set_results()
 
     def get_since(self):
-        """Ask for the day to start from, as an ISO date, or None.
+        """Ask for the day to start from, with the widget that knows days.
 
-        @return: the date written, or None
+        A text box would take 31 February and 2026-13-01; the calendarium
+        takes three numbers and gives back a date or nothing.
+
+        @return: the date, written, or None
         @rtype: string
         """
-        written = simpledialog.askstring(
-            self.engine.app_title,
-            "Show results from which day?\n\nWrite it as 2026-01-31.",
-            initialvalue=self.engine.get_period()[1] or "",
-            parent=self)
+        window = self.engine.windows.replace(
+            "since", lambda: ui.since.UI(self, self.engine.get_period()[1]))
+        self.wait_window(window)
 
         found = None
-        if written:
-            try:
-                found = datetime.date.fromisoformat(written.strip()).isoformat()
-            except ValueError:
-                messagebox.showwarning(self.engine.app_title,
-                                       "{0} is not a date.".format(written),
-                                       parent=self)
+        if window.chosen is not None:
+            found = window.chosen.isoformat()
 
         return found
 
