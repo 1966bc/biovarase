@@ -63,23 +63,28 @@ class UI(Dialog):
 
         self.expiration = Calendarium(self.frm_fields, "")
 
+        # The two combo boxes carry long names and are left to stretch; the
+        # rest are as wide as what goes in them, so the window is the size of
+        # its widest real field and not of its widest possible one.
         self.add_field("Control:", cb_control)
         self.add_field("Workstation:", cb_workstation)
-        self.add_field("Lot number:",
-                       self.engine.tools.get_entry(self.frm_fields, self.lot_number))
-        self.add_field("Level:",
-                       self.engine.tools.get_entry(self.frm_fields, self.description))
-        self.add_field("Rank:",
-                       self.engine.tools.get_entry(self.frm_fields, self.rank, "integer"))
-        self.add_field("Expiration:", self.expiration)
-        self.add_field("Target:",
-                       self.engine.tools.get_entry(self.frm_fields, self.target, "float"))
-        self.add_field("SD:",
-                       self.engine.tools.get_entry(self.frm_fields, self.sd, "float"))
-        self.add_field("Lower:",
-                       self.engine.tools.get_entry(self.frm_fields, self.lower, "float"))
-        self.add_field("Upper:",
-                       self.engine.tools.get_entry(self.frm_fields, self.upper, "float"))
+        self.add_field("Lot number:", self.get_entry(self.lot_number,
+                                                     LOT_NUMBER_MAX_LENGTH), tk.W)
+        self.add_field("Level:", self.get_entry(self.description,
+                                                BATCH_DESCRIPTION_MAX_LENGTH), tk.W)
+        self.add_field("Rank:", self.get_entry(self.rank, 4, "integer"), tk.W)
+        self.add_field("Expiration:", self.expiration, tk.W)
+        self.add_field("Target:", self.get_entry(self.target, 12, "float"), tk.W)
+        self.add_field("SD:", self.get_entry(self.sd, 12, "float"), tk.W)
+        self.add_field("Lower:", self.get_entry(self.lower, 12, "float"), tk.W)
+        self.add_field("Upper:", self.get_entry(self.upper, 12, "float"), tk.W)
+
+    def get_entry(self, variable, width, kind="text"):
+        """A field of the width its column allows, and no wider."""
+        entry = self.engine.tools.get_entry(self.frm_fields, variable, kind)
+        entry.configure(width=width)
+
+        return entry
 
     def get_buttons(self):
         """Save and Cancel, and Compute for a lot that has results on it."""

@@ -41,11 +41,18 @@ class UI(Dialog):
 
         self.received = Calendarium(self.frm_fields, "")
 
-        self.add_field("Result:",
-                       self.engine.tools.get_entry(self.frm_fields, self.result, "float"))
-        self.add_field("Received:", self.received)
-        self.add_field("Reagent lot:",
-                       self.engine.tools.get_entry(self.frm_fields, self.reagent_lot))
+        # Fields as wide as what goes in them, and anchored west: a grid
+        # stretches every field to the width of the widest one, and a control
+        # value is five figures next to a lot number that is twenty.
+        entry = self.engine.tools.get_entry(self.frm_fields, self.result, "float")
+        entry.configure(width=10)
+        self.add_field("Result:", entry, tk.W)
+
+        self.add_field("Received:", self.received, tk.W)
+
+        entry = self.engine.tools.get_entry(self.frm_fields, self.reagent_lot)
+        entry.configure(width=20)
+        self.add_field("Reagent lot:", entry, tk.W)
 
     def set_values(self, row):
 
