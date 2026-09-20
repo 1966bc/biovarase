@@ -158,8 +158,18 @@ CREATE TABLE batches (
 CREATE INDEX idx_batches_series ON batches (test_method_id, workstation_id, status);
 CREATE INDEX idx_batches_expiration ON batches (expiration, status);
 
--- One measurement of a control. status 0 leaves the point on the chart but out
--- of the statistics: an outlier excluded on purpose, not a point hidden.
+-- One measurement of a control.
+--
+-- status 0 leaves the point on the chart, in grey and with the line broken
+-- around it, and out of the statistics. It is the only way a result is ever
+-- withdrawn: there is no logical deletion and no delete in the program.
+--
+-- A wrong value is corrected and the old one stays in audit_results; a result
+-- entered on the wrong lot is moved to the right one; a duplicate is excluded
+-- with the action "Entered twice". Every one of those leaves a trace of what
+-- happened, which is what a record is for - and a point in grey with a note
+-- saying why tells the truth, where a row made to disappear would say that
+-- nobody ever typed it.
 CREATE TABLE results (
     result_id   INTEGER   PRIMARY KEY,
     batch_id    INTEGER   NOT NULL REFERENCES batches (batch_id),
