@@ -43,4 +43,4 @@ INSERT INTO "units" VALUES(3,'ug/L',1);
 INSERT INTO "units" VALUES(4,'pg/mL',1);
 INSERT INTO "units" VALUES(5,'%',1);
 INSERT INTO "units" VALUES(6,'pg/mg',1);
-INSERT INTO "users" VALUES(1,'Administrator',NULL,'admin','$2b$12$qtg6CYSzMZRvkaoOWSq0P..B3ruCGM/jkkmPh6sJLP2ZSDNi2rutC',0,1);
+INSERT INTO "users" VALUES(1,'Administrator',NULL,'admin','$2b$12$mn4IgCI6K1g0bZAfaCy8uO.J0lwkiSpckU6.74J24Qrvlqs2Pza.O',0,1);

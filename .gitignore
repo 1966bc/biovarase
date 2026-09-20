@@ -29,6 +29,11 @@ dist/
 *~
 .DS_Store
 
-# Reference material kept beside the program: certificates, papers, guidelines.
-# Other people own most of it.
-documents/
+# documents/ holds what this project wrote. What it keeps beside it for
+# reference - certificates, papers, guidelines - belongs to other people and
+# is not republished here.
+documents/*.pdf
+documents/*.xlsx
+documents/*.docx
+documents/*.odt
+log.txt
