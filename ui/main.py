@@ -109,10 +109,10 @@ class Main(tk.Toplevel):
         self.parent = parent
 
         # Subscribe to changes (Observer pattern)
-        self.engine.events.subscribe("batch_changed", self._on_batch_changed)
-        self.engine.events.subscribe("tests_changed", self._on_tests_changed)
-        self.engine.events.subscribe("categories_changed", self._on_categories_changed)
-        self.engine.events.subscribe("test_method_changed", self._on_test_method_changed)
+        self.engine.events.subscribe("batches", self._on_batch_changed)
+        self.engine.events.subscribe("tests", self._on_tests_changed)
+        self.engine.events.subscribe("categories", self._on_categories_changed)
+        self.engine.events.subscribe("test_methods", self._on_test_method_changed)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -2568,9 +2568,9 @@ class Main(tk.Toplevel):
 
     def on_close(self):
         # Unsubscribe from events (Observer pattern)
-        self.engine.events.unsubscribe("batch_changed", self._on_batch_changed)
-        self.engine.events.unsubscribe("tests_changed", self._on_tests_changed)
-        self.engine.events.unsubscribe("categories_changed", self._on_categories_changed)
-        self.engine.events.unsubscribe("test_method_changed", self._on_test_method_changed)
+        self.engine.events.unsubscribe("batches", self._on_batch_changed)
+        self.engine.events.unsubscribe("tests", self._on_tests_changed)
+        self.engine.events.unsubscribe("categories", self._on_categories_changed)
+        self.engine.events.unsubscribe("test_methods", self._on_test_method_changed)
         self.engine.windows.dict_instances.pop(self.winfo_name(), None)
         self.nametowidget(".").on_exit()

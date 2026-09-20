@@ -121,9 +121,9 @@ class UI(ParentView):
         self.selected_batch = None
 
         # Subscribe to events (Observer pattern)
-        self.engine.events.subscribe("batch_changed", self._on_batch_changed)
-        self.engine.events.subscribe("tests_changed", self._on_tests_changed)
-        self.engine.events.subscribe("test_method_changed", self._on_tests_changed)
+        self.engine.events.subscribe("batches", self._on_batch_changed)
+        self.engine.events.subscribe("tests", self._on_tests_changed)
+        self.engine.events.subscribe("test_methods", self._on_tests_changed)
 
         # Build interface
         self._build_ui()
@@ -910,9 +910,9 @@ class UI(ParentView):
             evt: Tkinter event (unused, for event binding compatibility)
         """
         # Unsubscribe from events (Observer pattern)
-        self.engine.events.unsubscribe("batch_changed", self._on_batch_changed)
-        self.engine.events.unsubscribe("tests_changed", self._on_tests_changed)
-        self.engine.events.unsubscribe("test_method_changed", self._on_tests_changed)
+        self.engine.events.unsubscribe("batches", self._on_batch_changed)
+        self.engine.events.unsubscribe("tests", self._on_tests_changed)
+        self.engine.events.unsubscribe("test_methods", self._on_tests_changed)
 
         if self.child is not None:
             try:

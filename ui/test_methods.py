@@ -71,7 +71,7 @@ class UI(ParentView):
         self.search_var.trace_add("write", self._on_search_changed)
 
         # Subscribe to tests changes (Observer pattern)
-        self.engine.events.subscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.subscribe("tests", self._on_tests_changed)
 
         self.show(on_screen=True)
         
@@ -366,5 +366,5 @@ class UI(ParentView):
             self._load_methods_for_selected_test()
 
     def on_cancel(self, _evt=None):
-        self.engine.events.unsubscribe("tests_changed", self._on_tests_changed)
+        self.engine.events.unsubscribe("tests", self._on_tests_changed)
         super().on_cancel()

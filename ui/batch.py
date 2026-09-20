@@ -527,7 +527,7 @@ class UI(ChildView):
 
         # Notify all subscribers (Observer pattern)
         # This will refresh: batches.py, main.py, and any other listener
-        self.engine.events.notify("batch_changed", {"batch_id": target_id})
+        self.engine.events.notify("batches", {"batch_id": target_id})
 
         # Close
         self.on_cancel()

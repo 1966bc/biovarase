@@ -30,7 +30,7 @@ class Listener:
     def __init__(self):
         self.heard = []
 
-    def on_result_changed(self, row_id):
+    def on_results(self, row_id):
         """Write down the row that changed."""
         self.heard.append(row_id)
 
@@ -45,49 +45,49 @@ class TestEvents(unittest.TestCase):
 
     def test_a_subscriber_is_told(self):
         """With the row that changed, so a list can land on it."""
-        self.events.subscribe("result_changed", self.listener.on_result_changed)
-        self.events.notify("result_changed", 42)
+        self.events.subscribe("results", self.listener.on_results)
+        self.events.notify("results", 42)
         self.assertEqual(self.listener.heard, [42])
 
     def test_nobody_listening_is_not_an_error(self):
         """A window that saves does not care whether anything is open."""
-        self.events.notify("result_changed", 42)
+        self.events.notify("results", 42)
         self.assertEqual(self.listener.heard, [])
 
     def test_subscribing_twice_is_told_once(self):
         """A window that opens twice does not redraw itself twice."""
-        self.events.subscribe("result_changed", self.listener.on_result_changed)
-        self.events.subscribe("result_changed", self.listener.on_result_changed)
-        self.events.notify("result_changed", 42)
+        self.events.subscribe("results", self.listener.on_results)
+        self.events.subscribe("results", self.listener.on_results)
+        self.events.notify("results", 42)
         self.assertEqual(self.listener.heard, [42])
 
     def test_unsubscribing_stops_it(self):
         """A window that closes is not told any more."""
-        self.events.subscribe("result_changed", self.listener.on_result_changed)
-        self.events.unsubscribe("result_changed", self.listener.on_result_changed)
-        self.events.notify("result_changed", 42)
+        self.events.subscribe("results", self.listener.on_results)
+        self.events.unsubscribe("results", self.listener.on_results)
+        self.events.notify("results", 42)
         self.assertEqual(self.listener.heard, [])
 
     def test_a_callback_may_unsubscribe_while_it_is_told(self):
         """The callbacks are called on a copy, so the list may change meanwhile."""
         def leave(row_id):
-            self.events.unsubscribe("result_changed", leave)
+            self.events.unsubscribe("results", leave)
             self.listener.heard.append(row_id)
 
-        self.events.subscribe("result_changed", leave)
-        self.events.subscribe("result_changed", self.listener.on_result_changed)
-        self.events.notify("result_changed", 42)
+        self.events.subscribe("results", leave)
+        self.events.subscribe("results", self.listener.on_results)
+        self.events.notify("results", 42)
         self.assertEqual(self.listener.heard, [42, 42])
 
     def test_an_event_nobody_ever_hears_is_refused(self):
         """A typo in the name is an error where it is written."""
         with self.assertRaises(ValueError):
-            self.events.notify("results_changed", 42)
+            self.events.notify("resultz", 42)
 
     def test_subscribing_to_a_typo_is_refused_too(self):
         """So a window cannot wait for something that will never arrive."""
         with self.assertRaises(ValueError):
-            self.events.subscribe("batches_changed", self.listener.on_result_changed)
+            self.events.subscribe("batchez", self.listener.on_results)
 
 
 if __name__ == "__main__":

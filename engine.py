@@ -90,10 +90,18 @@ class Engine:
         """The Python this is running on, for the About window."""
         return "Python version:\n{0}".format(".".join(map(str, sys.version_info[:3])))
 
-    def get_icon(self):
-        """The icon of the windows: its file holds one base64 PNG."""
-        with open(self.get_file("biovarase.png"), "r") as f:
-            return f.readline()
+    def get_icons(self):
+        """Every size of the application icon: one base64 PNG per line.
+
+        The window manager picks the size each place needs - the title bar,
+        the task list, the switcher - so none of them is scaled up and
+        blurred. The file is written by forge/make_icon.py.
+
+        @return: the icons, as base64
+        @rtype: list
+        """
+        with open(self.get_file("icon"), "r") as f:
+            return f.read().split()
 
     def get_license(self):
         """The licence, as the About window shows it."""

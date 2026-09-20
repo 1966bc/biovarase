@@ -202,5 +202,5 @@ class UI(ChildView):
             return
 
         self.parent._set_values()
-        self.engine.events.notify("categories_changed")
+        self.engine.events.notify("categories")
         self.on_cancel()

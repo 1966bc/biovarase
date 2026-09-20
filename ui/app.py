@@ -50,9 +50,13 @@ class App(tk.Tk):
         self.engine.log.trace("ready; the engine holds log, config, db, tools, events, windows")
 
     def set_icon(self):
-        """The icon of the window: its file holds one base64 PNG."""
-        icon = tk.PhotoImage(data=self.engine.get_icon())
-        self.call("wm", "iconphoto", self._w, "-default", icon)
+        """The icon, in every size the window manager may ask for.
+
+        The images are kept on the instance: Tk holds them by name and a
+        PhotoImage nobody keeps is collected, leaving an empty icon.
+        """
+        self.icons = [tk.PhotoImage(data=data) for data in self.engine.get_icons()]
+        self.iconphoto(True, *self.icons)
 
     def set_info(self):
         """The facts the About window shows, from the metadata above."""

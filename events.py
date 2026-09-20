@@ -11,9 +11,9 @@ not know each other: the window that saves a result does not know that a
 Levey-Jennings chart is open on that lot, and it does not need to. It says
 "result_changed", and every window that asked to be told redraws itself.
 
-    events.subscribe("result_changed", self.on_result_changed)   # window opens
-    events.notify("result_changed", result_id)                   # row is saved
-    events.unsubscribe("result_changed", self.on_result_changed) # window closes
+    events.subscribe("results", self.on_results)   # when a window opens
+    events.notify("results", result_id)            # when a row is saved
+    events.unsubscribe("results", self.on_results) # when it closes
 
 notify is synchronous: the callbacks run before it returns. A window that
 reads its own dictionaries after calling notify may find them already cleared
@@ -24,11 +24,12 @@ by a callback, so whatever is needed goes into a variable first.
 class Events:
     """Who wants to be told, for each event, and the telling."""
 
-    #: The events that exist. A name not in this list is a typo, and it is
-    #: refused where it is written rather than being an event nobody hears.
-    NAMES = ("actions_changed", "batch_changed", "categories_changed",
-             "note_changed", "result_changed", "test_method_changed",
-             "tests_changed")
+    #: The events that exist, one per table a window shows. A name not in
+    #: this list is a typo, and it is refused where it is written rather than
+    #: being an event nobody ever hears.
+    NAMES = ("actions", "batches", "categories", "controls", "equipments",
+             "methods", "notes", "results", "samples", "suppliers",
+             "test_methods", "tests", "units", "users", "workstations")
 
     def __init__(self, log):
         #: The log, for the trace (--trace).

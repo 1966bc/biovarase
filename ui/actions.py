@@ -335,7 +335,7 @@ class ActionEditor(ChildView):
 
         # Refresh parent
         self.parent._set_values()
-        self.engine.events.notify("actions_changed")
+        self.engine.events.notify("actions")
         self.on_cancel()
 
     def on_cancel(self, evt=None):

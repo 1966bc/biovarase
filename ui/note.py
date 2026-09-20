@@ -401,7 +401,7 @@ class UI(ChildView):
 
             # Notify observers (daily_validation, main, etc.)
             note_id = last_id if self.index is None else int(self.index)
-            self.engine.events.notify("note_changed", note_id)
+            self.engine.events.notify("notes", note_id)
 
             # Reload master Treeview (if parent has _set_values, e.g. notes.py)
             if hasattr(self.parent, "_set_values"):

@@ -448,7 +448,7 @@ class UI(ParentView):
         self._reselect_in_parent(last_id)
 
         # Notify observers for cross-window refresh
-        self.engine.events.notify("test_method_changed")
+        self.engine.events.notify("test_methods")
 
         self.on_cancel()
 

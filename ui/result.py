@@ -419,7 +419,7 @@ class UI(ChildView):
         self._set_index(last_id)
 
         # Notify observers
-        self.engine.events.notify("result_changed", last_id)
+        self.engine.events.notify("results", last_id)
 
         self.on_cancel()
 
@@ -503,7 +503,7 @@ class UI(ChildView):
         self._update_main_results_lists()
 
         # Notify observers
-        self.engine.events.notify("result_changed", pk)
+        self.engine.events.notify("results", pk)
 
         self.on_cancel()
 
