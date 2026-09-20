@@ -1,0 +1,61 @@
+# -----------------------------------------------------------------------------
+# project:  biovarase
+# authors:  Giuseppe Costanzi (1966bc)
+# licence:  GPL-3.0-or-later, see LICENSE
+# -----------------------------------------------------------------------------
+# The tests, run on a machine that is not this one.
+#
+# They take eight seconds here, which is no reason to leave them to whoever
+# remembers: a laboratory installs what the repository says is good, and what
+# says so has to be something other than the author's memory.
+#
+# The windows are opened for real by tests/test_windows.py, which skips itself
+# where there is no display. A runner has none, so one is made with xvfb-run:
+# skipped tests pass, and tests that pass because they did not run are the
+# worst kind. Tkinter itself is not in the runner image and comes from apt.
+
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Also by hand, from the Actions tab, when something has to be tried again.
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # One version failing is worth knowing about on the other as well.
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: The screen the windows are opened on, and Tk itself
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y xvfb python3-tk
+
+      - name: What the program needs, and what the tests need
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Tkinter is there
+        run: python -c "import tkinter; print(tkinter.TkVersion)"
+
+      - name: The tests
+        run: xvfb-run -a python -m pytest tests/ -v

@@ -1,5 +1,6 @@
 # Biovarase
 
+[![tests](https://github.com/1966bc/biovarase/actions/workflows/tests.yml/badge.svg)](https://github.com/1966bc/biovarase/actions/workflows/tests.yml)
 [![Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/downloads/)
 [![Tkinter](https://img.shields.io/badge/tkinter-green.svg)](https://docs.python.org/3/library/tk.html)
 [![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg)](https://www.sqlite.org/index.html)
