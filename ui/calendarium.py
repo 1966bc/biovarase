@@ -125,6 +125,15 @@ class Calendarium(Window, ttk.Frame):
     def is_valid(self):
         return self.get_date() is not None
 
+    def set_focus(self):
+        """The keyboard on the day.
+
+        Three fields, and a caller that has something to say about the date
+        has one widget to point at. The day is where it is pointed: a date
+        that is not one is usually a day that month has not got.
+        """
+        self.spins[0].focus()
+
     def get_iso(self):
         """ISO 8601 text, which is how dates are stored, or None."""
         value = self.get_date()

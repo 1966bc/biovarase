@@ -130,7 +130,7 @@ class UI(Window, tk.Toplevel):
 
         if day is None:
             messagebox.showwarning(self.engine.app_title,
-                                   "That is not a date.",
+                                   self.engine.tools.NOT_A_DATE,
                                    parent=self)
         else:
             row = self.engine.db.read(False,

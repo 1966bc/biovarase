@@ -677,18 +677,26 @@ class Tools:
 
         A field that is not on the form at the moment is skipped - see
         is_out_of_the_form.
+
+        A date is not one field but three inside a frame, and its three parts
+        can each be a number while the three together are not a date: the
+        31st of a month that has thirty. It is asked whether it has a date,
+        which is a question a widget can answer about itself - anything here
+        that can be asked is, and nothing else has to know which class it is.
         """
         invalid = None
         for widget in self.get_widgets(container):
-            if (invalid is None
-                    and isinstance(widget, (ttk.Entry, tk.Entry))
-                    and not self.is_out_of_the_form(widget)):
-                value = widget.get().strip()
-                if not value:
-                    invalid = (widget, "empty")
-                elif (isinstance(widget, ttk.Combobox)
-                      and value not in widget.cget("values")):
-                    invalid = (widget, "not_in_list")
+            if invalid is None and not self.is_out_of_the_form(widget):
+                if hasattr(widget, "is_valid"):
+                    if not widget.is_valid():
+                        invalid = (widget, "not_a_date")
+                elif isinstance(widget, (ttk.Entry, tk.Entry)):
+                    value = widget.get().strip()
+                    if not value:
+                        invalid = (widget, "empty")
+                    elif (isinstance(widget, ttk.Combobox)
+                          and value not in widget.cget("values")):
+                        invalid = (widget, "not_in_list")
         return invalid
 
     def is_out_of_the_form(self, widget):
@@ -718,19 +726,39 @@ class Tools:
             text = " ".join(value.split())
         return text
 
+    #: Said wherever a date is read and is not one. The day, the month and
+    #: the year are three numbers a person can type, and three numbers are
+    #: not a date: this says which way they failed to be one, because "that
+    #: is not a date" leaves somebody looking at a year that is perfectly
+    #: good.
+    NOT_A_DATE = ("That is not a date: those three numbers do not make one."
+                  "\n\nFebruary has no 31st, and a year wants four figures.")
+
     def on_fields_control(self, container, title):
         """True when every field is filled and every choice is a legal one."""
         messages = {"empty": "Please fill in every field.",
-                    "not_in_list": "Choose a value from the list."}
+                    "not_in_list": "Choose a value from the list.",
+                    "not_a_date": self.NOT_A_DATE}
         invalid = self.get_invalid_field(container)
         is_valid = invalid is None
 
         if not is_valid:
             widget, reason = invalid
             messagebox.showwarning(title, messages[reason], parent=container)
-            widget.focus()
+            self.set_focus(widget)
 
         return is_valid
+
+    def set_focus(self, widget):
+        """Put the keyboard where the mistake is.
+
+        A frame takes no keyboard, and a date is three fields in one: the
+        widget is asked where its own focus goes, and answers if it can.
+        """
+        if hasattr(widget, "set_focus"):
+            widget.set_focus()
+        else:
+            widget.focus()
 
     def get_validate_integer(self, caller):
         return (caller.register(self.validate_integer),

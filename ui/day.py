@@ -330,7 +330,7 @@ class UI(Window, tk.Toplevel):
 
         if day is None:
             messagebox.showwarning(self.engine.app_title,
-                                   "That is not a date.", parent=self)
+                                   self.engine.tools.NOT_A_DATE, parent=self)
         else:
             typed = self.get_typed()
             if not typed:

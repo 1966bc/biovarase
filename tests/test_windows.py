@@ -234,5 +234,134 @@ class TestTheDay(WindowTestCase):
                          [""] * len(self.window.boxes))
 
 
+class TestADateThatIsNotOne(WindowTestCase):
+    """The 31st of February, typed into a form that takes a date.
+
+    The three parts are each a number the spinbox allows, and together they
+    are not a day. What used to happen depended on the form: the result
+    crashed inside datetime.combine(), the round broke a NOT NULL constraint,
+    and the lot quietly saved no expiration at all - which is the worst of
+    the three, because nothing says so.
+    """
+
+    def setUp(self):
+        """A result form, on the first lot of the sample laboratory."""
+        super().setUp()
+        import ui.result
+
+        self.said = []
+        self.batch = self.engine.db.read(False, "SELECT MIN(batch_id) AS id FROM batches",
+                                         ())["id"]
+        self.window = ui.result.UI(self.main, self.batch)
+        self.window.on_open()
+        self.window.result.set("19.5")
+        self.app.update()
+
+    def tearDown(self):
+        """Close the form, then whatever the parent class opened."""
+        self.window.destroy()
+        super().tearDown()
+
+    def set_the_thirty_first_of_february(self):
+        """A day this month has not got."""
+        self.window.received.day.set(31)
+        self.window.received.month.set(2)
+        self.app.update()
+
+    def test_the_widget_says_it_is_not_a_date(self):
+        """Which is the question the form asks it, and all it has to answer."""
+        self.set_the_thirty_first_of_february()
+        self.assertIsNone(self.window.received.get_date())
+        self.assertFalse(self.window.received.is_valid())
+
+    def test_the_form_finds_it(self):
+        """The check walks the fields and comes back with the date, by name."""
+        self.set_the_thirty_first_of_february()
+        widget, reason = self.engine.tools.get_invalid_field(self.window.frm_fields)
+        self.assertIs(widget, self.window.received)
+        self.assertEqual(reason, "not_a_date")
+
+    def test_a_good_date_passes(self):
+        """The same walk, with the date the form opened on."""
+        self.assertIsNone(self.engine.tools.get_invalid_field(self.window.frm_fields))
+
+    def test_nothing_is_written(self):
+        """Save says so and the form stays open, with what was typed in it."""
+        self.set_the_thirty_first_of_february()
+        before = self.engine.db.read(False, "SELECT COUNT(*) AS n FROM results", ())["n"]
+        self.window.on_save()
+        after = self.engine.db.read(False, "SELECT COUNT(*) AS n FROM results", ())["n"]
+
+        self.assertEqual(after, before)
+        self.assertTrue(self.window.winfo_exists())
+
+
+class TestADateThatIsNotOne(WindowTestCase):
+    """The 31st of February, typed into a form that takes a date.
+
+    The three parts are each a number the spinbox allows, and together they
+    are not a day. What happened depended on the form: the result crashed
+    inside datetime.combine(), the round broke a NOT NULL constraint, and the
+    lot quietly saved no expiration at all - the worst of the three, because
+    nothing says so. The check walks the fields and asks the date whether it
+    is one.
+    """
+
+    def setUp(self):
+        """A result form, on the first lot of the sample laboratory."""
+        super().setUp()
+        import ui.result
+
+        batch = self.engine.db.read(False,
+                                    "SELECT MIN(batch_id) AS id FROM batches",
+                                    ())["id"]
+        self.window = ui.result.UI(self.main, batch)
+        self.window.on_open()
+        self.window.result.set("19.5")
+        self.app.update()
+
+    def tearDown(self):
+        """Close the form, then whatever the parent class opened."""
+        self.window.destroy()
+        super().tearDown()
+
+    def set_the_thirty_first_of_february(self):
+        """A day that month has not got."""
+        self.window.received.day.set(31)
+        self.window.received.month.set(2)
+        self.app.update()
+
+    def test_the_widget_says_it_is_not_a_date(self):
+        """Which is the only question the form asks it."""
+        self.set_the_thirty_first_of_february()
+        self.assertIsNone(self.window.received.get_date())
+        self.assertFalse(self.window.received.is_valid())
+
+    def test_the_check_finds_it_among_the_fields(self):
+        """And comes back with the date itself, not with one of its spinboxes."""
+        self.set_the_thirty_first_of_february()
+        invalid = self.engine.tools.get_invalid_field(self.window.frm_fields)
+        widget, reason = invalid
+        self.assertIs(widget, self.window.received)
+        self.assertEqual(reason, "not_a_date")
+
+    def test_a_good_date_passes(self):
+        """The same walk, on the date the form opened with."""
+        found = self.engine.tools.get_invalid_field(self.window.frm_fields)
+        self.assertIsNone(found)
+
+    def test_nothing_is_written(self):
+        """Save refuses and the form stays open, with what was typed in it."""
+        self.set_the_thirty_first_of_february()
+        before = self.engine.db.read(False, "SELECT COUNT(*) AS n FROM results",
+                                     ())["n"]
+        self.window.on_save()
+        after = self.engine.db.read(False, "SELECT COUNT(*) AS n FROM results",
+                                    ())["n"]
+
+        self.assertEqual(after, before)
+        self.assertTrue(self.window.winfo_exists())
+
+
 if __name__ == "__main__":
     unittest.main()
