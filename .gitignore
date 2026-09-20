@@ -96,3 +96,8 @@ docs/*
 !docs/MANUALE_PROGRAMMAZIONE.md
 pics/
 quarantine/
+
+# Working material, not part of the program
+CLAUDE.md
+forge/
+.coverage
