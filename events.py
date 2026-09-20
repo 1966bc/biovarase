@@ -27,9 +27,10 @@ class Events:
     #: The events that exist, one per table a window shows. A name not in
     #: this list is a typo, and it is refused where it is written rather than
     #: being an event nobody ever hears.
-    NAMES = ("actions", "batches", "categories", "controls", "equipments",
-             "methods", "notes", "results", "samples", "suppliers",
-             "test_methods", "tests", "units", "users", "workstations")
+    NAMES = ("actions", "batches", "categories", "controls", "eqa_results",
+             "eqa_rounds", "eqa_schemes", "equipments", "methods", "notes",
+             "results", "samples", "suppliers", "test_methods", "tests",
+             "units", "users", "workstations")
 
     def __init__(self, log):
         #: The log, for the trace (--trace).

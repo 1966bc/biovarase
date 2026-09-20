@@ -24,6 +24,7 @@ import bcrypt
 
 from config import Config
 from dbms import DBMS
+from eqa import Eqa
 from events import Events
 from exporter import Exporter
 from qc import QC
@@ -56,6 +57,9 @@ class Engine:
         # The statistics of a series, and the rules read on them.
         self.qc = QC(self.config)
         self.westgards = Westgards()
+        # The other half of quality: how this laboratory compares with the
+        # ones that ran the same sample.
+        self.eqa = Eqa()
         # Sheets out of the data, and the form that is signed.
         self.exporter = Exporter(self)
         self.report = Report(self)
@@ -79,8 +83,9 @@ class Engine:
         self.user_not_enable = "You are not allowed to do this."
 
     def __str__(self):
-        return "class: {0}\nparts: log, config, db, tools, qc, westgards, exporter, report, events, windows".format(
-            self.__class__.__name__)
+        return ("class: {0}\nparts: log, config, db, tools, qc, westgards, eqa,"
+                " exporter, report, events, windows").format(
+                    self.__class__.__name__)
 
     # ------------------------------------------------------------- the files
 

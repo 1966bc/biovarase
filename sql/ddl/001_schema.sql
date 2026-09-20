@@ -89,13 +89,20 @@ CREATE TABLE users (
 );
 
 -- One row, always. The login writes it, the audit triggers read it: SQLite has
--- no CURRENT_USER, so the current user is kept here, in the open.
+-- no CURRENT_USER and no way to ask which machine is connected, so both are
+-- kept here, in the open.
+--
+-- host matters when the database file lives on a shared folder, which is how
+-- a section with four benches works: the user says who, the host says from
+-- which computer, and when an account has been shared - which it should not
+-- be and is - the host is the only thing left that distinguishes two people.
 CREATE TABLE session (
     session_id INTEGER PRIMARY KEY CHECK (session_id = 1),
-    user_id    INTEGER REFERENCES users (user_id)
+    user_id    INTEGER REFERENCES users (user_id),
+    host       TEXT
 );
 
-INSERT INTO session (session_id, user_id) VALUES (1, NULL);
+INSERT INTO session (session_id, user_id, host) VALUES (1, NULL, NULL);
 
 -- ------------------------------------------------------------- the laboratory
 
@@ -199,6 +206,69 @@ CREATE TABLE notes (
 
 CREATE INDEX idx_notes_result ON notes (result_id, status);
 
+-- ------------------------------------------- external quality assessment
+
+-- Internal control answers whether the method is doing today what it did
+-- yesterday. It cannot answer whether what it does is right, because the
+-- target it is judged against is the laboratory's own: a method can sit
+-- perfectly on a mean that has been wrong for six months, and the chart will
+-- never say so.
+--
+-- A proficiency scheme is the other half. The same sample goes to everybody,
+-- the value comes from outside, and what comes back is how far this
+-- laboratory fell from it. ISO 15189 asks for both, and ISO 13528 says how
+-- the arithmetic is done.
+
+CREATE TABLE eqa_schemes (
+    scheme_id   INTEGER PRIMARY KEY,
+    supplier_id INTEGER REFERENCES suppliers (supplier_id),
+    description TEXT    NOT NULL UNIQUE,
+    status      INTEGER NOT NULL DEFAULT 1 CHECK (status IN (0, 1))
+);
+
+-- One distribution of a scheme: the sample that arrived, was run, and came
+-- back with a report. received is the day it was measured, which is the day
+-- the performance belongs to; reported is the day the report came, which is
+-- usually weeks later and is why the two are not one column.
+CREATE TABLE eqa_rounds (
+    round_id    INTEGER   PRIMARY KEY,
+    scheme_id   INTEGER   NOT NULL REFERENCES eqa_schemes (scheme_id),
+    description TEXT      NOT NULL,
+    received    DATE      NOT NULL,
+    reported    DATE,
+    status      INTEGER   NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+    created_by  INTEGER   REFERENCES users (user_id),
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (scheme_id, description)
+);
+
+-- What this laboratory reported for one analyte of one round, beside what the
+-- scheme said it should have been.
+--
+-- assigned is the value the scheme assigned: a consensus of the participants,
+-- a reference method, or the way the material was made. sd is the standard
+-- deviation the scheme judges by - sigma-pt in ISO 13528, the target spread,
+-- which is a decision about fitness for purpose and not the spread the
+-- participants happened to have.
+--
+-- The z score is not a column. It is (result - assigned) / sd, and storing it
+-- would allow a row in which those three numbers do not give the fourth.
+CREATE TABLE eqa_results (
+    eqa_id         INTEGER   PRIMARY KEY,
+    round_id       INTEGER   NOT NULL REFERENCES eqa_rounds (round_id),
+    test_method_id INTEGER   NOT NULL REFERENCES test_methods (test_method_id),
+    result         REAL      NOT NULL,
+    assigned       REAL      NOT NULL,
+    sd             REAL      NOT NULL CHECK (sd > 0),
+    status         INTEGER   NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+    created_by     INTEGER   REFERENCES users (user_id),
+    created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (round_id, test_method_id)
+);
+
+CREATE INDEX idx_eqa_results_round ON eqa_results (round_id, status);
+CREATE INDEX idx_eqa_results_method ON eqa_results (test_method_id);
+
 -- ---------------------------------------------------------------- audit trail
 
 -- Nothing is deleted quietly and nothing is changed quietly: every insert,
@@ -215,7 +285,8 @@ CREATE TABLE audit_results (
     reagent_lot TEXT,
     status      INTEGER,
     log_time    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    log_id      INTEGER
+    log_id      INTEGER,
+    log_host    TEXT
 );
 
 CREATE INDEX idx_audit_results_result ON audit_results (result_id, log_time);
@@ -231,63 +302,119 @@ CREATE TABLE audit_batches (
     upper      REAL,
     status     INTEGER,
     log_time   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    log_id     INTEGER
+    log_id     INTEGER,
+    log_host   TEXT
 );
 
 CREATE INDEX idx_audit_batches_batch ON audit_batches (batch_id, log_time);
+
+-- A result sent to a proficiency scheme is a result, and the same promise
+-- covers it: what it was before a correction is kept here.
+CREATE TABLE audit_eqa_results (
+    audit_id       INTEGER   PRIMARY KEY,
+    operation      TEXT      NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
+    eqa_id         INTEGER   NOT NULL,
+    round_id       INTEGER,
+    test_method_id INTEGER,
+    result         REAL,
+    assigned       REAL,
+    sd             REAL,
+    status         INTEGER,
+    log_time       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    log_id         INTEGER,
+    log_host       TEXT
+);
+
+CREATE INDEX idx_audit_eqa_results_eqa ON audit_eqa_results (eqa_id, log_time);
 
 -- On insert the new row is kept, on update and delete the row as it was.
 
 CREATE TRIGGER tr_results_insert AFTER INSERT ON results
 BEGIN
     INSERT INTO audit_results (operation, result_id, batch_id, result, received,
-                               reagent_lot, status, log_id)
+                               reagent_lot, status, log_id, log_host)
     VALUES ('INSERT', NEW.result_id, NEW.batch_id, NEW.result, NEW.received,
             NEW.reagent_lot, NEW.status,
-            (SELECT user_id FROM session WHERE session_id = 1));
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
 END;
 
 CREATE TRIGGER tr_results_update AFTER UPDATE ON results
 BEGIN
     INSERT INTO audit_results (operation, result_id, batch_id, result, received,
-                               reagent_lot, status, log_id)
+                               reagent_lot, status, log_id, log_host)
     VALUES ('UPDATE', OLD.result_id, OLD.batch_id, OLD.result, OLD.received,
             OLD.reagent_lot, OLD.status,
-            (SELECT user_id FROM session WHERE session_id = 1));
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
 END;
 
 CREATE TRIGGER tr_results_delete AFTER DELETE ON results
 BEGIN
     INSERT INTO audit_results (operation, result_id, batch_id, result, received,
-                               reagent_lot, status, log_id)
+                               reagent_lot, status, log_id, log_host)
     VALUES ('DELETE', OLD.result_id, OLD.batch_id, OLD.result, OLD.received,
             OLD.reagent_lot, OLD.status,
-            (SELECT user_id FROM session WHERE session_id = 1));
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
 END;
 
 CREATE TRIGGER tr_batches_insert AFTER INSERT ON batches
 BEGIN
     INSERT INTO audit_batches (operation, batch_id, lot_number, target, sd,
-                               lower, upper, status, log_id)
+                               lower, upper, status, log_id, log_host)
     VALUES ('INSERT', NEW.batch_id, NEW.lot_number, NEW.target, NEW.sd,
             NEW.lower, NEW.upper, NEW.status,
-            (SELECT user_id FROM session WHERE session_id = 1));
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
 END;
 
 CREATE TRIGGER tr_batches_update AFTER UPDATE ON batches
 BEGIN
     INSERT INTO audit_batches (operation, batch_id, lot_number, target, sd,
-                               lower, upper, status, log_id)
+                               lower, upper, status, log_id, log_host)
     VALUES ('UPDATE', OLD.batch_id, OLD.lot_number, OLD.target, OLD.sd,
             OLD.lower, OLD.upper, OLD.status,
-            (SELECT user_id FROM session WHERE session_id = 1));
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
 END;
 
 CREATE TRIGGER tr_batches_delete AFTER DELETE ON batches
 BEGIN
     INSERT INTO audit_batches (operation, batch_id, lot_number, target, sd,
-                               lower, upper, status, log_id)
+                               lower, upper, status, log_id, log_host)
     VALUES ('DELETE', OLD.batch_id, OLD.lot_number, OLD.target, OLD.sd,
             OLD.lower, OLD.upper, OLD.status,
-            (SELECT user_id FROM session WHERE session_id = 1));
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
+END;
+
+CREATE TRIGGER tr_eqa_results_insert AFTER INSERT ON eqa_results
+BEGIN
+    INSERT INTO audit_eqa_results (operation, eqa_id, round_id, test_method_id,
+                                   result, assigned, sd, status, log_id, log_host)
+    VALUES ('INSERT', NEW.eqa_id, NEW.round_id, NEW.test_method_id,
+            NEW.result, NEW.assigned, NEW.sd, NEW.status,
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
+END;
+
+CREATE TRIGGER tr_eqa_results_update AFTER UPDATE ON eqa_results
+BEGIN
+    INSERT INTO audit_eqa_results (operation, eqa_id, round_id, test_method_id,
+                                   result, assigned, sd, status, log_id, log_host)
+    VALUES ('UPDATE', OLD.eqa_id, OLD.round_id, OLD.test_method_id,
+            OLD.result, OLD.assigned, OLD.sd, OLD.status,
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
+END;
+
+CREATE TRIGGER tr_eqa_results_delete AFTER DELETE ON eqa_results
+BEGIN
+    INSERT INTO audit_eqa_results (operation, eqa_id, round_id, test_method_id,
+                                   result, assigned, sd, status, log_id, log_host)
+    VALUES ('DELETE', OLD.eqa_id, OLD.round_id, OLD.test_method_id,
+            OLD.result, OLD.assigned, OLD.sd, OLD.status,
+            (SELECT user_id FROM session WHERE session_id = 1),
+            (SELECT host FROM session WHERE session_id = 1));
 END;

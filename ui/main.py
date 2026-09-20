@@ -31,6 +31,8 @@ import ui.change_password
 import ui.controls
 import ui.day
 import ui.equipments
+import ui.eqa
+import ui.eqa_schemes
 import ui.export_day
 import ui.history
 import ui.methods
@@ -180,6 +182,8 @@ class Main(Window, ttk.Frame):
         m_qc.add_separator()
         m_qc.add_command(label="Performance", underline=0,
                          command=self.on_performance)
+        m_qc.add_command(label="External quality", underline=0,
+                         command=self.on_eqa)
         m_qc.add_command(label="Notes", underline=1, command=self.on_notes)
         m_qc.add_command(label="Batches", underline=0, command=self.on_batches)
         m_qc.add_separator()
@@ -200,6 +204,7 @@ class Main(Window, ttk.Frame):
                                   ("Corrective actions", ui.actions),
                                   ("Instruments", ui.workstations),
                                   ("Methods", ui.methods),
+                                  ("Proficiency schemes", ui.eqa_schemes),
                                   ("Models", ui.equipments),
                                   ("Samples", ui.samples),
                                   ("Test methods", ui.test_methods),
@@ -433,6 +438,10 @@ class Main(Window, ttk.Frame):
         self.engine.windows.show(
             "performance",
             lambda: ui.performance_dashboard.UI(self, self.since))
+
+    def on_eqa(self, evt=None):
+        """The proficiency rounds: the half of quality that comes from outside."""
+        self.engine.windows.show("eqa", lambda: ui.eqa.UI(self))
 
     def on_notes(self, evt=None):
         """The log of what was written about the results, over the period."""

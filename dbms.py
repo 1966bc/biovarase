@@ -15,6 +15,7 @@ in it.
 """
 import datetime
 import os
+import socket
 import sqlite3 as lite
 
 
@@ -123,17 +124,21 @@ class DBMS:
         return written
 
     def set_session_user(self, user_id):
-        """Say who is working, for the audit triggers to write down.
+        """Say who is working and from which machine, for the triggers to write.
 
-        SQLite has no CURRENT_USER. The triggers on results and batches read
-        this one row, so the login writes it here and the logout clears it:
-        the name in the audit trail comes from the session, not from whatever
-        the window happened to know.
+        SQLite has no CURRENT_USER and no way to ask which computer is
+        connected. The triggers read this one row, so the login writes it
+        here: the name and the host in the audit trail come from the session,
+        not from whatever the window happened to know.
+
+        The host is the machine the program is running on. It is worth
+        recording because the database file can live on a shared folder, and
+        then the same row can be written from any of four benches.
 
         @param name: user_id
         """
-        self.write("UPDATE session SET user_id = ? WHERE session_id = 1",
-                   (user_id,))
+        self.write("UPDATE session SET user_id = ?, host = ? WHERE session_id = 1",
+                   (user_id, socket.gethostname()))
 
     def get_dict(self, row):
         """A row as a dictionary; None stays None.

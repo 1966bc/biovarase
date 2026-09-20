@@ -472,6 +472,112 @@ taken, the note and who wrote it.
 It is the non conformity log, and it is the document that answers "show me
 what you did about it".
 
+# External quality assessment
+
+Everything up to here is the laboratory against itself. The target on every
+chart is one the laboratory set, from the insert of a box or from its own
+results, and that is the limit of what internal control can say: whether the
+method is doing today what it did yesterday. It cannot say whether what it
+does is right. A method can sit perfectly in control, for six months, on a
+mean that moved — and no Levey-Jennings chart will ever mention it, because
+the mean it is drawn against is the one that moved.
+
+A proficiency scheme is the other half, and ISO 15189 asks for both. The same
+material goes to every participant, the value is assigned from outside, and
+what comes back says how far this laboratory fell from it.
+
+**QC > External quality.**
+
+![The proficiency rounds](images/eqa.png)
+
+## A round, and what is typed into it
+
+The rounds are on the left, newest first. The right button gives **New
+round**; double clicking one opens it again. A round is a scheme, a name —
+the scheme's own, usually a year and a number — and two dates: **Run on**,
+the day the sample was measured, which is the day the performance belongs to,
+and **Reported**, the day the report came back, which is weeks later.
+
+Choosing a round lists its analytes. The right button there gives **Add
+analyte**; double clicking one opens it. Three numbers are typed for each:
+
+| Field | What the report calls it |
+|---|---|
+| **Result** | what this laboratory sent in |
+| **Assigned** | the value the scheme assigned: a consensus of the participants, a reference method, or the way the material was made |
+| **SD** | the standard deviation the scheme judges by |
+
+That last one is the one to be careful with. It is **not** the spread of the
+participants: it is the target standard deviation for proficiency
+assessment - sigma-pt in ISO 13528 - which is a decision about what a result has
+to be worth to be fit for purpose. The report says what it is. When a report
+gives a target CV instead, the SD is the assigned value times that CV over a
+hundred.
+
+The z score is not typed and is not stored:
+
+```
+z = (result - assigned) / SD
+```
+
+It follows from the three numbers, and a stored copy could disagree with
+them.
+
+## Reading one analyte
+
+| z | |
+|---|---|
+| under 2 | satisfactory |
+| 2 or more | questionable, shown in orange |
+| 3 or more | unsatisfactory, shown in red |
+
+Those are ISO 13528's thresholds, read on the size and not on the sign: two
+standard deviations out is two standard deviations out either way.
+
+## Reading a whole round
+
+Under the analytes, and in the two columns on the right of the rounds list,
+are the scores that read the round as one thing. They answer different
+questions and both are needed.
+
+```
+RSZ = sum(z) / sqrt(n)      are we out on the same side, on everything?
+SZ2 = sum(z squared) / n    how far out are we, whichever side?
+```
+
+**RSZ keeps the sign**, so pluses and minuses cancel. A laboratory scattered
+either side of the assigned values comes out near zero however wide the
+scatter; a laboratory that reads a little high on everything does not. That
+is a bias of the **laboratory** rather than of any one method — a calibrator,
+a weighing, a way of working — and there is nothing in internal quality
+control that can see it.
+
+**SZ2 squares**, so nothing cancels. It is the size of the misses whichever
+way they went, which is imprecision, and a single badly wrong analyte raises
+it while leaving RSZ where it was.
+
+The sample database has the case worth studying. Open the *Drugs of abuse in
+urine* round of 2026-1: nineteen analytes, **every one of them
+satisfactory** — the worst z in the round is 1.19 — and the round's RSZ is
+4.26. Nineteen analytes all reading about one standard deviation high. No
+chart in this program and no single z score can find that, and it is the
+reason the second half of quality exists.
+
+## What this does not do
+
+It does not compute anything from the internal control, and it must not. The
+whole value of a proficiency score is that nothing in it comes from the
+laboratory's own target; the two halves are kept apart on purpose.
+
+It does not download reports, and there is nothing to import: the numbers are
+typed from the report as it arrived. A round is a few minutes, four times a
+year.
+
+## The schemes
+
+**Edit > Proficiency schemes**, for an administrator. A scheme is a name and
+its organiser, from the suppliers.
+
 # The period
 
 The **Period** menu decides how far back the program looks: last month, last
@@ -863,6 +969,11 @@ quality control whose sample data is all in control teaches nothing:
 | Lamotrigine | imprecision quietly getting worse | `1:2S` |
 | Valproic acid | one bad morning | `1:2S` |
 
+Three results were corrected and one was withdrawn as a duplicate, so
+**QC > History** has something to show; and of the four proficiency schemes
+and their eight rounds, one has every analyte satisfactory and a laboratory
+bias the analytes cannot show.
+
 They have the notes that were written about them. Open the phenytoin, level
 2, on the first instrument, and read the chapters above against it.
 
@@ -912,6 +1023,10 @@ now at edition 6.
 
 **Westgard multirules**, as in *Basic QC Practices*: the six rules and the
 order they are read in.
+
+**ISO 13528:2015**, statistical methods for use in proficiency testing by
+interlaboratory comparison: the z score, the two combined scores, and the
+thresholds all three are read against.
 
 The program implements them. Deciding that what it computes is fit for the
 laboratory's purpose is the laboratory's job, and this manual does not

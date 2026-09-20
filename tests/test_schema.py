@@ -71,7 +71,9 @@ class TestSchema(unittest.TestCase):
         expected = {"units", "samples", "methods", "tests", "categories",
                     "suppliers", "equipments", "controls", "actions", "users",
                     "session", "workstations", "test_methods", "batches",
-                    "results", "notes", "audit_results", "audit_batches"}
+                    "results", "notes", "eqa_schemes", "eqa_rounds",
+                    "eqa_results", "audit_results", "audit_batches",
+                    "audit_eqa_results"}
         rows = self.con.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
             " AND name NOT LIKE 'sqlite_%'").fetchall()
@@ -159,6 +161,20 @@ class TestAuditTrail(unittest.TestCase):
                          ["INSERT", "UPDATE", "DELETE"])
         self.assertEqual(rows[2]["result"], 96.4)
         self.assertEqual(rows[2]["status"], 0)
+
+    def test_the_audit_says_which_machine(self):
+        """The session holds the host, and the triggers write it beside the user.
+
+        It matters because the database file can live on a folder four
+        benches reach, and then who is only half the answer.
+        """
+        self.con.execute("UPDATE session SET user_id = 1, host = 'ms-pc-02'"
+                         " WHERE session_id = 1")
+        self.con.execute("INSERT INTO results (batch_id, result) VALUES (1, 10.0)")
+        row = self.con.execute("SELECT log_id, log_host FROM audit_results"
+                               " ORDER BY audit_id DESC LIMIT 1").fetchone()
+        self.assertEqual(row["log_id"], 1)
+        self.assertEqual(row["log_host"], "ms-pc-02")
 
     def test_the_audit_says_who(self):
         """SQLite has no CURRENT_USER: the trigger reads it from session."""

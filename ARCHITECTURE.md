@@ -145,6 +145,18 @@ Nothing in the program deletes a result. The delete trigger is there because
 somebody can always reach the file with `sqlite3`, and that is the case an
 audit trail is for.
 
+## The two halves of quality
+
+`qc.py` and `westgards.py` are about the laboratory against itself: a series,
+its own target, the rules read on it. `eqa.py` is about the laboratory
+against everybody else, and it is a separate module for a reason that is not
+tidiness. The two must not borrow from each other — the whole value of a
+proficiency score is that nothing in it comes from the laboratory's own
+target, and a shared function would be the beginning of that going wrong.
+
+It holds three formulae and the thresholds of ISO 13528, and it knows nothing
+about the database: it is handed numbers.
+
 ## The charts
 
 Six canvases, drawn by hand on `tk.Canvas`: Levey-Jennings, Youden, total

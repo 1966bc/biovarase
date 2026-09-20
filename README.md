@@ -99,6 +99,17 @@ imprecision. The total error chart puts what the method does against what the
 analyte allows. The Bland-Altman plot compares two instruments on the same
 control, which is the question of the morning a new one arrives.
 
+**Asks somebody else.** Internal control answers whether the method is doing
+today what it did yesterday, and nothing more: the target it is judged
+against is the laboratory's own, so a method can sit in control for six
+months on a mean that moved. The proficiency rounds are the other half — the
+same sample to everybody, the value assigned from outside, and a z score for
+each analyte. Two scores read a whole round at once: **RSZ**, which keeps the
+sign and so sees a laboratory that reads high on everything, and **SZ2**,
+which squares and so sees how far out it was whichever way. The sample
+database has a round where every single analyte is satisfactory and the round
+is not, which is the case neither a chart nor a single z can find.
+
 **Keeps the record.** Every result entered, corrected, excluded or moved is
 written to an audit trail by triggers in the database, with the values as
 they were, who did it and when. Nothing is deleted: a wrong value is
@@ -124,7 +135,7 @@ its procedures — therapeutic drug monitoring, immunosuppressants, steroid
 hormones, vitamins, catecholamines, alcohol markers and drugs of abuse, on two
 mass spectrometers, a chromatograph and a gas chromatograph with a headspace
 sampler. 44 analytes, 56 methods over seven matrices, 133 lots, 8348 results
-over six months.
+over six months, and four proficiency schemes with eight rounds of them.
 
 What is invented is the data. The concentrations are the ones those analytes
 are actually controlled at and the lots behave as lots behave, but no result
@@ -138,7 +149,10 @@ control whose sample data is all in control teaches nothing: a calibration
 drifting on the phenytoin, a mean that moved and stayed there on the
 tacrolimus, imprecision quietly getting worse on the lamotrigine, one bad
 morning on the valproic acid. They come out as `4:1S`, `10:X` and `1:2S`,
-with the notes that were written about them.
+with the notes that were written about them. Three results were corrected and
+one was withdrawn as a duplicate, so the audit trail has something to show;
+and of the eight proficiency rounds, one has every analyte inside two
+standard deviations and an RSZ of 4.26.
 
 Everybody's password is `pass`.
 
@@ -178,7 +192,7 @@ the statistics, the rules, the exporter and the windows, and is none of them:
 `engine.db.read(...)`, `engine.qc.get_mean(...)`. A call says who does the
 work.
 
-105 tests, `unittest` from the standard library, a database in memory.
+125 tests, `unittest` from the standard library, a database in memory.
 
 [documents/USER_MANUAL.md](documents/USER_MANUAL.md) is the program as it is
 used, with a picture of every window: the day's work, the rules and what
@@ -199,10 +213,11 @@ start, a login, a chart, a result entered, an error;
 | `ui/` | the windows, one class per file |
 | `engine.py` | what everything reaches |
 | `dbms.py`, `qc.py`, `westgards.py` | the database, the statistics, the rules |
+| `eqa.py` | the z score, and the two that read a whole round |
 | `exporter.py`, `report.py` | the sheets, and the form that gets signed |
 | `*_canvas.py`, `ljcanvas.py` | the charts |
 | `sql/` | the schema, the queries, the sample database |
-| `tests/` | 105 of them |
+| `tests/` | 125 of them |
 | `documents/` | the manual, the analytical goals, how to build it |
 
 ## Licence
