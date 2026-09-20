@@ -52,7 +52,7 @@ RESULTS = (("#0", "id", tk.W, False, 0, 0),
 
 #: The size it opens at: two lists side by side, and room for a round of
 #: twenty analytes without scrolling.
-WIDTH = 1280
+WIDTH = 1380
 HEIGHT = 600
 
 #: Where the divider goes. A paned window asks its panes how wide they want
@@ -87,12 +87,27 @@ class UI(Window, tk.Toplevel):
     def init_ui(self):
 
         frm_main = ttk.Frame(self, style="App.TFrame", padding=6)
-        self.across = ttk.PanedWindow(frm_main, orient=tk.HORIZONTAL)
 
+        # Buttons here and gestures everywhere else, on purpose. A lot is
+        # opened every morning and the gesture is learnt in two days; a
+        # proficiency round is entered four times a year, and the first one
+        # has to be made on an empty list - there is nothing on the screen
+        # to double click, and a menu that appears on the right button
+        # announces itself to nobody.
+        buttons = self.engine.tools.get_button_column(frm_main,
+                                                      (("New round", self.on_add_round),
+                                                       ("Add analyte", self.on_add_result),
+                                                       ("Close", self.on_cancel)))
+
+        self.across = ttk.PanedWindow(frm_main, orient=tk.HORIZONTAL)
         self.init_rounds(self.across)
         self.init_results(self.across)
 
-        self.across.pack(fill=tk.BOTH, expand=1)
+        # The buttons are packed first, though they sit on the right: pack
+        # hands the room out in the order it is asked for, and the pane that
+        # expands would leave them the width of what is left.
+        buttons.pack(side=tk.RIGHT, fill=tk.Y, padx=(12, 0))
+        self.across.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         frm_main.pack(fill=tk.BOTH, expand=1)
 
     def init_rounds(self, container):

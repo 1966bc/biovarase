@@ -17,6 +17,12 @@ The rules this code is written by.
   needs several exits is doing several things and must be split. `raise` is
   allowed, for real errors only.
 - **One thing per line**: a plain `if`/`else`, never `x if condition else y`.
+- **A gesture for what is done daily, a button for what is not.** Double
+  clicking a lot to enter a result on it is learnt in two mornings and needs
+  no button; entering a proficiency round happens four times a year, and the
+  first one is made on an empty list where there is nothing to double click.
+  The test is frequency and whether there is something on the screen to do it
+  to — not taste.
 - **A constant lives where it is read**, at the top of that module, with the
   comment that says why it is that number. A file collecting the constants of
   the whole program puts every one of them a jump away from the only code

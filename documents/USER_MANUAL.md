@@ -491,14 +491,14 @@ what comes back says how far this laboratory fell from it.
 
 ## A round, and what is typed into it
 
-The rounds are on the left, newest first. The right button gives **New
-round**; double clicking one opens it again. A round is a scheme, a name —
-the scheme's own, usually a year and a number — and two dates: **Run on**,
-the day the sample was measured, which is the day the performance belongs to,
-and **Reported**, the day the report came back, which is weeks later.
+The rounds are on the left, newest first, and **New round** opens an empty
+one. A round is a scheme, a name — the scheme's own, usually a year and a
+number — and two dates: **Run on**, the day the sample was measured, which is
+the day the performance belongs to, and **Reported**, the day the report came
+back, which is weeks later.
 
-Choosing a round lists its analytes. The right button there gives **Add
-analyte**; double clicking one opens it. Three numbers are typed for each:
+Choosing a round lists its analytes on the right, and **Add analyte** puts
+one in. Three numbers are typed for each:
 
 | Field | What the report calls it |
 |---|---|
@@ -521,6 +521,13 @@ z = (result - assigned) / SD
 
 It follows from the three numbers, and a stored copy could disagree with
 them.
+
+To change something already entered: double click it, in either list, or use
+the right button, which offers the same. This window has buttons where the
+rest of the program has gestures, and for a reason — a lot is opened every
+morning and the gesture is learnt in two days, while a proficiency round is
+entered four times a year and the first one has to be made on an empty list,
+where there is nothing to double click at all.
 
 ## Reading one analyte
 
