@@ -1,6 +1,5 @@
-mariadb==1.1.13
-openpyxl==3.1.5
-Pillow==11.3.0
-bcrypt==4.3.0
-cryptography>=44.0.1
-
+# What the program needs beyond the standard library. Three, and each one
+# earns its place: the sheets, the passwords, the form that gets signed.
+openpyxl>=3.0
+bcrypt>=4.0
+reportlab>=3.6

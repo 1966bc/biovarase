@@ -27,6 +27,7 @@ from dbms import DBMS
 from events import Events
 from exporter import Exporter
 from qc import QC
+from report import Report
 from tools import Tools
 from westgards import Westgards
 from windows import Windows
@@ -50,14 +51,20 @@ class Engine:
         # The statistics of a series, and the rules read on them.
         self.qc = QC(self.config)
         self.westgards = Westgards()
-        # Sheets out of the data.
+        # Sheets out of the data, and the form that is signed.
         self.exporter = Exporter(self)
+        self.report = Report(self)
         # Who changed what, told to the windows that show it: the Observer.
         self.events = Events(log)
         # The open windows, one per name: the Singleton pattern, by name.
         self.windows = Windows(log)
 
         self.app_title = "Biovarase"
+        #: What version is running, put here by the application when it
+        #: starts: the number lives once, in ui/app.py, and whatever needs it
+        #: - the About window, the footer of a report - asks for it here
+        #: rather than importing a window to find out.
+        self.version = ""
         #: The row of the user who logged in; empty until someone does.
         self.log_user = {}
         #: The lot the main window is on, remembered while the program runs.
@@ -70,7 +77,7 @@ class Engine:
         self.user_not_enable = "You are not allowed to do this."
 
     def __str__(self):
-        return "class: {0}\nparts: log, config, db, tools, qc, westgards, exporter, events, windows".format(
+        return "class: {0}\nparts: log, config, db, tools, qc, westgards, exporter, report, events, windows".format(
             self.__class__.__name__)
 
     # ------------------------------------------------------------- the files
@@ -86,6 +93,10 @@ class Engine:
         @rtype: string
         """
         return os.path.join(os.path.dirname(__file__), file)
+
+    def get_version(self):
+        """The version of the program that is running."""
+        return self.version
 
     def get_laboratory(self):
         """Whose laboratory this is: the site, the laboratory, the section.

@@ -119,6 +119,10 @@ CREATE TABLE test_methods (
     method_id      INTEGER NOT NULL REFERENCES methods (method_id),
     unit_id        INTEGER NOT NULL REFERENCES units (unit_id),
     code           TEXT    NOT NULL,
+    -- Whether this method is controlled every working day. What is run in
+    -- batches - the steroids, the vitamins - is controlled on the days it is
+    -- run, and a report of what was not done today must not ask after it.
+    is_mandatory   INTEGER NOT NULL DEFAULT 1 CHECK (is_mandatory IN (0, 1)),
     cvw            REAL    NOT NULL DEFAULT 0,
     cvb            REAL    NOT NULL DEFAULT 0,
     imp            REAL    NOT NULL DEFAULT 0,

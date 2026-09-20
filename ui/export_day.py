@@ -4,13 +4,19 @@
 # authors:  Giuseppe Costanzi (1966bc)
 # licence:  GPL-3.0-or-later, see LICENSE
 # -----------------------------------------------------------------------------
-"""Pick a day and get its controls as a sheet.
+"""Pick a day and get its controls, as a sheet or as a form.
 
-The question at the end of a morning, or the morning after: what was run
-yesterday, what came out, and was any of it out of control. The sheet is
-what gets printed, signed and filed, which is the reason it exists.
+Two formats because they answer two needs. The sheet is for the data -
+sorted, filtered, pasted into something else, two sums done on the side. The
+form is the record: it does not change after it is made, it says which
+laboratory it belongs to, who produced it, with which program and which
+statistical settings, and it has a line for the signature of whoever reviews
+the run. ISO 15189 asks for the quality control results to be recorded and
+reviewed; a spreadsheet is data, a form is a record.
 """
 
+import os
+import tempfile
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
@@ -49,7 +55,8 @@ class UI(Window, tk.Toplevel):
                                                 sticky=tk.W, pady=(4, 0))
 
         buttons = self.engine.tools.get_button_column(frm_main,
-                                                      (("Export", self.on_export),
+                                                      (("Sheet", self.on_sheet),
+                                                       ("Form", self.on_form),
                                                        ("Cancel", self.on_cancel)),
                                                       window=self)
 
@@ -71,8 +78,25 @@ class UI(Window, tk.Toplevel):
                                   (self.day.get_iso(),))
         self.count.set("{0} results on that day.".format(row["n"]))
 
-    def on_export(self, evt=None):
-        """Write the sheet, unless there is nothing to write."""
+    def on_sheet(self, evt=None):
+        """The controls of the day as a spreadsheet: the data."""
+        self.on_export(self.engine.exporter.get_day)
+
+    def on_form(self, evt=None):
+        """The controls of the day as a form: the record that is signed."""
+        self.on_export(self.get_form)
+
+    def get_form(self, day):
+        """The PDF, written where the system keeps temporary files."""
+        path = os.path.join(tempfile.gettempdir(),
+                            "qc_{0}.pdf".format(day.isoformat()))
+        self.engine.report.get_day(day, path)
+        self.engine.open_file(path)
+
+        return path
+
+    def on_export(self, write):
+        """Check the day, then let the writer make its file and open it."""
         self.set_count()
         day = self.day.get_date()
 
@@ -91,7 +115,7 @@ class UI(Window, tk.Toplevel):
                                     parent=self)
             else:
                 self.engine.tools.busy(self)
-                path = self.engine.exporter.get_day(day)
+                path = write(day)
                 self.engine.tools.not_busy(self)
                 self.engine.log.trace("exported {0}".format(path))
                 self.on_cancel()

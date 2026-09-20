@@ -42,6 +42,7 @@ class App(tk.Tk):
         super().__init__()
 
         self.engine = Engine(log)
+        self.engine.version = __version__
 
         self.protocol("WM_DELETE_WINDOW", self.on_exit)
         # The name of the program, kept apart from the title of the window:
